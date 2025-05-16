@@ -429,11 +429,8 @@ const HomeController = (function() {
         // Calculate new position relative to container
         const containerRect = tilesContainer.getBoundingClientRect();
         
-        // Get the same padding values used in resize constraints for consistency
-        const paddingLeft = 30;
-        const paddingRight = 30;
-        const paddingTop = 10;
-        const paddingBottom = 30;
+        // Get the padding values for consistent constraints
+        const padding = getContainerPadding();
         
         // Calculate position where the cursor is
         const x = clientX - containerRect.left - dragOffset.x;
@@ -444,10 +441,10 @@ const HomeController = (function() {
         const tileHeight = parseInt(draggedTile.style.height, 10) || 200; // Default to 200 if not set
         
         // Constrain to container bounds with padding
-        const minX = paddingLeft;
-        const minY = paddingTop;
-        const maxX = containerRect.width - paddingRight - tileWidth;
-        const maxY = containerRect.height - paddingBottom - tileHeight;
+        const minX = padding.left;
+        const minY = padding.top;
+        const maxX = containerRect.width - padding.right - tileWidth;
+        const maxY = containerRect.height - padding.bottom - tileHeight;
         
         const constrainedX = Math.max(minX, Math.min(x, maxX));
         const constrainedY = Math.max(minY, Math.min(y, maxY));
@@ -920,10 +917,7 @@ const HomeController = (function() {
      */
     function constrainResizeDimensions(dimensions, containerRect) {
         // Get container dimensions with padding
-        const paddingLeft = 30;
-        const paddingRight = 30;
-        const paddingTop = 10;
-        const paddingBottom = 30;
+        const padding = getContainerPadding();
         
         // Make a copy to avoid modifying the original object
         let result = { ...dimensions };
@@ -937,9 +931,9 @@ const HomeController = (function() {
         result.height = Math.min(400, result.height);
         
         // Handle left boundary
-        if (result.x < paddingLeft) {
-            const overflow = paddingLeft - result.x;
-            result.x = paddingLeft;
+        if (result.x < padding.left) {
+            const overflow = padding.left - result.x;
+            result.x = padding.left;
             
             // If we're dragging from left side, adjust width
             if (result.adjustWidthFromLeft) {
@@ -948,9 +942,9 @@ const HomeController = (function() {
         }
         
         // Handle top boundary
-        if (result.y < paddingTop) {
-            const overflow = paddingTop - result.y;
-            result.y = paddingTop;
+        if (result.y < padding.top) {
+            const overflow = padding.top - result.y;
+            result.y = padding.top;
             
             // If we're dragging from top side, adjust height
             if (result.adjustHeightFromTop) {
@@ -959,7 +953,7 @@ const HomeController = (function() {
         }
         
         // Handle right boundary
-        const rightEdge = containerRect.width - paddingRight;
+        const rightEdge = containerRect.width - padding.right;
         if (result.x + result.width > rightEdge) {
             const overflow = (result.x + result.width) - rightEdge;
             
@@ -974,7 +968,7 @@ const HomeController = (function() {
         }
         
         // Handle bottom boundary
-        const bottomEdge = containerRect.height - paddingBottom;
+        const bottomEdge = containerRect.height - padding.bottom;
         if (result.y + result.height > bottomEdge) {
             const overflow = (result.y + result.height) - bottomEdge;
             
@@ -989,6 +983,19 @@ const HomeController = (function() {
         }
         
         return result;
+    }
+    
+    /**
+     * Get container padding values
+     * @returns {Object} Object containing padding values
+     */
+    function getContainerPadding() {
+        return {
+            left: 30,
+            right: 30,
+            top: 10,
+            bottom: 30
+        };
     }
     
     // Public API
