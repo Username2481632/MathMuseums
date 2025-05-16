@@ -1,11 +1,17 @@
 /* Home View Specific Styles */
+#home-view {
+    margin: 0;
+    padding: 0;
+}
+
 .tiles-container {
     position: relative;
     width: 100%;
-    height: calc(100vh - 150px);
-    min-height: 600px;
+    height: calc(100vh - 70px);
+    min-height: 400px;
     background-color: var(--bg-color);
-    margin-top: var(--spacing-lg);
+    margin: 0;
+    padding: 0;
     overflow: hidden;
 }
 
@@ -32,6 +38,7 @@
     opacity: 0.8;
     cursor: grabbing;
     z-index: 10;
+    box-shadow: 0 0 0 2px var(--secondary-color);
 }
 
 .concept-tile.resizing {

@@ -37,15 +37,15 @@ body {
     color: var(--text-color);
     background-color: var(--bg-color);
     min-height: 100vh;
-    /* Add padding to account for the fixed header */
-    padding-top: 70px;
+    padding-top: 70px; /* Only account for the fixed header */
+    margin: 0;
 }
 
 /* Header */
 header {
     background-color: var(--primary-color);
     color: white;
-    padding: var(--spacing-md) var(--spacing-lg);
+    padding: var(--spacing-sm);
     text-align: center;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     position: fixed;
@@ -95,10 +95,11 @@ h3 {
 }
 
 /* Container */
-#app-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: var(--spacing-lg);
+main#app-container {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 /* Loading State */
@@ -112,9 +113,26 @@ h3 {
 /* Views */
 .view {
     animation: fadeIn 0.3s ease-in-out;
+    margin: 0;
+    padding: 0;
 }
 
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
+}
+
+section {
+    margin: 0;
+    padding: 0;
+}
+
+main {
+    margin: 0;
+    padding: 0;
+}
+
+#home-view {
+    margin: 0;
+    padding: 0;
 }
