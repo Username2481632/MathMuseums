@@ -53,3 +53,8 @@
 #completion-toggle.in-progress {
     background-color: #f39c12;
 }
+
+/* Detail view container specific styling */
+main#app-container #detail-view {
+    padding: var(--spacing-lg);
+}
