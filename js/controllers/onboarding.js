@@ -112,9 +112,6 @@ const OnboardingController = (function() {
         arrow.style.left = '-9999px';
         text.style.left = '-9999px';
         
-        // Update the text on the dismiss button
-        dismissButton.textContent = 'Dismiss';
-        
         // Show "Never show again" button only for experienced users
         if (isExperienced) {
             neverButton.style.display = 'inline-block';
