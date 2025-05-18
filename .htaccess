@@ -1,0 +1,9 @@
+# Redirect all requests to Django WSGI
+Options +ExecCGI
+RewriteEngine On
+RewriteBase /
+RewriteRule ^(static/.*)$ - [L]
+RewriteRule ^(admin/.*)$ - [L]
+RewriteRule ^(media/.*)$ - [L]
+RewriteRule ^(mathmuseums/dispatch\.wsgi/.*)$ - [L]
+RewriteRule ^(.*)$ mathmuseums/mathmuseums/dispatch.wsgi/$1 [QSA,PT,L]
