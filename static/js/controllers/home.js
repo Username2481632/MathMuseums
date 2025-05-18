@@ -1043,3 +1043,7 @@ const HomeController = (function() {
         }
     };
 })();
+
+function handleTouchResizeEnd(e) {
+    handleResizeEnd(e);
+}

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Enter OTP</h2>
+<p>An OTP has been sent to <b>{{ email }}</b>. Please enter it below:</p>
+<form method="post">
+    {% csrf_token %}
+    <label for="otp">OTP Code:</label>
+    <input type="text" id="otp" name="otp" maxlength="6" required autofocus>
+    <button type="submit">Verify</button>
+</form>
+{% if messages %}
+<ul>
+  {% for message in messages %}
+    <li>{{ message }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

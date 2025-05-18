@@ -10,8 +10,32 @@
     <link rel="stylesheet" href="{% static 'css/detail.css' %}">
     <link rel="stylesheet" href="{% static 'css/onboarding.css' %}">
     <script src="https://www.desmos.com/api/v1.10/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+    <style>
+        .logout-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: #1976d2;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 0.5em 1em;
+            font-size: 1em;
+            cursor: pointer;
+            z-index: 1001;
+        }
+        .logout-btn:hover {
+            background: #1565c0;
+        }
+    </style>
 </head>
 <body>
+    {% if user.is_authenticated %}
+    <form method="post" action="/auth/logout/" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" class="logout-btn">Logout</button>
+    </form>
+    {% endif %}
     <header>
         <h1>Math Museums</h1>
     </header>
