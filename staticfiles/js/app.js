@@ -6,8 +6,17 @@
     // Initialize the application
     async function init() {
         try {
+            // Initialize auth first
+            await AuthClient.init();
+            
             // Initialize storage
             await StorageManager.init();
+            
+            // Initialize preferences
+            PreferencesClient.init();
+            
+            // Initialize sync client (after storage and auth)
+            SyncClient.init();
             
             // Reset onboarding session flag on new app start
             // This allows onboarding to show on new page visits, but not within the same session
@@ -18,6 +27,16 @@
                 'home': HomeController.init,
                 'detail': DetailController.init
             }, 'home');
+            
+            // Set up sync button
+            const syncButton = document.getElementById('sync-button');
+            if (syncButton) {
+                syncButton.addEventListener('click', () => {
+                    if (SyncClient.getSyncStatus() !== 'syncing') {
+                        SyncClient.forceSync();
+                    }
+                });
+            }
             
             // Remove loading state
             const loading = document.getElementById('loading');

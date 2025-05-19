@@ -1,10 +1,15 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import login, logout
+from django.urls import reverse
 from .models import User
 from .utils import create_otp_for_user, send_otp_email, validate_otp
 
 def auth_request_view(request):
+    # If user is already authenticated, redirect to index
+    if request.user.is_authenticated:
+        return redirect('index')
+        
     if request.method == 'POST':
         email = request.POST.get('email')
         if not email:
@@ -32,7 +37,7 @@ def verify_otp_view(request):
         if validate_otp(user, code):
             login(request, user)
             messages.success(request, 'Authentication successful!')
-            return redirect('/')
+            return redirect('index')
         else:
             messages.error(request, 'Invalid or expired OTP. Please try again.')
     return render(request, 'authentication/verify_otp.html', {'email': email})

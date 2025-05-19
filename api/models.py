@@ -28,6 +28,8 @@ class ConceptTile(models.Model):
     is_complete = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    last_synced = models.DateTimeField(null=True, blank=True)
+    version = models.IntegerField(default=1)  # For optimistic concurrency control
 
     class Meta:
         unique_together = ('user', 'concept_type')
@@ -43,3 +45,21 @@ class UserPreference(models.Model):
 
     def __str__(self):
         return f"Preferences for {self.user.email}"
+
+class SyncLog(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('complete', 'Complete'),
+        ('failed', 'Failed'),
+        ('conflict', 'Conflict'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sync_logs')
+    device_id = models.CharField(max_length=100)  # Unique identifier for the device
+    sync_time = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    items_synced = models.IntegerField(default=0)
+    error_message = models.TextField(blank=True)
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.sync_time} - {self.status}"

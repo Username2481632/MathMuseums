@@ -8,11 +8,7 @@
     <input type="text" id="otp" name="otp" maxlength="6" required autofocus>
     <button type="submit">Verify</button>
 </form>
-{% if messages %}
-<ul>
-  {% for message in messages %}
-    <li>{{ message }}</li>
-  {% endfor %}
-</ul>
-{% endif %}
+<p>
+    <a href="{% url 'auth_request' %}">Use a different email</a>
+</p>
 {% endblock %}

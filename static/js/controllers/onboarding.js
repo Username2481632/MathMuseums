@@ -136,7 +136,7 @@ const OnboardingController = (function() {
         // Never show again button
         neverButton.addEventListener('click', () => {
             // Save preference
-            StorageManager.saveOnboardingPreference(true);
+            PreferencesClient.savePreferences({ onboardingDisabled: true });
             
             // Stop onboarding
             stop();

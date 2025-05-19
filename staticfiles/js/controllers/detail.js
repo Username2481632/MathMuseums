@@ -34,7 +34,7 @@ const DetailController = (function() {
         }
         
         // Check if onboarding is disabled
-        isOnboardingDisabled = StorageManager.getOnboardingPreference();
+        isOnboardingDisabled = PreferencesClient.isOnboardingDisabled();
         
         // Render the detail view
         render();

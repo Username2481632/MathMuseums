@@ -72,6 +72,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'mathmuseums.middleware.AuthRequiredDebugMiddleware',
 ]
 
 ROOT_URLCONF = 'mathmuseums.urls'
@@ -174,3 +175,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@mathmuseums.example.com')
 
 AUTH_USER_MODEL = 'authentication.User'
+
+# Authentication settings
+LOGIN_URL = '/auth/request/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/auth/request/'

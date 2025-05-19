@@ -11,6 +11,7 @@ const StorageManager = (function() {
     // Private variables
     let db = null;
     let isDbAvailable = false;
+    let unsyncedChanges = 0;
     
     /**
      * Initialize the IndexedDB database
@@ -73,18 +74,28 @@ const StorageManager = (function() {
      * Save a concept to storage or API
      */
     async function saveConcept(concept) {
+        // Increment unsynced changes counter
+        incrementUnsyncedChanges();
+        
         if (isAuthenticated()) {
             // If concept has an id, update; else, create
             const method = concept.id ? 'PUT' : 'POST';
             const url = concept.id
                 ? `/api/concepts/${concept.id}/`
                 : '/api/concepts/';
-            const resp = await apiRequest(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(concept)
-            });
-            return resp;
+            try {
+                const resp = await apiRequest(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(concept)
+                });
+                // Mark as synced
+                decrementUnsyncedChanges();
+                return resp;
+            } catch (error) {
+                console.error('Error saving to API, falling back to local storage', error);
+                // Continue with local storage
+            }
         }
         // Fallback: IndexedDB/localStorage
         saveToLocalStorage(concept);
@@ -101,6 +112,66 @@ const StorageManager = (function() {
         });
     }
 
+    /**
+     * Update a concept in storage
+     * @param {Object} concept - The concept to update
+     * @returns {Promise<Object>} The updated concept
+     */
+    async function updateConcept(concept) {
+        // Update timestamp
+        concept.lastSynced = new Date().toISOString();
+        
+        // Save to local storage
+        saveToLocalStorage(concept);
+        
+        if (!isDbAvailable) return concept;
+        
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.put(concept);
+            request.onsuccess = () => resolve(concept);
+            request.onerror = (event) => {
+                console.error('Error updating concept:', event.target.error);
+                reject(event.target.error);
+            };
+        });
+    }
+    
+    /**
+     * Check if there are unsynced changes
+     * @returns {boolean}
+     */
+    function hasUnsyncedChanges() {
+        return unsyncedChanges > 0;
+    }
+    
+    /**
+     * Mark a concept as synced
+     * @param {string} conceptId - ID of the concept
+     */
+    function markConceptSynced(conceptId) {
+        if (unsyncedChanges > 0) {
+            unsyncedChanges--;
+        }
+    }
+    
+    /**
+     * Increment unsynced changes counter
+     */
+    function incrementUnsyncedChanges() {
+        unsyncedChanges++;
+    }
+    
+    /**
+     * Decrement unsynced changes counter
+     */
+    function decrementUnsyncedChanges() {
+        if (unsyncedChanges > 0) {
+            unsyncedChanges--;
+        }
+    }
+    
     /**
      * Get a concept by ID
      */
@@ -304,6 +375,7 @@ const StorageManager = (function() {
     return {
         init: initDatabase,
         saveConcept,
+        updateConcept,
         getConcept,
         getAllConcepts,
         saveOnboardingPreference,
@@ -312,6 +384,10 @@ const StorageManager = (function() {
         getOnboardingSession,
         clearOnboardingSession,
         saveImageSkill,
-        getImageSkill
+        getImageSkill,
+        hasUnsyncedChanges,
+        markConceptSynced,
+        incrementUnsyncedChanges,
+        decrementUnsyncedChanges
     };
 })();

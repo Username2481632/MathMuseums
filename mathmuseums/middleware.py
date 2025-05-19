@@ -28,3 +28,26 @@ class DisableTranslationMiddleware:
             settings.USE_I18N = old_use_i18n
             
         return response
+
+class AuthRequiredDebugMiddleware:
+    """
+    Middleware for debugging authentication-related issues.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+        
+    def __call__(self, request):
+        # Get the current path
+        path = request.path_info
+        
+        # Log authentication state for debugging
+        authenticated = request.user.is_authenticated
+        print(f"DEBUG: Request to {path} - User authenticated: {authenticated}")
+        
+        # Process the request
+        response = self.get_response(request)
+        
+        # Log response status
+        print(f"DEBUG: Response for {path} - Status code: {response.status_code}")
+        
+        return response
