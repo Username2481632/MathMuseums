@@ -212,41 +212,23 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'django.log'),
-            'formatter': 'verbose',
-        },
+        # 'file' handler removed to avoid file permission issues
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': True,
         },
         'django.request': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'ERROR',
             'propagate': False,
         },
         'authentication': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
         },
     },
 }
-
-if not DEBUG:
-    # In production, make sure we can write to the log file
-    import os.path
-    log_dir = os.path.dirname(LOGGING['handlers']['file']['filename'])
-    if not os.path.exists(log_dir):
-        try:
-            os.makedirs(log_dir)
-        except Exception as e:
-            # If we can't create the log directory, just use console logging
-            print(f"Warning: Could not create log directory: {str(e)}")
-            LOGGING['loggers']['django']['handlers'] = ['console']
-            LOGGING['loggers']['django.request']['handlers'] = ['console']
-            LOGGING['loggers']['authentication']['handlers'] = ['console']
