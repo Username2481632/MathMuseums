@@ -17,6 +17,13 @@ for whl in glob.glob(os.path.join(staticlibs_dir, '*.whl')):
     if whl not in sys.path:
         sys.path.insert(0, whl)
 
+# Apply monkeypatch for translation issues before importing Django
+try:
+    from monkeypatch import apply_patches
+    apply_patches()
+except ImportError:
+    pass
+
 # Set up Django settings
 os.environ['DJANGO_SETTINGS_MODULE'] = 'mathmuseums.settings'
 

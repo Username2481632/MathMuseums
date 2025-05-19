@@ -14,6 +14,10 @@ from pathlib import Path
 import os
 import environ
 
+# Force C locale (English) to avoid translation file lookups
+import locale
+locale.setlocale(locale.LC_ALL, 'C')
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -68,7 +72,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'mathmuseums.middleware.DisableTranslationMiddleware',  # Add custom middleware to disable translations
 ]
 
 ROOT_URLCONF = 'mathmuseums.urls'
@@ -129,13 +132,13 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
+# Using simple English locale to avoid translation issues
+LANGUAGE_CODE = 'en'
 TIME_ZONE = 'UTC'
 
-# Disable internationalization to avoid translation issues on shared hosting
+# Disable internationalization features to avoid translation issues on shared hosting
 USE_I18N = False
-
+USE_L10N = False
 USE_TZ = True
 
 
