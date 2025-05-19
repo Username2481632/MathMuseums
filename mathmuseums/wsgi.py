@@ -9,8 +9,11 @@ https://docs.djangoproject.com/en/5.0/howto/deployment/wsgi/
 
 import os
 
-from django.core.wsgi import get_wsgi_application
-
+# Set environment variable before any Django imports
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mathmuseums.settings')
 
+# Import the WSGI application getter
+from django.core.wsgi import get_wsgi_application
+
+# Create the WSGI application
 application = get_wsgi_application()
