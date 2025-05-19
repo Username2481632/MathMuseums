@@ -51,23 +51,48 @@ const StorageManager = (function() {
     }
     
     /**
-     * Save a concept to storage
-     * @param {Object} concept - The concept object to save
-     * @returns {Promise} Resolves with the saved concept
+     * Check if user is authenticated (by presence of a session cookie)
+     * @returns {boolean}
+     */
+    function isAuthenticated() {
+        // Simple check for Django sessionid cookie
+        return document.cookie.split(';').some(c => c.trim().startsWith('sessionid='));
+    }
+
+    /**
+     * Helper for API requests
+     */
+    async function apiRequest(url, options = {}) {
+        options.credentials = 'same-origin';
+        const response = await fetch(url, options);
+        if (!response.ok) throw new Error(await response.text());
+        return response.json();
+    }
+
+    /**
+     * Save a concept to storage or API
      */
     async function saveConcept(concept) {
-        // Always try localStorage as backup
-        saveToLocalStorage(concept);
-        
-        if (!isDbAvailable) {
-            return Promise.resolve(concept);
+        if (isAuthenticated()) {
+            // If concept has an id, update; else, create
+            const method = concept.id ? 'PUT' : 'POST';
+            const url = concept.id
+                ? `/api/concepts/${concept.id}/`
+                : '/api/concepts/';
+            const resp = await apiRequest(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(concept)
+            });
+            return resp;
         }
-        
+        // Fallback: IndexedDB/localStorage
+        saveToLocalStorage(concept);
+        if (!isDbAvailable) return concept;
         return new Promise((resolve, reject) => {
             const transaction = db.transaction([STORE_NAME], 'readwrite');
             const store = transaction.objectStore(STORE_NAME);
             const request = store.put(concept);
-            
             request.onsuccess = () => resolve(concept);
             request.onerror = (event) => {
                 console.error('Error saving concept:', event.target.error);
@@ -75,67 +100,58 @@ const StorageManager = (function() {
             };
         });
     }
-    
+
     /**
      * Get a concept by ID
-     * @param {string} id - Concept ID
-     * @returns {Promise} Resolves with the concept or null if not found
      */
     async function getConcept(id) {
-        if (!isDbAvailable) {
-            return Promise.resolve(getFromLocalStorage(id));
+        if (isAuthenticated()) {
+            try {
+                return await apiRequest(`/api/concepts/${id}/`);
+            } catch (e) {
+                // Fallback to local
+            }
         }
-        
+        if (!isDbAvailable) return getFromLocalStorage(id);
         return new Promise((resolve, reject) => {
             const transaction = db.transaction([STORE_NAME], 'readonly');
             const store = transaction.objectStore(STORE_NAME);
             const request = store.get(id);
-            
             request.onsuccess = () => {
                 const result = request.result;
-                if (!result) {
-                    // Fall back to localStorage if not in IndexedDB
-                    resolve(getFromLocalStorage(id));
-                } else {
-                    resolve(result);
-                }
+                if (!result) resolve(getFromLocalStorage(id));
+                else resolve(result);
             };
-            
             request.onerror = (event) => {
                 console.error('Error getting concept:', event.target.error);
-                // Fall back to localStorage on error
                 resolve(getFromLocalStorage(id));
             };
         });
     }
-    
+
     /**
      * Get all concepts
-     * @returns {Promise} Resolves with an array of concepts
      */
     async function getAllConcepts() {
-        if (!isDbAvailable) {
-            return Promise.resolve(getAllFromLocalStorage());
+        if (isAuthenticated()) {
+            try {
+                return await apiRequest('/api/concepts/');
+            } catch (e) {
+                // Fallback to local
+            }
         }
-        
+        if (!isDbAvailable) return getAllFromLocalStorage();
         return new Promise((resolve, reject) => {
             const transaction = db.transaction([STORE_NAME], 'readonly');
             const store = transaction.objectStore(STORE_NAME);
             const request = store.getAll();
-            
             request.onsuccess = () => {
                 const result = request.result;
-                if (!result || result.length === 0) {
-                    // Fall back to localStorage if IndexedDB is empty
-                    resolve(getAllFromLocalStorage());
-                } else {
-                    resolve(result);
-                }
+                if (!result || result.length === 0) resolve(getAllFromLocalStorage());
+                else resolve(result);
             };
-            
             request.onerror = (event) => {
                 console.error('Error getting all concepts:', event.target.error);
-                // Fall back to localStorage on error
                 resolve(getAllFromLocalStorage());
             };
         });

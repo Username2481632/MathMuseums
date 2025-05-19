@@ -2,15 +2,38 @@
 
 ## Current Focus
 
-- Developing REST API endpoints for user data and concept synchronization
-- Preparing serializers and views for ConceptTile and UserPreference
-- Planning API authentication and permissions
+- Implementing email OTP authentication system with shared login/signup UI
+- Creating custom user model with email as primary field
+- Implementing OTP generation, sending, and verification
+- Developing authentication views and endpoints
+- Testing the authentication flow end-to-end
 
 ## Recent Changes
 
-- Implemented ConceptTile and UserPreference models in the api app
-- Applied migrations for new models
-- Updated progress and documentation
+- Successfully configured PostgreSQL database for server-side storage:
+  - Set up local PostgreSQL instance using Podman container
+  - Updated Django settings to use PostgreSQL with environment variables
+  - Migrated database schema to PostgreSQL
+  - Added django-extensions for better development tools
+  - Created database documentation
+- Removed padding and margins from the home page to maximize usable space:
+  - Eliminated padding in #app-container
+  - Removed margin-top from .tiles-container
+  - Adjusted height calculation to use more vertical space
+  - Set container padding values to 0 in getContainerPadding()
+  - Added blue highlight effect during tile dragging to match resize styling
+- Restored margins for detail views while keeping zero margins for home view
+- Created view-specific styling to ensure proper appearance across different views
+- Modified header padding to be more compact
+- Ensured consistent visual feedback during user interactions:
+  - Blue highlight during both resizing and dragging operations
+  - Consistent cursor styling for different interaction modes
+- Fixed navigation between views with proper resource cleanup
+- Removed extraneous files and backup history
+- Ensured all controllers have proper cleanup methods
+- Implemented proper Desmos preview image generation for tile grid
+- Added resource cleanup to prevent memory leaks during navigation
+- Enhanced error handling and loading states for preview images
 
 ## Active Decisions
 
@@ -22,9 +45,16 @@
 
 ## Next Steps
 
-1. Implement REST API endpoints for user data and concept synchronization (Step 5)
-2. Modify frontend for API integration (Step 6)
-3. Deploy to HelioHost (Step 7)
+1. Implement the email OTP authentication system (Step 3):
+   - Create custom user model with email as primary field
+   - Implement OTP generation and validation
+   - Create authentication views and templates
+   - Set up email sending functionality
+   - Test authentication flow end-to-end
+2. Define database models for user data and concept information (Step 4)
+3. Develop REST API endpoints for data synchronization (Step 5)
+4. Modify frontend for API integration (Step 6)
+5. Deploy to HelioHost (Step 7)
 
 ## Decisions Made
 

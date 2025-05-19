@@ -32,16 +32,15 @@
 - Set up local development database using Podman
 - Migrated database schema to PostgreSQL
 - Documented database configuration
-- Implemented database models for user data (ConceptTile) and user preferences (UserPreference) in the api app
-- Applied migrations for new models
 
 ## In Progress
 
 - User authentication with email OTP (Step 3)
-- Developing REST API endpoints for data synchronization (Step 5)
 
 ## Pending
 
+- Database models for user data and concept information (Step 4)
+- REST API endpoints for data synchronization (Step 5)
 - Client-side API integration with server (Step 6)
 - Deployment to HelioHost (Step 7)
 - Testing and verification of all components
@@ -55,8 +54,8 @@ Frontend feature complete with UI enhancements. Backend integration in progress.
 
 - Project implementation complete, ready for testing
 - Target completion date: May 20, 2025
-- Current phase: Django integration - Step 4 completed
-- Next phase: REST API endpoints for data sync (Step 5)
+- Current phase: Django integration - Step 2 completed
+- Next phase: Email OTP authentication (Step 3)
 
 ## Known Issues
 

@@ -62,9 +62,9 @@ The Math Museums project follows a hybrid architecture with both client-side and
   ```
 
 - **Database Models**:
-  - User model (custom, email as username)
-  - ConceptTile model (stores user's concept data, position, Desmos state, description, completion status, etc.)
-  - UserPreference model (stores UI and onboarding preferences)
+  - User model (extending Django's built-in user)
+  - ConceptTile model (for storing user's concept data)
+  - UserPreference model (for storing UI preferences)
 
 ## CSS Styling Patterns
 
