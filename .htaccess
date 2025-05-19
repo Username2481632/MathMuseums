@@ -2,6 +2,7 @@
 Options +ExecCGI
 RewriteEngine On
 RewriteBase /
+SetEnv PYTHONPATH /home/coder248/.local/lib/python3.12/site-packages
 RewriteRule ^favicon\.ico$ static/img/Museum-icon.svg [L]
 RewriteRule ^$ dispatch.wsgi/ [QSA,PT,L]
 RewriteRule ^(static/.*)$ - [L]
