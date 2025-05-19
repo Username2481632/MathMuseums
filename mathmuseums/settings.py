@@ -68,6 +68,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'mathmuseums.middleware.DisableTranslationMiddleware',  # Add custom middleware to disable translations
 ]
 
 ROOT_URLCONF = 'mathmuseums.urls'
@@ -132,7 +133,8 @@ LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
 
-USE_I18N = True
+# Disable internationalization to avoid translation issues on shared hosting
+USE_I18N = False
 
 USE_TZ = True
 
