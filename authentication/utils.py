@@ -39,13 +39,26 @@ def validate_otp(user, code):
 
 def send_otp_email(user, otp_code):
     """Send OTP code to user's email."""
+    import logging
+    logger = logging.getLogger('django')
+    
     subject = "Your Math Museums verification code"
     message = f"Your verification code is: {otp_code}\n\nThis code will expire in 15 minutes."
     from_email = settings.DEFAULT_FROM_EMAIL
-    send_mail(
-        subject,
-        message,
-        from_email,
-        [user.email],
-        fail_silently=False,
-    )
+    
+    try:
+        sent = send_mail(
+            subject,
+            message,
+            from_email,
+            [user.email],
+            fail_silently=False,
+        )
+        if not sent:
+            logger.warning(f"Email not sent to {user.email}. No error raised, but send_mail returned 0.")
+            raise Exception("Email not sent")
+        logger.info(f"OTP email sent successfully to {user.email}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send OTP email to {user.email}: {str(e)}")
+        raise

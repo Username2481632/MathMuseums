@@ -35,6 +35,8 @@ class AuthRequiredDebugMiddleware:
     """
     def __init__(self, get_response):
         self.get_response = get_response
+        import logging
+        self.logger = logging.getLogger('django')
         
     def __call__(self, request):
         # Get the current path
@@ -42,12 +44,44 @@ class AuthRequiredDebugMiddleware:
         
         # Log authentication state for debugging
         authenticated = request.user.is_authenticated
-        print(f"DEBUG: Request to {path} - User authenticated: {authenticated}")
+        self.logger.debug(f"Request to {path} - User authenticated: {authenticated}")
         
         # Process the request
         response = self.get_response(request)
         
         # Log response status
-        print(f"DEBUG: Response for {path} - Status code: {response.status_code}")
+        self.logger.debug(f"Response for {path} - Status code: {response.status_code}")
+        
+        # Log details for error responses
+        if response.status_code >= 400:
+            self.logger.error(f"Error {response.status_code} for {request.method} {path}")
+            if hasattr(response, 'content') and len(response.content) < 1000:
+                self.logger.error(f"Response content: {response.content}")
         
         return response
+
+class ExceptionLoggingMiddleware:
+    """
+    Middleware that logs unhandled exceptions.
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+        import logging
+        self.logger = logging.getLogger('django')
+        
+    def __call__(self, request):
+        return self.get_response(request)
+        
+    def process_exception(self, request, exception):
+        import traceback
+        self.logger.error(f"Unhandled exception: {str(exception)}")
+        self.logger.error(f"Path: {request.path_info}")
+        self.logger.error(f"Method: {request.method}")
+        self.logger.error(f"User: {request.user}")
+        
+        # Get traceback information
+        tb = traceback.format_exc()
+        self.logger.error(f"Traceback: {tb}")
+        
+        # Don't return a response - let Django's default exception handling take over
+        return None

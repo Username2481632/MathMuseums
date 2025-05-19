@@ -15,12 +15,30 @@ def auth_request_view(request):
         if not email:
             messages.error(request, 'Please enter your email address.')
             return render(request, 'authentication/auth_request.html')
-        user, created = User.objects.get_or_create(email=email)
-        otp = create_otp_for_user(user)
-        send_otp_email(user, otp.code)
-        request.session['auth_email'] = email
-        messages.success(request, f'An OTP has been sent to {email}.')
-        return redirect('verify_otp')
+        
+        try:
+            user, created = User.objects.get_or_create(email=email)
+            otp = create_otp_for_user(user)
+            
+            try:
+                send_otp_email(user, otp.code)
+                request.session['auth_email'] = email
+                messages.success(request, f'An OTP has been sent to {email}.')
+                return redirect('verify_otp')
+            except Exception as e:
+                # Handle email sending errors
+                import logging
+                logger = logging.getLogger('django')
+                logger.error(f"Email sending error for {email}: {str(e)}")
+                messages.error(request, 'We could not send the verification code. Please try again later or contact support.')
+                return render(request, 'authentication/auth_request.html')
+        except Exception as e:
+            # Handle user creation or OTP generation errors
+            import logging
+            logger = logging.getLogger('django')
+            logger.error(f"Authentication error: {str(e)}")
+            messages.error(request, 'An error occurred. Please try again later.')
+            return render(request, 'authentication/auth_request.html')
     return render(request, 'authentication/auth_request.html')
 
 def verify_otp_view(request):
