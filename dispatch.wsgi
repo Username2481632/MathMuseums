@@ -10,5 +10,8 @@ for whl in glob.glob(os.path.join(os.path.dirname(__file__), 'staticlibs', '*.wh
 
 # Now initialize Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mathmuseums.settings')
+
+# Use a single entry point for the WSGI application
+# This prevents the "populate() isn't reentrant" error
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
