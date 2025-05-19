@@ -2,9 +2,10 @@
 Options +ExecCGI
 RewriteEngine On
 RewriteBase /
+RewriteRule ^favicon\.ico$ static/img/Museum-icon.svg [L]
+RewriteRule ^$ dispatch.wsgi/ [QSA,PT,L]
 RewriteRule ^(static/.*)$ - [L]
 RewriteRule ^(admin/.*)$ - [L]
 RewriteRule ^(media/.*)$ - [L]
-RewriteRule ^(mathmuseums/dispatch\.wsgi/.*)$ - [L]
-RewriteRule ^favicon\.ico$ static/img/Museum-icon.svg [L]
-RewriteRule ^(.*)$ mathmuseums/mathmuseums/dispatch.wsgi/$1 [QSA,PT,L]
+RewriteRule ^dispatch\.wsgi/.*$ - [L]
+RewriteRule ^(.*)$ dispatch.wsgi/$1 [QSA,PT,L]
