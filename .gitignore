@@ -17,8 +17,15 @@ media
 venv/
 ENV/
 
-# Static files collected
-staticfiles/
+# Static files collected (uncomment only if regenerated during deployment)
+# staticfiles/
+
+# Temporary/development files
+*.bak
+*.swp
+*.tmp
+.DS_Store
+*.~*
 
 # Python
 *.py[cod]
