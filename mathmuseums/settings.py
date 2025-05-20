@@ -100,25 +100,20 @@ WSGI_APPLICATION = 'mathmuseums.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-# Use SQLite on HelioHost to avoid PostgreSQL version issues
-# Detect HelioHost environment
-if os.environ.get('HELIOHOST') or '.heliohost.org' in os.environ.get('SERVER_NAME', ''):
-    # Use PostgreSQL on HelioHost with psycopg3
+# Force SQLite mode for HelioHost due to PostgreSQL 13 compatibility issues
+# Use direct file check for HelioHost detection
+is_heliohost = os.path.exists('/home/math.moshchuk.com')
+
+if is_heliohost:
+    print("HelioHost environment detected - Using SQLite")
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': env('DATABASE_NAME'),
-            'USER': env('DATABASE_USER'),
-            'PASSWORD': env('DATABASE_PASSWORD'),
-            'HOST': env('DATABASE_HOST'),
-            'PORT': env('DATABASE_PORT'),
-            'OPTIONS': {
-                'driver': 'psycopg',  # Use psycopg3 driver
-            },
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
         }
     }
 else:
-    # Use PostgreSQL for development
+    print("Development environment detected - Using PostgreSQL")
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
