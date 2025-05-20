@@ -43,7 +43,8 @@ class User(AbstractUser):
     objects = UserManager()
 
 class OTPCode(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='otp_codes')
+    email = models.EmailField(_('email address'))
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='otp_codes', null=True, blank=True)
     code = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
@@ -54,4 +55,4 @@ class OTPCode(models.Model):
         return not self.is_used and now <= self.expires_at
 
     def __str__(self):
-        return f"OTP for {self.user.email} (valid until {self.expires_at})"
+        return f"OTP for {self.email} (valid until {self.expires_at})"

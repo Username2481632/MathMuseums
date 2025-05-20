@@ -37,7 +37,7 @@ def validate_otp(user, code):
     except OTPCode.DoesNotExist:
         return False
 
-def send_otp_email(user, otp_code):
+def send_otp_email(otp, otp_code):
     """Send OTP code to user's email."""
     import logging
     logger = logging.getLogger('django')
@@ -51,14 +51,44 @@ def send_otp_email(user, otp_code):
             subject,
             message,
             from_email,
-            [user.email],
+            [otp.email],
             fail_silently=False,
         )
         if not sent:
-            logger.warning(f"Email not sent to {user.email}. No error raised, but send_mail returned 0.")
+            logger.warning(f"Email not sent to {otp.email}. No error raised, but send_mail returned 0.")
             raise Exception("Email not sent")
-        logger.info(f"OTP email sent successfully to {user.email}")
+        logger.info(f"OTP email sent successfully to {otp.email}")
         return True
     except Exception as e:
-        logger.error(f"Failed to send OTP email to {user.email}: {str(e)}")
+        logger.error(f"Failed to send OTP email to {otp.email}: {str(e)}")
         raise
+
+def create_otp_for_email(email):
+    """Create a new OTP for the given email."""
+    code = generate_otp()
+    expires_at = timezone.now() + timedelta(minutes=15)
+    otp = OTPCode.objects.create(
+        email=email,
+        code=code,
+        expires_at=expires_at
+    )
+    return otp
+
+def validate_otp_and_create_user(email, code):
+    """Validate an OTP code for an email and create a user if valid."""
+    now = timezone.now()
+    try:
+        otp = OTPCode.objects.get(
+            email=email,
+            code=code,
+            is_used=False,
+            expires_at__gte=now
+        )
+        otp.is_used = True
+        otp.save()
+        user, created = User.objects.get_or_create(email=email)
+        otp.user = user
+        otp.save()
+        return user
+    except OTPCode.DoesNotExist:
+        return None
