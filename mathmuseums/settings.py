@@ -109,7 +109,8 @@ DATABASES = {
         'HOST': env('DATABASE_HOST'),
         'PORT': env('DATABASE_PORT'),
         'OPTIONS': {
-            'options': '-c server_version=140000',
+            # Force Django to skip PostgreSQL version check on HelioHost
+            'isolation_level': None,  # Disable transactions during connection to avoid version check
         },
     }
 }
