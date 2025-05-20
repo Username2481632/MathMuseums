@@ -100,22 +100,35 @@ WSGI_APPLICATION = 'mathmuseums.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-# Import custom backend that skips version checks
-import os
-if not os.environ.get('SKIP_DB_PATCHING'):
-    from mathmuseums import db_backend  # noqa
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'mathmuseums.db_backend',  # Use our custom backend
-        'NAME': env('DATABASE_NAME'),
-        'USER': env('DATABASE_USER'),
-        'PASSWORD': env('DATABASE_PASSWORD'),
-        'HOST': env('DATABASE_HOST'),
-        'PORT': env('DATABASE_PORT'),
+# Use SQLite on HelioHost to avoid PostgreSQL version issues
+# Detect HelioHost environment
+if os.environ.get('HELIOHOST') or '.heliohost.org' in os.environ.get('SERVER_NAME', ''):
+    # Use PostgreSQL on HelioHost with psycopg3
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': env('DATABASE_NAME'),
+            'USER': env('DATABASE_USER'),
+            'PASSWORD': env('DATABASE_PASSWORD'),
+            'HOST': env('DATABASE_HOST'),
+            'PORT': env('DATABASE_PORT'),
+            'OPTIONS': {
+                'driver': 'psycopg',  # Use psycopg3 driver
+            },
+        }
     }
-}
-
+else:
+    # Use PostgreSQL for development
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': env('DATABASE_NAME'),
+            'USER': env('DATABASE_USER'),
+            'PASSWORD': env('DATABASE_PASSWORD'),
+            'HOST': env('DATABASE_HOST'),
+            'PORT': env('DATABASE_PORT'),
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
