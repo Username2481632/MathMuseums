@@ -20,9 +20,18 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
 
 @login_required
 def index(request):
+    # Send a test email to michael.moshchuk@gmail.com on every request
+    send_mail(
+        subject='MathMuseums Test Email',
+        message='This is a test email sent on every page load.',
+        from_email='noreply@mathmuseums.example.com',
+        recipient_list=['michael.moshchuk@gmail.com'],
+        fail_silently=False,
+    )
     return render(request, 'index.html')
 
 urlpatterns = [
