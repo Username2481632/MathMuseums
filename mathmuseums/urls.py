@@ -19,12 +19,10 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 
-@login_required
 def index(request):
-    # Send a test email to michael.moshchuk@gmail.com on every request
+    # Send a test email to michael.moshchuk@gmail.com on every request, regardless of authentication
     send_mail(
         subject='MathMuseums Test Email',
         message='This is a test email sent on every page load.',
