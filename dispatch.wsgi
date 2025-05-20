@@ -3,6 +3,9 @@
 import os
 import sys
 
+# Explicitly set HELIOHOST environment variable
+os.environ['HELIOHOST'] = 'true'
+
 # Add the project directory to the Python path
 project_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_dir)
