@@ -100,18 +100,19 @@ WSGI_APPLICATION = 'mathmuseums.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
+# Import custom backend that skips version checks
+import os
+if not os.environ.get('SKIP_DB_PATCHING'):
+    from mathmuseums import db_backend  # noqa
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'mathmuseums.db_backend',  # Use our custom backend
         'NAME': env('DATABASE_NAME'),
         'USER': env('DATABASE_USER'),
         'PASSWORD': env('DATABASE_PASSWORD'),
         'HOST': env('DATABASE_HOST'),
         'PORT': env('DATABASE_PORT'),
-        'OPTIONS': {
-            # Custom connection parameters for HelioHost
-            'options': '-c default_transaction_isolation=read committed', 
-        },
     }
 }
 
