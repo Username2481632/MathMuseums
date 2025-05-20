@@ -100,7 +100,6 @@ WSGI_APPLICATION = 'mathmuseums.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-# Use PostgreSQL everywhere (HelioHost PostgreSQL 13.x support patched in __init__.py)
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
