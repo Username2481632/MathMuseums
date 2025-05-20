@@ -100,30 +100,17 @@ WSGI_APPLICATION = 'mathmuseums.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-# Force SQLite mode for HelioHost due to PostgreSQL 13 compatibility issues
-# Use direct file check for HelioHost detection
-is_heliohost = os.path.exists('/home/math.moshchuk.com')
-
-if is_heliohost:
-    print("HelioHost environment detected - Using SQLite")
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        }
+# Use PostgreSQL everywhere (HelioHost PostgreSQL 13.x support patched in __init__.py)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': env('DATABASE_NAME'),
+        'USER': env('DATABASE_USER'),
+        'PASSWORD': env('DATABASE_PASSWORD'),
+        'HOST': env('DATABASE_HOST'),
+        'PORT': env('DATABASE_PORT'),
     }
-else:
-    print("Development environment detected - Using PostgreSQL")
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': env('DATABASE_NAME'),
-            'USER': env('DATABASE_USER'),
-            'PASSWORD': env('DATABASE_PASSWORD'),
-            'HOST': env('DATABASE_HOST'),
-            'PORT': env('DATABASE_PORT'),
-        }
-    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
