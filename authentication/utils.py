@@ -40,28 +40,11 @@ def validate_otp(user, code):
 def send_otp_email(otp, otp_code):
     """Send OTP code to user's email."""
     import logging
-    import socket
-    from smtplib import SMTPException
     logger = logging.getLogger('django')
     
     subject = "Your Math Museums verification code"
     message = f"Your verification code is: {otp_code}\n\nThis code will expire in 15 minutes."
     from_email = settings.DEFAULT_FROM_EMAIL
-    
-    # Log mail server settings for debugging
-    logger.info(f"Attempting to send email using: "
-                f"HOST={settings.EMAIL_HOST}, "
-                f"PORT={settings.EMAIL_PORT}, "
-                f"TLS={settings.EMAIL_USE_TLS}, "
-                f"SSL={settings.EMAIL_USE_SSL}")
-    
-    # Add DNS resolution check
-    try:
-        ip_address = socket.gethostbyname(settings.EMAIL_HOST)
-        logger.info(f"Email host {settings.EMAIL_HOST} resolves to {ip_address}")
-    except socket.gaierror as e:
-        logger.error(f"DNS resolution failed for {settings.EMAIL_HOST}: {str(e)}")
-        # Continue anyway to see the full error from send_mail
     
     try:
         sent = send_mail(
@@ -76,12 +59,6 @@ def send_otp_email(otp, otp_code):
             raise Exception("Email not sent")
         logger.info(f"OTP email sent successfully to {otp.email}")
         return True
-    except SMTPException as e:
-        logger.error(f"SMTP error when sending to {otp.email}: {str(e)}")
-        raise
-    except socket.error as e:
-        logger.error(f"Socket/network error when sending to {otp.email}: {str(e)}")
-        raise
     except Exception as e:
         logger.error(f"Failed to send OTP email to {otp.email}: {str(e)}")
         raise
