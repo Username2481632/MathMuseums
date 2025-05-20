@@ -165,3 +165,12 @@ class SyncLogListView(generics.ListAPIView):
     
     def get_queryset(self):
         return SyncLog.objects.filter(user=self.request.user).order_by('-sync_time')[:20]
+
+class AuthStatusView(APIView):
+    """Lightweight endpoint to check authentication status."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        if request.user.is_authenticated:
+            return Response({'authenticated': True}, status=status.HTTP_200_OK)
+        return Response({'authenticated': False}, status=status.HTTP_401_UNAUTHORIZED)

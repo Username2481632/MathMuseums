@@ -12,7 +12,7 @@ const AuthClient = (function() {
      */
     async function checkAuthentication() {
         try {
-            const response = await fetch('/api/concepts/', {
+            const response = await fetch('/api/auth/status/', {
                 method: 'GET',
                 credentials: 'same-origin'
             });

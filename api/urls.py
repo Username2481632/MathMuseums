@@ -7,4 +7,5 @@ urlpatterns = [
     path('preferences/', views.UserPreferenceRetrieveUpdateView.as_view(), name='user-preferences'),
     path('sync/', views.SyncView.as_view(), name='sync'),
     path('sync/logs/', views.SyncLogListView.as_view(), name='sync-logs'),
+    path('auth/status/', views.AuthStatusView.as_view(), name='auth-status'),
 ]
