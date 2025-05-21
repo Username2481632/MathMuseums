@@ -16,11 +16,11 @@ const AuthClient = (function() {
                 method: 'GET',
                 credentials: 'same-origin'
             });
-            
-            if (response.status === 200) {
+            const data = await response.json();
+            if (data.authenticated === true) {
                 isAuthenticated = true;
                 return true;
-            } else if (response.status === 401 || response.status === 403) {
+            } else {
                 isAuthenticated = false;
                 // Redirect to login page if not authenticated
                 window.location.href = '/auth/request/';

@@ -171,6 +171,4 @@ class AuthStatusView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        if request.user.is_authenticated:
-            return Response({'authenticated': True}, status=status.HTTP_200_OK)
-        return Response({'authenticated': False}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({'authenticated': request.user.is_authenticated}, status=status.HTTP_200_OK)
