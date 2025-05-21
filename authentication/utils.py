@@ -54,9 +54,21 @@ def send_otp_email(otp, otp_code):
             [otp.email],
             fail_silently=False,
         )
-        if not sent:
-            logger.warning(f"Email not sent to {otp.email}. No error raised, but send_mail returned 0.")
-            raise Exception("Email not sent")
+        # Super detailed logging for debugging email sending
+        logger.info(
+            f"OTP email send attempt details:\n"
+            f"  Recipient: {otp.email}\n"
+            f"  Subject: {subject}\n"
+            f"  Message: {message}\n"
+            f"  From: {from_email}\n"
+            f"  EMAIL_HOST: {getattr(settings, 'EMAIL_HOST', None)}\n"
+            f"  EMAIL_PORT: {getattr(settings, 'EMAIL_PORT', None)}\n"
+            f"  EMAIL_HOST_USER: {getattr(settings, 'EMAIL_HOST_USER', None)}\n"
+            f"  EMAIL_USE_SSL: {getattr(settings, 'EMAIL_USE_SSL', None)}\n"
+            f"  EMAIL_USE_TLS: {getattr(settings, 'EMAIL_USE_TLS', None)}\n"
+            f"  DEFAULT_FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', None)}\n"
+            f"  fail_silently: False\n"
+        )
         logger.info(f"OTP email sent successfully to {otp.email}")
         return True
     except Exception as e:
