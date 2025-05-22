@@ -40,7 +40,7 @@ def validate_otp(user, code):
 def send_otp_email(otp, otp_code):
     """Send OTP code to user's email."""
     import logging
-    logger = logging.getLogger('django')
+    logger = logging.getLogger('authentication')
     
     subject = "Your Math Museums verification code"
     message = f"Your verification code is: {otp_code}\n\nThis code will expire in 15 minutes."
@@ -57,7 +57,16 @@ def send_otp_email(otp, otp_code):
         if not sent:
             logger.warning(f"Email not sent to {otp.email}. No error raised, but send_mail returned 0.")
             raise Exception("Email not sent")
-        logger.info(f"OTP email sent successfully to {otp.email}")
+        logger.debug(
+            f"OTP email sent successfully to {otp.email}\n"
+            f"  Recipient: {otp.email}\n"
+            f"  Subject: {subject}\n"
+            f"  Message: {message}\n"
+            f"  From: {from_email}\n"
+            f"  EMAIL_BACKEND: {getattr(settings, 'EMAIL_BACKEND', None)}\n"
+            f"  DEFAULT_FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', None)}\n"
+            f"  fail_silently: False\n"
+        )
         return True
     except Exception as e:
         logger.error(
@@ -67,11 +76,7 @@ def send_otp_email(otp, otp_code):
             f"  Subject: {subject}\n"
             f"  Message: {message}\n"
             f"  From: {from_email}\n"
-            f"  EMAIL_HOST: {getattr(settings, 'EMAIL_HOST', None)}\n"
-            f"  EMAIL_PORT: {getattr(settings, 'EMAIL_PORT', None)}\n"
-            f"  EMAIL_HOST_USER: {getattr(settings, 'EMAIL_HOST_USER', None)}\n"
-            f"  EMAIL_USE_SSL: {getattr(settings, 'EMAIL_USE_SSL', None)}\n"
-            f"  EMAIL_USE_TLS: {getattr(settings, 'EMAIL_USE_TLS', None)}\n"
+            f"  EMAIL_BACKEND: {getattr(settings, 'EMAIL_BACKEND', None)}\n"
             f"  DEFAULT_FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', None)}\n"
             f"  fail_silently: False\n"
         )
