@@ -54,8 +54,14 @@ def send_otp_email(otp, otp_code):
             [otp.email],
             fail_silently=False,
         )
-        # Super detailed logging for debugging email sending
-        logger.warning(
+        if not sent:
+            logger.warning(f"Email not sent to {otp.email}. No error raised, but send_mail returned 0.")
+            raise Exception("Email not sent")
+        logger.info(f"OTP email sent successfully to {otp.email}")
+        return True
+    except Exception as e:
+        logger.error(
+            f"Failed to send OTP email to {otp.email}: {str(e)}\n"
             f"OTP email send attempt details:\n"
             f"  Recipient: {otp.email}\n"
             f"  Subject: {subject}\n"
@@ -69,10 +75,6 @@ def send_otp_email(otp, otp_code):
             f"  DEFAULT_FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', None)}\n"
             f"  fail_silently: False\n"
         )
-        logger.info(f"OTP email sent successfully to {otp.email}")
-        return True
-    except Exception as e:
-        logger.error(f"Failed to send OTP email to {otp.email}: {str(e)}")
         raise
 
 def create_otp_for_email(email):
