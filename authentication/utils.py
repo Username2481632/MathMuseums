@@ -55,7 +55,7 @@ def send_otp_email(otp, otp_code):
             fail_silently=False,
         )
         # Super detailed logging for debugging email sending
-        logger.info(
+        logger.warning(
             f"OTP email send attempt details:\n"
             f"  Recipient: {otp.email}\n"
             f"  Subject: {subject}\n"
