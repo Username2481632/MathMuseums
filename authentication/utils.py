@@ -69,6 +69,8 @@ def send_otp_email(otp, otp_code):
         )
         return True
     except Exception as e:
+        import django
+        django_version = getattr(django, '__version__', 'unknown')
         logger.error(
             f"Failed to send OTP email to {otp.email}: {str(e)}\n"
             f"OTP email send attempt details:\n"
@@ -78,6 +80,7 @@ def send_otp_email(otp, otp_code):
             f"  From: {from_email}\n"
             f"  EMAIL_BACKEND: {getattr(settings, 'EMAIL_BACKEND', None)}\n"
             f"  DEFAULT_FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', None)}\n"
+            f"  Django version: {django_version}\n"
             f"  fail_silently: False\n"
         )
         raise
