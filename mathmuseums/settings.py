@@ -178,8 +178,8 @@ if DEBUG:
     # Use console backend for development
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
-    # Use Sendmail backend for production
-    EMAIL_BACKEND = 'django.core.mail.backends.sendmail.EmailBackend'
+    # Use custom Sendmail backend for production
+    EMAIL_BACKEND = 'mathmuseums.email_backends.sendmail.EmailBackend'
     # Optionally specify the path to sendmail if needed (default is usually fine)
     # EMAIL_SENDMAIL = '/usr/sbin/sendmail'
 
