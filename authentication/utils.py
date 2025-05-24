@@ -42,6 +42,11 @@ def send_otp_email(otp, otp_code):
     subject = "Your Math Museums verification code"
     message = f"Your verification code is: {otp_code}\n\nThis code will expire in 15 minutes."
     from_email = settings.DEFAULT_FROM_EMAIL
+    
+    # Enhanced debugging for SMTP issues
+    import logging
+    logger = logging.getLogger('authentication')
+    
     try:
         sent = send_mail(
             subject,
@@ -54,10 +59,15 @@ def send_otp_email(otp, otp_code):
             raise Exception("Email not sent")
         return True
     except Exception as e:
-        import logging
         import django
-        logger = logging.getLogger('authentication')
         django_version = getattr(django, '__version__', 'unknown')
+        
+        # Get email credentials for logging (mask password for security)
+        email_username = getattr(settings, 'EMAIL_HOST_USER', 'Not set')
+        email_password = getattr(settings, 'EMAIL_HOST_PASSWORD', None)
+        password_status = 'Set' if email_password else 'Not set'
+        password_masked = f"{'*' * (len(email_password) - 2)}{email_password[-2:]}" if email_password and len(email_password) > 2 else password_status
+        
         logger.error(
             f"Failed to send OTP email: {str(e)}\n"
             f"OTP email send attempt details:\n"
@@ -66,6 +76,12 @@ def send_otp_email(otp, otp_code):
             f"  Message: {message}\n"
             f"  From: {from_email}\n"
             f"  EMAIL_BACKEND: {getattr(settings, 'EMAIL_BACKEND', None)}\n"
+            f"  EMAIL_HOST: {getattr(settings, 'EMAIL_HOST', 'Not set')}\n"
+            f"  EMAIL_PORT: {getattr(settings, 'EMAIL_PORT', 'Not set')}\n"
+            f"  EMAIL_HOST_USER: {email_username}\n"
+            f"  EMAIL_HOST_PASSWORD: {password_masked}\n"
+            f"  EMAIL_USE_TLS: {getattr(settings, 'EMAIL_USE_TLS', 'Not set')}\n"
+            f"  EMAIL_USE_SSL: {getattr(settings, 'EMAIL_USE_SSL', 'Not set')}\n"
             f"  DEFAULT_FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', None)}\n"
             f"  Django version: {django_version}\n"
             f"  fail_silently: False\n"
