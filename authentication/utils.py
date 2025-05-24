@@ -42,7 +42,6 @@ def send_otp_email(otp, otp_code):
     subject = "Your Math Museums verification code"
     message = f"Your verification code is: {otp_code}\n\nThis code will expire in 15 minutes."
     from_email = settings.DEFAULT_FROM_EMAIL
-    
     try:
         sent = send_mail(
             subject,
@@ -55,6 +54,22 @@ def send_otp_email(otp, otp_code):
             raise Exception("Email not sent")
         return True
     except Exception as e:
+        import logging
+        import django
+        logger = logging.getLogger('authentication')
+        django_version = getattr(django, '__version__', 'unknown')
+        logger.error(
+            f"Failed to send OTP email: {str(e)}\n"
+            f"OTP email send attempt details:\n"
+            f"  Recipient: {otp.email}\n"
+            f"  Subject: {subject}\n"
+            f"  Message: {message}\n"
+            f"  From: {from_email}\n"
+            f"  EMAIL_BACKEND: {getattr(settings, 'EMAIL_BACKEND', None)}\n"
+            f"  DEFAULT_FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', None)}\n"
+            f"  Django version: {django_version}\n"
+            f"  fail_silently: False\n"
+        )
         raise
 
 def create_otp_for_email(email):
