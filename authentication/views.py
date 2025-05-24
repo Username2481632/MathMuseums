@@ -21,15 +21,9 @@ def auth_request_view(request):
                 messages.success(request, f'An OTP has been sent to {email}.')
                 return redirect('verify_otp')
             except Exception as e:
-                import logging
-                logger = logging.getLogger('django')
-                logger.error(f"Email sending error for {email}: {str(e)}")
                 messages.error(request, 'We could not send the verification code. Please try again later or contact support.')
                 return render(request, 'authentication/auth_request.html')
         except Exception as e:
-            import logging
-            logger = logging.getLogger('django')
-            logger.error(f"Authentication error: {str(e)}")
             messages.error(request, 'An error occurred. Please try again later.')
             return render(request, 'authentication/auth_request.html')
     return render(request, 'authentication/auth_request.html')

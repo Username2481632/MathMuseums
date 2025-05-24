@@ -39,9 +39,6 @@ def validate_otp(user, code):
 
 def send_otp_email(otp, otp_code):
     """Send OTP code to user's email."""
-    import logging
-    logger = logging.getLogger('authentication')
-    
     subject = "Your Math Museums verification code"
     message = f"Your verification code is: {otp_code}\n\nThis code will expire in 15 minutes."
     from_email = settings.DEFAULT_FROM_EMAIL
@@ -55,34 +52,9 @@ def send_otp_email(otp, otp_code):
             fail_silently=False,
         )
         if not sent:
-            logger.warning(f"Email not sent to {otp.email}. No error raised, but send_mail returned 0.")
             raise Exception("Email not sent")
-        logger.debug(
-            f"OTP email sent successfully to {otp.email}\n"
-            f"  Recipient: {otp.email}\n"
-            f"  Subject: {subject}\n"
-            f"  Message: {message}\n"
-            f"  From: {from_email}\n"
-            f"  EMAIL_BACKEND: {getattr(settings, 'EMAIL_BACKEND', None)}\n"
-            f"  DEFAULT_FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', None)}\n"
-            f"  fail_silently: False\n"
-        )
         return True
     except Exception as e:
-        import django
-        django_version = getattr(django, '__version__', 'unknown')
-        logger.error(
-            f"Failed to send OTP email to {otp.email}: {str(e)}\n"
-            f"OTP email send attempt details:\n"
-            f"  Recipient: {otp.email}\n"
-            f"  Subject: {subject}\n"
-            f"  Message: {message}\n"
-            f"  From: {from_email}\n"
-            f"  EMAIL_BACKEND: {getattr(settings, 'EMAIL_BACKEND', None)}\n"
-            f"  DEFAULT_FROM_EMAIL: {getattr(settings, 'DEFAULT_FROM_EMAIL', None)}\n"
-            f"  Django version: {django_version}\n"
-            f"  fail_silently: False\n"
-        )
         raise
 
 def create_otp_for_email(email):
