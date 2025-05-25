@@ -1,8 +1,0 @@
-# .htaccess for Python WSGI app
-# Passenger directives removed (not allowed on HelioHost shared hosting)
-
-# If you want to use WSGI, set the entry point in your hosting control panel.
-# Optionally, you can enable CGI for .wsgi files:
-Options +ExecCGI
-AddHandler wsgi-script .wsgi
-DirectoryIndex dispatch.wsgi
