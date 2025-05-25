@@ -1,28 +1,30 @@
-import smtplib
-import ssl
-import traceback
+import django
+from django.conf import settings
+from django.core.mail import send_mail
+
+settings.configure(
+    EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend',
+    EMAIL_HOST='math.moshchuk.com',
+    EMAIL_PORT=465,
+    EMAIL_USE_SSL=True,
+    EMAIL_HOST_USER='noreply@math.moshchuk.com',
+    EMAIL_HOST_PASSWORD='12345',
+    DEFAULT_FROM_EMAIL='noreply@math.moshchuk.com',
+    SECRET_KEY='dummy',
+    INSTALLED_APPS=[],
+)
+django.setup()
 
 def application(environ, start_response):
-    smtp_host = 'math.moshchuk.com'
-    smtp_port = 465
-    smtp_user = 'noreply@math.moshchuk.com'
-    smtp_pass = '12345'
-
-    from_address = smtp_user
     to_address = 'test-v8u6s6y9q@srv1.mail-tester.com'
     subject = 'An Email'
     body = 'This is an email.'
-    message = "Subject: %s\n\n%s" % (subject, body)
-
-    context = ssl.create_default_context()
     try:
-        with smtplib.SMTP_SSL(smtp_host, smtp_port, context=context) as server:
-            server.login(smtp_user, smtp_pass)
-            server.sendmail(from_address, to_address, message)
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [to_address], fail_silently=False)
         status_message = f"Email sent to {to_address}"
     except Exception as e:
         status_message = f"Failed to send email: {e}"
-        traceback.print_exc()
+        import traceback; traceback.print_exc()
 
     print(status_message)
     start_response('200 OK', [('Content-Type', 'text/html; charset=utf-8')])
