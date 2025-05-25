@@ -1,0 +1,7 @@
+# Enable CGI and set dispatch.wsgi as default page
+Options +ExecCGI
+AddHandler cgi-script .wsgi
+DirectoryIndex dispatch.wsgi
+
+# Set Python path
+SetEnv PYTHONPATH /home/coder248/.local/lib/python3.12/site-packages
