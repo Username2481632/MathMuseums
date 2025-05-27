@@ -4,9 +4,9 @@ from django.contrib.auth import login, logout
 from .utils import create_otp_for_email, send_otp_email, validate_otp_and_create_user
 
 def auth_request_view(request):
-    # If user is already authenticated, redirect to index
+    # If user is already authenticated, redirect to auth check
     if request.user.is_authenticated:
-        return redirect('index')
+        return redirect('auth_check')
     
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -38,7 +38,7 @@ def verify_otp_view(request):
         if user:
             login(request, user)
             messages.success(request, 'Authentication successful!')
-            return redirect('index')
+            return redirect('auth_check')
         else:
             messages.error(request, 'Invalid or expired OTP. Please try again.')
     return render(request, 'authentication/verify_otp.html', {'email': email})

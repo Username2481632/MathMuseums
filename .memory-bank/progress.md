@@ -84,6 +84,21 @@
 - Fixed: Tiles could be resized outside the container boundaries
 - Fixed: Inconsistent boundary limits between resize and drag operations
 
+### Critical Security Fix (May 27, 2025)
+- **IDENTIFIED**: Critical security vulnerability where entire application was exposed to unauthenticated users
+- **Problem**: Application loaded all frontend code, templates, and resources before checking authentication
+- **Impact**: Unauthorized users could access complete application logic, API endpoints, and business logic
+- **SOLUTION IMPLEMENTED**: Authentication-first loading architecture
+  - Modified URL routing to implement two-step authentication flow
+  - Created minimal `auth_check.html` template that only loads authentication scripts
+  - Added `@login_required` decorator to protect main application access
+  - Implemented protected static file serving for JavaScript and CSS files
+  - Route `/` now serves auth check page, `/app/` serves authenticated application
+  - JavaScript/CSS files now require authentication, images remain public
+  - Updated authentication views to redirect to new auth check flow
+- **TESTING COMPLETED**: Verified no resources are exposed to unauthenticated users
+- **STATUS**: Security vulnerability fully resolved
+
 ### Deployment and Cleanup
 - Bundled Django REST Framework and dependencies as .whl files in staticlibs for deployment without shell access
 - Updated dispatch.wsgi to load .whl files from staticlibs
