@@ -1,37 +1,25 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
-# Simple CGI script that calls our WSGI app
 import os
 import sys
 
-# Add current directory to Python path
-sys.path.insert(0, os.path.dirname(__file__))
+# Add the project directory to the Python path
+project_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, project_dir)
 
-# Import our WSGI application
-from app import application
+# Add staticlibs directory to the Python path
+staticlibs_dir = os.path.join(project_dir, 'staticlibs')
+sys.path.insert(0, staticlibs_dir)
 
-# Simple WSGI-to-CGI adapter
-def run_wsgi_as_cgi():
-    environ = dict(os.environ)
-    environ['REQUEST_METHOD'] = os.environ.get('REQUEST_METHOD', 'GET')
-    environ['PATH_INFO'] = os.environ.get('PATH_INFO', '/')
-    environ['QUERY_STRING'] = os.environ.get('QUERY_STRING', '')
-    
-    def start_response(status, headers):
-        print(f"Status: {status}")
-        for name, value in headers:
-            print(f"{name}: {value}")
-        print()  # Empty line to end headers
-    
-    # Call the WSGI application
-    response = application(environ, start_response)
-    
-    # Output the response
-    for data in response:
-        if isinstance(data, bytes):
-            sys.stdout.buffer.write(data)
-        else:
-            print(data, end='')
+# Load wheel files
+import glob  # noqa: E402
+for whl in glob.glob(os.path.join(staticlibs_dir, '*.whl')):
+    if whl not in sys.path:
+        sys.path.insert(0, whl)
 
-if __name__ == '__main__':
-    run_wsgi_as_cgi()
+# Set Django settings module
+os.environ['DJANGO_SETTINGS_MODULE'] = 'mathmuseums.settings'
+
+# Import and set up WSGI application
+from django.core.wsgi import get_wsgi_application  # noqa: E402
+application = get_wsgi_application()
