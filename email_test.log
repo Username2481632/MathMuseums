@@ -1,0 +1,38 @@
+Traceback (most recent call last):
+  File "/var/home/micha/Documents/Coding/2025/MathMuseums/app.py", line 23, in application
+    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [to_address], fail_silently=False)
+    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/micha/.local/lib/python3.13/site-packages/django/core/mail/__init__.py", line 92, in send_mail
+    return mail.send()
+           ~~~~~~~~~^^
+  File "/home/micha/.local/lib/python3.13/site-packages/django/core/mail/message.py", line 307, in send
+    return self.get_connection(fail_silently).send_messages([self])
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "/home/micha/.local/lib/python3.13/site-packages/django/core/mail/backends/smtp.py", line 128, in send_messages
+    new_conn_created = self.open()
+  File "/home/micha/.local/lib/python3.13/site-packages/django/core/mail/backends/smtp.py", line 95, in open
+    self.connection.login(self.username, self.password)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib64/python3.13/smtplib.py", line 750, in login
+    raise last_exception
+  File "/usr/lib64/python3.13/smtplib.py", line 739, in login
+    (code, resp) = self.auth(
+                   ~~~~~~~~~^
+        authmethod, getattr(self, method_name),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        initial_response_ok=initial_response_ok)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib64/python3.13/smtplib.py", line 662, in auth
+    raise SMTPAuthenticationError(code, resp)
+smtplib.SMTPAuthenticationError: (535, b'5.7.8 Error: authentication failed: authentication failure')
+Failed to send email: (535, b'5.7.8 Error: authentication failed: authentication failure')
+Status: 200 OK
+Content-Type: text/html; charset=utf-8
+
+<html>
+<head><title>Send Mail Result</title></head>
+<body>
+<h1>Mail Result</h1>
+<p>Failed to send email: (535, b'5.7.8 Error: authentication failed: authentication failure')</p>
+</body>
+</html>
