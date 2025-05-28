@@ -24,6 +24,9 @@ from django.http import FileResponse, Http404
 from django.views.static import serve
 import os
 
+# Import migration runner for database setup
+from migrate_runner import run_migrations_view
+
 def auth_check(request):
     """Minimal page that only checks authentication before loading app resources"""
     return render(request, 'auth_check.html')
@@ -85,6 +88,8 @@ urlpatterns = [
     path('api/', include('api.urls')),
     path('auth/', include('authentication.urls')),
     path('app/', app_view, name='app'),
+    # TEMPORARY: Migration runner for database setup (REMOVE AFTER USE)
+    path('run-migrations/', run_migrations_view, name='run_migrations'),
     # Protected static files (JS/CSS) - require authentication
     path('static/js/<path:path>', protected_js, name='protected_js'),
     path('static/css/<path:path>', protected_css, name='protected_css'),
