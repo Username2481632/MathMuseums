@@ -101,19 +101,28 @@ def create_otp_for_email(email):
 
 def validate_otp_and_create_user(email, code):
     """Validate an OTP code for an email and create a user if valid."""
+    from django.db import transaction
+    
     now = timezone.now()
     try:
-        otp = OTPCode.objects.get(
-            email=email,
-            code=code,
-            is_used=False,
-            expires_at__gte=now
-        )
-        otp.is_used = True
-        otp.save()
-        user, created = User.objects.get_or_create(email=email)
-        otp.user = user
-        otp.save()
-        return user
+        with transaction.atomic():
+            otp = OTPCode.objects.get(
+                email=email,
+                code=code,
+                is_used=False,
+                expires_at__gte=now
+            )
+            otp.is_used = True
+            otp.save()
+            user, _ = User.objects.get_or_create(email=email)
+            otp.user = user
+            otp.save()
+            return user
     except OTPCode.DoesNotExist:
+        return None
+    except Exception as e:
+        # Log the error for debugging
+        import logging
+        logger = logging.getLogger('authentication')
+        logger.error(f"Failed to validate OTP and create user for {email}: {str(e)}")
         return None

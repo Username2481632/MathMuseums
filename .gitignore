@@ -1,6 +1,6 @@
 /.github
 /.history
-/memory-bank
+/.memory-bank
 
 # Django
 *.log

@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.db import transaction
 from .models import ConceptTile, UserPreference, SyncLog
 from .serializers import ConceptTileSerializer, UserPreferenceSerializer, SyncLogSerializer
@@ -26,27 +27,35 @@ class ConceptTileRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView
         return ConceptTile.objects.filter(user=self.request.user)
     
     def update(self, request, *args, **kwargs):
-        instance = self.get_object()
+        from django.db import transaction
         
-        # Get the version from the request data
-        incoming_version = request.data.get('version', None)
-        
-        # Check for concurrent modifications
-        if incoming_version and int(incoming_version) != instance.version:
-            return Response(
-                {"detail": "Concept has been modified since last sync. Please refresh and try again."},
-                status=status.HTTP_409_CONFLICT
-            )
-        
-        response = super().update(request, *args, **kwargs)
-        
-        # Increment version on successful update
-        if response.status_code == status.HTTP_200_OK:
-            instance.version += 1
-            instance.last_synced = timezone.now()
-            instance.save()
-        
-        return response
+        with transaction.atomic():
+            instance = self.get_object()
+            
+            # Get the version from the request data
+            incoming_version = request.data.get('version', None)
+            
+            # Check for concurrent modifications
+            if incoming_version and int(incoming_version) != instance.version:
+                return Response(
+                    {"detail": "Concept has been modified since last sync. Please refresh and try again."},
+                    status=status.HTTP_409_CONFLICT
+                )
+            
+            # Store the current version for incrementing
+            current_version = instance.version
+            
+            response = super().update(request, *args, **kwargs)
+            
+            # Increment version on successful update
+            if response.status_code == status.HTTP_200_OK:
+                # Refresh from database to get the updated instance
+                instance.refresh_from_db()
+                instance.version = current_version + 1
+                instance.last_synced = timezone.now()
+                instance.save(update_fields=['version', 'last_synced'])
+            
+            return response
 
 class UserPreferenceRetrieveUpdateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -80,27 +89,58 @@ class SyncView(APIView):
         
         try:
             updated_items = 0
-            conflicts = []
+            conflicts_resolved = 0
+            errors = []
             
             for concept_data in concepts_data:
                 concept_type = concept_data.get('concept_type')
                 incoming_version = concept_data.get('version', 1)
+                incoming_updated_at = concept_data.get('updated_at')
                 
                 # Try to find existing concept
                 try:
-                    concept = ConceptTile.objects.get(
+                    concept = ConceptTile.objects.select_for_update().get(
                         user=request.user, 
                         concept_type=concept_type
                     )
                     
-                    # Check for version conflicts
-                    if concept.version > incoming_version:
-                        conflicts.append({
-                            'concept_type': concept_type,
-                            'server_version': concept.version,
-                            'client_version': incoming_version
-                        })
-                        continue
+                    # Enhanced conflict resolution: use timestamp if versions conflict
+                    version_conflict = concept.version > incoming_version
+                    timestamp_conflict = False
+                    
+                    if incoming_updated_at:
+                        if isinstance(incoming_updated_at, str):
+                            incoming_time = parse_datetime(incoming_updated_at)
+                        else:
+                            incoming_time = incoming_updated_at
+                            
+                        if incoming_time and concept.updated_at > incoming_time:
+                            timestamp_conflict = True
+                    
+                    # If there's a conflict, resolve using the most recent timestamp
+                    if version_conflict or timestamp_conflict:
+                        if timestamp_conflict and not version_conflict:
+                            # Server data is newer, skip client update but log it
+                            conflicts_resolved += 1
+                            continue
+                        elif version_conflict and incoming_updated_at:
+                            # Check if client data is actually newer despite version conflict
+                            if isinstance(incoming_updated_at, str):
+                                incoming_time = parse_datetime(incoming_updated_at)
+                            else:
+                                incoming_time = incoming_updated_at
+                                
+                            if incoming_time and incoming_time > concept.updated_at:
+                                # Client data is newer, allow the update
+                                conflicts_resolved += 1
+                            else:
+                                # Server data is newer, skip
+                                conflicts_resolved += 1
+                                continue
+                        else:
+                            # No timestamp available, skip to avoid data loss
+                            conflicts_resolved += 1
+                            continue
                     
                     # Update the concept
                     serializer = ConceptTileSerializer(
@@ -114,6 +154,8 @@ class SyncView(APIView):
                             last_synced=timezone.now()
                         )
                         updated_items += 1
+                    else:
+                        errors.append(f"Validation error for {concept_type}: {serializer.errors}")
                     
                 except ConceptTile.DoesNotExist:
                     # Create new concept
@@ -125,11 +167,16 @@ class SyncView(APIView):
                             last_synced=timezone.now()
                         )
                         updated_items += 1
+                    else:
+                        errors.append(f"Validation error for new {concept_type}: {serializer.errors}")
             
             # Update sync log
-            if conflicts:
-                sync_log.status = 'conflict'
-                sync_log.error_message = f"Conflicts found: {len(conflicts)}"
+            if errors:
+                sync_log.status = 'failed'
+                sync_log.error_message = '; '.join(errors[:5])  # Limit error message length
+            elif conflicts_resolved > 0:
+                sync_log.status = 'complete'
+                sync_log.error_message = f"Resolved {conflicts_resolved} conflicts using timestamps"
             else:
                 sync_log.status = 'complete'
             
@@ -141,10 +188,10 @@ class SyncView(APIView):
             concept_serializer = ConceptTileSerializer(concepts, many=True)
             
             return Response({
-                'status': 'success' if not conflicts else 'conflict',
+                'status': 'success',
                 'sync_id': sync_log.id,
                 'items_synced': updated_items,
-                'conflicts': conflicts,
+                'conflicts_resolved': conflicts_resolved,
                 'concepts': concept_serializer.data
             })
             

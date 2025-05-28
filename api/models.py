@@ -17,7 +17,7 @@ class ConceptTile(models.Model):
         ('trigonometric', 'Trigonometric'),
         ('piecewise', 'Piecewise'),
     ]
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='concept_tiles')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='concept_tiles')
     concept_type = models.CharField(max_length=20, choices=CONCEPT_CHOICES)
     position_x = models.IntegerField(default=0)
     position_y = models.IntegerField(default=0)
@@ -38,7 +38,7 @@ class ConceptTile(models.Model):
         return f"{self.user.email} - {self.get_concept_type_display()}"
 
 class UserPreference(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='preferences')
+    user = models.OneToOneField(User, on_delete=models.PROTECT, related_name='preferences')
     onboarding_disabled = models.BooleanField(default=False)
     theme = models.CharField(max_length=20, default='light')
     # Add more preferences as needed
@@ -54,7 +54,7 @@ class SyncLog(models.Model):
         ('conflict', 'Conflict'),
     ]
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sync_logs')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name='sync_logs')
     device_id = models.CharField(max_length=100)  # Unique identifier for the device
     sync_time = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
