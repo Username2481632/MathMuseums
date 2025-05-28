@@ -68,7 +68,6 @@ def run_migrations_view(request):
         """)
     
     elif request.method == 'POST':
-    elif request.method == 'POST':
         try:
             # Set up Django environment
             os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'mathmuseums.settings')
