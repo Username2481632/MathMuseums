@@ -219,19 +219,3 @@ class AuthStatusView(APIView):
 
     def get(self, request):
         return Response({'authenticated': request.user.is_authenticated}, status=status.HTTP_200_OK)
-
-# REMOVE TEMPORARY MIGRATION ENDPOINT
-# from django.http import JsonResponse
-# from django.core.management import call_command
-# from django.views.decorators.csrf import csrf_exempt
-#
-# @csrf_exempt
-# def run_migrations_view(request):
-#     if request.method == 'POST':
-#         try:
-#             call_command('makemigrations', 'api')
-#             call_command('migrate', 'api')
-#             return JsonResponse({'status': 'success', 'message': 'Migrations applied.'})
-#         except Exception as e:
-#             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-#     return JsonResponse({'status': 'error', 'message': 'POST required.'}, status=405)

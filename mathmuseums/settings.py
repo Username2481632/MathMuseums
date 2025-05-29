@@ -29,7 +29,7 @@ env = environ.Env(
     DATABASE_USER=(str, 'mathmuseums_user'),
     DATABASE_PASSWORD=(str, 'development_password'),
     DATABASE_HOST=(str, 'localhost'),
-    DATABASE_PORT=(int, 5432),
+    DATABASE_PORT=(int, 3306),  # Changed from 5432 (Postgres) to 3306 (MySQL/MariaDB default)
 )
 
 # Read .env file if it exists
