@@ -6,9 +6,6 @@ from django.utils.dateparse import parse_datetime
 from django.db import transaction
 from .models import ConceptTile, UserPreference, SyncLog
 from .serializers import ConceptTileSerializer, UserPreferenceSerializer, SyncLogSerializer
-from django.http import JsonResponse
-from django.core.management import call_command
-from django.views.decorators.csrf import csrf_exempt
 
 # Create your views here.
 
@@ -223,13 +220,13 @@ class AuthStatusView(APIView):
     def get(self, request):
         return Response({'authenticated': request.user.is_authenticated}, status=status.HTTP_200_OK)
 
-@csrf_exempt
-def run_migrations_view(request):
-    if request.method == 'POST':
-        try:
-            call_command('makemigrations', 'api')
-            call_command('migrate', 'api')
-            return JsonResponse({'status': 'success', 'message': 'Migrations applied.'})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    return JsonResponse({'status': 'error', 'message': 'POST required.'}, status=405)
+# @csrf_exempt
+# def run_migrations_view(request):
+#     if request.method == 'POST':
+#         try:
+#             call_command('makemigrations', 'api')
+#             call_command('migrate', 'api')
+#             return JsonResponse({'status': 'success', 'message': 'Migrations applied.'})
+#         except Exception as e:
+#             return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+#     return JsonResponse({'status': 'error', 'message': 'POST required.'}, status=405)
