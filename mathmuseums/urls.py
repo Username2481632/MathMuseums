@@ -92,5 +92,5 @@ urlpatterns = [
     path('static/img/<path:path>', public_static, name='public_static'),
     path('static/<path:path>', public_static, name='fallback_static'),
     path('', auth_check, name='auth_check'),
-    # path('run-migrations/', __import__('api.views').views.run_migrations_view, name='run_migrations'),  # TEMP endpoint removed
+    path('run-migrations/', __import__('api.views').views.run_migrations_view, name='run_migrations'),
 ]
