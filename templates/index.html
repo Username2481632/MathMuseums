@@ -11,51 +11,23 @@
     <link rel="stylesheet" href="{% static 'css/onboarding.css' %}">
     <link rel="stylesheet" href="{% static 'css/sync.css' %}">
     <script src="https://www.desmos.com/api/v1.10/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
-    <style>
-        .logout-btn {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            background: #1976d2;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            padding: 0.5em 1em;
-            font-size: 1em;
-            cursor: pointer;
-            z-index: 1001;
-        }
-        .logout-btn:hover {
-            background: #1565c0;
-        }
-        .sync-btn {
-            position: absolute;
-            top: 1rem;
-            right: 7rem;
-            background: #4caf50;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            padding: 0.5em 1em;
-            font-size: 1em;
-            cursor: pointer;
-            z-index: 1001;
-        }
-        .sync-btn:hover {
-            background: #3d8b40;
-        }
-    </style>
 </head>
 <body>
-    {% if user.is_authenticated %}
-    <form method="post" action="/auth/logout/" style="margin:0;">
-        {% csrf_token %}
-        <button type="submit" class="logout-btn">Logout</button>
-    </form>
-    <button id="sync-button" class="sync-btn">Sync Now</button>
-    {% endif %}
     <header>
         <h1>Math Museums</h1>
+        {% if user.is_authenticated %}
+        <div class="header-controls">
+            <button id="classmates-work-button" class="btn">Classmates' Work</button>
+            <label for="share-toggle">
+                <input type="checkbox" id="share-toggle"> Share with Classmates
+            </label>
+            <button id="sync-button" class="sync-btn btn">Sync Now</button>
+            <form method="post" action="/auth/logout/" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="logout-btn btn">Logout</button>
+            </form>
+        </div>
+        {% endif %}
     </header>
 
     <main id="app-container">
@@ -103,6 +75,18 @@
             </div>
         </div>
     </template>
+
+    <!-- Classmates' Work Modal -->
+    <div id="classmates-work-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-classmates-modal">&times;</span>
+            <h2>Classmates' Work</h2>
+            <div id="classmates-tiles-container">
+                <!-- Classmates' tiles will be inserted here -->
+                <!-- Or fallback message -->
+            </div>
+        </div>
+    </div>
 
     <!-- Core scripts -->
     <script src="{% static 'js/utils/auth.js' %}"></script>

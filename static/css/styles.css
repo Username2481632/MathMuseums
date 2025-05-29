@@ -136,3 +136,153 @@ main {
     margin: 0;
     padding: 0;
 }
+
+/* Header Controls (Moved from inline styles in index.html) */
+.header-controls {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    z-index: 1001; /* Ensure it's above other header content if any overlap */
+}
+.header-controls .btn, 
+.header-controls label { /* Apply button-like styling to the label */
+    background: var(--secondary-color); /* Use theme color */
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5em 1em;
+    font-size: var(--font-size-md); /* Use theme font size */
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.header-controls .btn:hover,
+.header-controls label:hover {
+    background: #2980b9; /* Darker shade of secondary color */
+}
+.header-controls input[type="checkbox"] {
+    margin-right: 0.5em;
+    vertical-align: middle; /* Align checkbox better with text */
+}
+
+/* Specific button styling within header-controls if needed */
+.header-controls .logout-btn {
+    background: var(--accent-color); /* Use accent color for logout */
+}
+.header-controls .logout-btn:hover {
+    background: #c0392b; /* Darker shade of accent */
+}
+.header-controls .sync-btn {
+    background: #4caf50; /* A distinct color for sync */
+}
+.header-controls .sync-btn:hover {
+    background: #3d8b40; /* Darker shade for sync */
+}
+
+
+/* Modal Styles (Moved from inline styles in index.html) */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 1000; /* High z-index to appear on top */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto; /* Enable scroll if content is too long */
+    background-color: rgba(0,0,0,0.6); /* Darker overlay for better focus */
+}
+.modal-content {
+    background-color: #fff; /* White background for modal content */
+    margin: 10vh auto; /* Centered, with 10% margin from top */
+    padding: 25px;
+    border: 1px solid #ccc; /* Softer border */
+    width: 90%;
+    max-width: 700px; /* Slightly reduced max-width for better readability */
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3); /* Softer shadow */
+    animation: slideInModal 0.3s ease-out;
+}
+
+@keyframes slideInModal {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.close-btn {
+    color: #888; /* Softer color for close button */
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    font-size: 32px;
+    font-weight: bold;
+    transition: color 0.2s;
+}
+.close-btn:hover,
+.close-btn:focus {
+    color: #333; /* Darker on hover/focus */
+    text-decoration: none;
+    cursor: pointer;
+}
+
+#classmates-tiles-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem; /* Increased gap */
+    justify-content: center;
+    margin-top: 1.5rem; /* Increased margin */
+    padding: 10px 0; /* Add some padding */
+}
+.classmate-tile {
+    border: 1px solid var(--border-color);
+    padding: 15px;
+    width: calc(50% - 2rem); /* Responsive width, 2 tiles per row with gap */
+    min-height: 180px; 
+    border-radius: 6px;
+    background-color: var(--bg-color); /* Use theme background color */
+    box-shadow: 0 2px 4px var(--tile-shadow);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.classmate-tile:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.classmate-tile h4 {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+.classmate-tile img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    border: 1px solid #eee;
+}
+.classmate-tile p {
+    font-size: var(--font-size-sm);
+    color: var(--text-color);
+    word-wrap: break-word; /* Ensure long words don't overflow */
+}
+
+/* Responsive adjustments for classmate tiles */
+@media (max-width: 600px) {
+    .classmate-tile {
+        width: calc(100% - 1rem); /* Full width on smaller screens */
+    }
+    .modal-content {
+        margin: 5vh auto; /* Smaller margin on small screens */
+        width: 95%;
+    }
+}

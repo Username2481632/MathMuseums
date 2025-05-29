@@ -6,7 +6,8 @@ const PreferencesClient = (function() {
     // Private variables
     let preferences = {
         onboardingDisabled: false,
-        theme: 'light'
+        theme: 'light',
+        share_with_classmates: true // Default to true
     };
     let loaded = false;
     
@@ -18,7 +19,8 @@ const PreferencesClient = (function() {
             // First try to load from local storage
             const localPrefs = getPreferencesFromLocalStorage();
             if (localPrefs) {
-                preferences = localPrefs;
+                // Merge with defaults to ensure all keys are present
+                preferences = { ...preferences, ...localPrefs };
             }
             
             // Then try to load from server if authenticated
@@ -33,11 +35,14 @@ const PreferencesClient = (function() {
                         const serverPrefs = await response.json();
                         preferences = {
                             onboardingDisabled: serverPrefs.onboarding_disabled,
-                            theme: serverPrefs.theme
+                            theme: serverPrefs.theme,
+                            share_with_classmates: serverPrefs.share_with_classmates 
                         };
                         
                         // Update local storage
                         savePreferencesToLocalStorage(preferences);
+                    } else {
+                        console.warn('Failed to load preferences from server, using local/default.');
                     }
                 } catch (error) {
                     console.error('Error loading preferences from server:', error);
@@ -65,6 +70,12 @@ const PreferencesClient = (function() {
             
             // Save to server if authenticated
             if (AuthClient.isAuthenticated()) {
+                const payload = {
+                    onboarding_disabled: preferences.onboardingDisabled,
+                    theme: preferences.theme,
+                    share_with_classmates: preferences.share_with_classmates
+                };
+                console.log('Saving preferences to server:', payload); // Debug log
                 await fetch('/api/preferences/', {
                     method: 'PUT',
                     credentials: 'same-origin',
@@ -72,10 +83,7 @@ const PreferencesClient = (function() {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': AuthClient.getCSRFToken()
                     },
-                    body: JSON.stringify({
-                        onboarding_disabled: preferences.onboardingDisabled,
-                        theme: preferences.theme
-                    })
+                    body: JSON.stringify(payload)
                 });
             }
             
@@ -112,10 +120,16 @@ const PreferencesClient = (function() {
     function getPreferencesFromLocalStorage() {
         try {
             const data = localStorage.getItem('mm_preferences');
-            return data ? JSON.parse(data) : null;
+            // Ensure share_with_classmates has a default if not present
+            const parsed = data ? JSON.parse(data) : {};
+            return {
+                onboardingDisabled: parsed.onboardingDisabled || false,
+                theme: parsed.theme || 'light',
+                share_with_classmates: typeof parsed.share_with_classmates === 'boolean' ? parsed.share_with_classmates : true
+            };
         } catch (error) {
             console.error('Error reading preferences from localStorage:', error);
-            return null;
+            return { onboardingDisabled: false, theme: 'light', share_with_classmates: true }; // Return defaults on error
         }
     }
     
@@ -134,6 +148,14 @@ const PreferencesClient = (function() {
     function getTheme() {
         return preferences.theme;
     }
+
+    /**
+     * Get all current preferences
+     * @returns {Object}
+     */
+    function getPreferences() {
+        return { ...preferences };
+    }
     
     /**
      * Initialize the preferences client
@@ -148,6 +170,7 @@ const PreferencesClient = (function() {
         savePreferences,
         isOnboardingDisabled,
         getTheme,
+        getPreferences, // Expose getPreferences
         isLoaded: () => loaded
     };
 })();

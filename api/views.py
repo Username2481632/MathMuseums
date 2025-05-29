@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.db import transaction
-from .models import ConceptTile, UserPreference, SyncLog
+from .models import ConceptTile, UserPreference, SyncLog, User # Added User
 from .serializers import ConceptTileSerializer, UserPreferenceSerializer, SyncLogSerializer
 
 # Create your views here.
@@ -212,6 +212,26 @@ class SyncLogListView(generics.ListAPIView):
     
     def get_queryset(self):
         return SyncLog.objects.filter(user=self.request.user).order_by('-sync_time')[:20]
+
+class ClassmatesWorkView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if not user.preferences.share_with_classmates:
+            return Response({"message": "You have not opted in to share your work."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Get 5 random users who have opted in, excluding the current user
+        classmates = User.objects.filter(
+            preferences__share_with_classmates=True
+        ).exclude(pk=user.pk).order_by('?')[:5]
+
+        if not classmates.exists():
+            return Response({"message": "No classmates are currently sharing their work."}, status=status.HTTP_200_OK)
+
+        classmates_tiles = ConceptTile.objects.filter(user__in=classmates)
+        serializer = ConceptTileSerializer(classmates_tiles, many=True)
+        return Response(serializer.data)
 
 class AuthStatusView(APIView):
     """Lightweight endpoint to check authentication status."""

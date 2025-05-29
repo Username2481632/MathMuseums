@@ -1,11 +1,16 @@
 from django.urls import path
-from . import views
+from .views import (
+    ConceptTileListCreateView, ConceptTileRetrieveUpdateDestroyView, 
+    UserPreferenceRetrieveUpdateView, SyncView, SyncLogListView, AuthStatusView,
+    ClassmatesWorkView
+)
 
 urlpatterns = [
-    path('concepts/', views.ConceptTileListCreateView.as_view(), name='concept-list-create'),
-    path('concepts/<int:pk>/', views.ConceptTileRetrieveUpdateDestroyView.as_view(), name='concept-detail'),
-    path('preferences/', views.UserPreferenceRetrieveUpdateView.as_view(), name='user-preferences'),
-    path('sync/', views.SyncView.as_view(), name='sync'),
-    path('sync/logs/', views.SyncLogListView.as_view(), name='sync-logs'),
-    path('auth/status/', views.AuthStatusView.as_view(), name='auth-status'),
+    path('concepts/', ConceptTileListCreateView.as_view(), name='concepttile-list-create'),
+    path('concepts/<int:pk>/', ConceptTileRetrieveUpdateDestroyView.as_view(), name='concepttile-retrieve-update-destroy'),
+    path('preferences/', UserPreferenceRetrieveUpdateView.as_view(), name='userpreference-retrieve-update'),
+    path('sync/', SyncView.as_view(), name='sync'),
+    path('sync/logs/', SyncLogListView.as_view(), name='sync-log-list'),
+    path('auth/status/', AuthStatusView.as_view(), name='auth-status'),
+    path('classmates/work/', ClassmatesWorkView.as_view(), name='classmates-work'),
 ]
