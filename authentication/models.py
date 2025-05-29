@@ -12,10 +12,7 @@ class UserManager(BaseUserManager):
             raise ValueError('The Email must be set')
         email = self.normalize_email(email)
         user = self.model(email=email, **extra_fields)
-        if password:
-            user.set_password(password)
-        else:
-            user.set_unusable_password()
+        user.set_password(password)  # Always set password (can be None/blank)
         user.save(using=self._db)
         return user
 
@@ -56,3 +53,18 @@ class OTPCode(models.Model):
 
     def __str__(self):
         return f"OTP for {self.email} (valid until {self.expires_at})"
+
+
+class AuthCode(models.Model):
+    """Session-persistent auth codes for user-initiated email verification"""
+    email = models.EmailField(_('email address'))
+    code = models.CharField(max_length=8)  # 8-digit code for display
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+    session_key = models.CharField(max_length=40)  # Django session key
+    
+    class Meta:
+        unique_together = ['email', 'session_key']
+    
+    def __str__(self):
+        return f"Auth code for {self.email} - {'Verified' if self.is_verified else 'Pending'}"
