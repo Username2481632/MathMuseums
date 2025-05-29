@@ -6,9 +6,6 @@ from django.utils.dateparse import parse_datetime
 from django.db import transaction
 from .models import ConceptTile, UserPreference, SyncLog
 from .serializers import ConceptTileSerializer, UserPreferenceSerializer, SyncLogSerializer
-from django.http import JsonResponse
-from django.core.management import call_command
-from django.views.decorators.csrf import csrf_exempt
 
 # Create your views here.
 
@@ -223,6 +220,11 @@ class AuthStatusView(APIView):
     def get(self, request):
         return Response({'authenticated': request.user.is_authenticated}, status=status.HTTP_200_OK)
 
+# REMOVE TEMPORARY MIGRATION ENDPOINT
+# from django.http import JsonResponse
+# from django.core.management import call_command
+# from django.views.decorators.csrf import csrf_exempt
+#
 # @csrf_exempt
 # def run_migrations_view(request):
 #     if request.method == 'POST':
