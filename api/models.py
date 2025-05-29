@@ -41,6 +41,7 @@ class UserPreference(models.Model):
     user = models.OneToOneField(User, on_delete=models.PROTECT, related_name='preferences')
     onboarding_disabled = models.BooleanField(default=False)
     theme = models.CharField(max_length=20, default='light')
+    share_with_classmates = models.BooleanField(default=True)  # New: opt-in for sharing work
     # Add more preferences as needed
 
     def __str__(self):
