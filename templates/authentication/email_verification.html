@@ -113,26 +113,48 @@
             {% endfor %}
         {% endif %}
         
+
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <a class="email-address" 
+               href="https://mail.google.com/mail/?view=cm&fs=1&to=verify@math.moshchuk.com&su=Math%20Museums%20Verification&body=Verification%20code%3A%20{{ auth_code }}" 
+               target="_blank" rel="noopener noreferrer"
+               style="display:inline-block;padding:0.5em 1em;background:#d93025;color:white;border-radius:4px;font-weight:600;text-decoration:none;">
+                Send with Gmail
+            </a>
+            <a class="email-address"
+               href="https://outlook.live.com/mail/0/deeplink/compose?to=verify@math.moshchuk.com&subject=Math%20Museums%20Verification&body=Verification%20code%3A%20{{ auth_code }}"
+               target="_blank" rel="noopener noreferrer"
+               style="display:inline-block;padding:0.5em 1em;background:#0078d4;color:white;border-radius:4px;font-weight:600;text-decoration:none;">
+                Send with Outlook
+            </a>
+            <a class="email-address" 
+               href="mailto:verify@math.moshchuk.com?subject=Math%20Museums%20Verification&body=Verification%20code%3A%20{{ auth_code }}"
+               style="display:inline-block;padding:0.5em 1em;background:#007bff;color:white;border-radius:4px;font-weight:600;text-decoration:none;">
+                Send with your email app
+            </a>
+        </div>
+        <div class="auth-code">{{ auth_code }}</div>
+        
+        <div class="instructions">
+            <ol>
+                <li>Copy the code above</li>
+                <li>Paste it into the body of your email</li>
+                <li>Send the email and wait for verification</li>
+            </ol>
+            <p><strong>Note:</strong> You can send the email from any email client or service. Verification is automatic once we receive your email.</p>
+        </div>
+        
+        <button id="scan-email-btn" style="margin:1rem auto;display:block;padding:0.75em 1.5em;font-size:1rem;background:#28a745;color:white;border:none;border-radius:4px;font-weight:600;cursor:pointer;">Scan Email</button>
+        <div id="scan-progress" style="display:none;margin-bottom:1rem;text-align:center;">
+            <span id="scan-progress-text">Scanning for new emails...</span>
+            <div style="background:#e9ecef;border-radius:4px;height:8px;width:100%;margin-top:8px;">
+                <div id="scan-progress-bar" style="height:8px;width:0%;background:#28a745;border-radius:4px;"></div>
+            </div>
+        </div>
         <div class="verification-status pending" id="verification-status">
             <span id="status-text">Waiting for email verification</span>
             <span class="loading-dots" id="loading-dots"></span>
         </div>
-        
-        <p>To complete your authentication, please send an email with the following code:</p>
-        
-        <div class="auth-code">{{ auth_code }}</div>
-        
-        <div class="instructions">
-            <h3>Verification Instructions:</h3>
-            <ol>
-                <li>Copy the code above: <strong>{{ auth_code }}</strong></li>
-                <li>Send an email to: <span class="email-address">verify@math.moshchuk.com</span></li>
-                <li>In the email body, paste the code: <strong>{{ auth_code }}</strong></li>
-                <li>Send the email and wait for verification</li>
-            </ol>
-            <p><strong>Note:</strong> You can send the email from any email client or service. The verification is automatic once we receive your email.</p>
-        </div>
-        
         <div class="back-link">
             <a href="{% url 'advanced_auth' %}">← Back to Login</a>
         </div>
@@ -140,6 +162,73 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            const scanBtn = document.getElementById('scan-email-btn');
+            const scanProgress = document.getElementById('scan-progress');
+            const scanProgressText = document.getElementById('scan-progress-text');
+            const scanProgressBar = document.getElementById('scan-progress-bar');
+            let scanInterval = null;
+            let scanTimeout = null;
+
+            function resetScanUI() {
+                scanBtn.disabled = false;
+                scanBtn.textContent = 'Scan Email';
+                scanProgress.style.display = 'none';
+                scanProgressBar.style.width = '0%';
+                scanProgressText.textContent = 'Scanning for new emails...';
+            }
+
+            scanBtn.addEventListener('click', function() {
+                scanBtn.disabled = true;
+                scanBtn.textContent = 'Scanning...';
+                scanProgress.style.display = 'block';
+                scanProgressBar.style.width = '0%';
+                scanProgressText.textContent = 'Scanning for new emails...';
+
+                let elapsed = 0;
+                const duration = 60; // seconds
+                scanInterval = setInterval(() => {
+                    elapsed++;
+                    scanProgressBar.style.width = Math.min((elapsed / duration) * 100, 100) + '%';
+                    scanProgressText.textContent = `Scanning for new emails... (${elapsed}s / 60s)`;
+                    if (elapsed >= duration) {
+                        clearInterval(scanInterval);
+                        resetScanUI();
+                    }
+                }, 1000);
+                scanTimeout = setTimeout(() => {
+                    clearInterval(scanInterval);
+                    resetScanUI();
+                }, duration * 1000);
+
+                fetch('{% url "scan_verification_email" %}', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-CSRFToken': (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || ''
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        scanProgressText.textContent = 'Scan complete!';
+                        scanProgressBar.style.width = '100%';
+                        setTimeout(resetScanUI, 1500);
+                    } else {
+                        scanProgressText.textContent = 'Scan failed: ' + (data.message || 'Unknown error');
+                        scanProgressBar.style.width = '0%';
+                        setTimeout(resetScanUI, 3500);
+                    }
+                    clearInterval(scanInterval);
+                    clearTimeout(scanTimeout);
+                })
+                .catch(() => {
+                    scanProgressText.textContent = 'Scan failed: Network error';
+                    scanProgressBar.style.width = '0%';
+                    setTimeout(resetScanUI, 3500);
+                    clearInterval(scanInterval);
+                    clearTimeout(scanTimeout);
+                });
+            });
             const statusElement = document.getElementById('verification-status');
             const statusText = document.getElementById('status-text');
             const loadingDots = document.getElementById('loading-dots');

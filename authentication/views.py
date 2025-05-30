@@ -9,6 +9,7 @@ import json
 import secrets
 from .utils import create_otp_for_email, send_otp_email, validate_otp_and_create_user
 from .models import User, AuthCode
+from authentication.poll_email import poll_verification_email
 
 def auth_request_view(request):
     # If user is already authenticated, redirect to auth check
@@ -189,6 +190,18 @@ class EmailVerificationView(View):
         except AuthCode.DoesNotExist:
             messages.error(request, 'Verification session expired. Please try again.')
             return redirect('advanced_auth')
+
+class ScanVerificationEmailView(View):
+    """AJAX endpoint to scan verification email inbox (manual trigger)"""
+    def post(self, request):
+        if not request.session.get('auth_email'):
+            return JsonResponse({'error': 'No active verification session'}, status=403)
+        try:
+            result = poll_verification_email()
+            return JsonResponse(result)
+        except Exception as e:
+            import traceback
+            return JsonResponse({'status': 'error', 'message': str(e), 'traceback': traceback.format_exc()}, status=500)
 
 class VerificationStatusView(View):
     """AJAX endpoint to check verification status"""
