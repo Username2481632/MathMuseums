@@ -33,27 +33,12 @@ class UserManager(BaseUserManager):
 class User(AbstractUser):
     username = None
     email = models.EmailField(_('email address'), unique=True)
+    is_email_verified = models.BooleanField(default=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
     objects = UserManager()
-
-class OTPCode(models.Model):
-    email = models.EmailField(_('email address'))
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='otp_codes', null=True, blank=True)
-    code = models.CharField(max_length=6)
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
-    is_used = models.BooleanField(default=False)
-
-    def is_valid(self):
-        now = timezone.now()
-        return not self.is_used and now <= self.expires_at
-
-    def __str__(self):
-        return f"OTP for {self.email} (valid until {self.expires_at})"
-
 
 class AuthCode(models.Model):
     """Session-persistent auth codes for user-initiated email verification"""

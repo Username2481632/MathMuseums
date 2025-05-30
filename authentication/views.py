@@ -7,53 +7,12 @@ from django.utils.decorators import method_decorator
 from django.views import View
 import json
 import secrets
-from .utils import create_otp_for_email, send_otp_email, validate_otp_and_create_user
 from .models import User, AuthCode
 from authentication.poll_email import poll_verification_email
 
-def auth_request_view(request):
-    # If user is already authenticated, redirect to auth check
-    if request.user.is_authenticated:
-        return redirect('auth_check')
-    
-    if request.method == 'POST':
-        email = request.POST.get('email')
-        if not email:
-            messages.error(request, 'Please enter your email address.')
-            return render(request, 'authentication/auth_request.html')
-        try:
-            otp = create_otp_for_email(email)
-            try:
-                send_otp_email(otp, otp.code)
-                request.session['auth_email'] = email
-                messages.success(request, f'An OTP has been sent to {email}.')
-                return redirect('verify_otp')
-            except Exception as e:
-                messages.error(request, 'We could not send the verification code. Please try again later or contact support.')
-                return render(request, 'authentication/auth_request.html')
-        except Exception as e:
-            messages.error(request, 'An error occurred. Please try again later.')
-            return render(request, 'authentication/auth_request.html')
-    return render(request, 'authentication/auth_request.html')
-
-def verify_otp_view(request):
-    email = request.session.get('auth_email')
-    if not email:
-        return redirect('auth_request')
-    if request.method == 'POST':
-        code = request.POST.get('otp')
-        user = validate_otp_and_create_user(email, code)
-        if user:
-            login(request, user)
-            messages.success(request, 'Authentication successful!')
-            return redirect('auth_check')
-        else:
-            messages.error(request, 'Invalid or expired OTP. Please try again.')
-    return render(request, 'authentication/verify_otp.html', {'email': email})
-
 def logout_view(request):
     logout(request)
-    return redirect('auth_request')
+    return redirect('advanced_auth')
 
 class EmailCheckView(View):
     """AJAX endpoint to check if email exists and return dynamic UI state"""
@@ -86,11 +45,9 @@ class AdvancedAuthView(View):
     """Advanced login/signup view with dynamic UI"""
     
     def get(self, request):
-        # If user is already authenticated, redirect to auth check
-        if request.user.is_authenticated:
-            return redirect('auth_check')
-        
-        return render(request, 'authentication/advanced_auth.html')
+        # Only show the 'Email verified successfully!' message if just verified
+        just_verified = request.session.pop('just_verified', False)
+        return render(request, 'authentication/advanced_auth.html', {'just_verified': just_verified})
     
     def post(self, request):
         email = request.POST.get('email', '').strip().lower()
@@ -109,23 +66,23 @@ class AdvancedAuthView(View):
                 try:
                     user = User.objects.get(email=email)
                     if user.check_password(password):
-                        # Check if user needs email verification
-                        auth_code, created = AuthCode.objects.get_or_create(
-                            email=email,
-                            session_key=request.session.session_key or request.session.cycle_key(),
-                            defaults={'code': f"{secrets.randbelow(100000000):08d}"}
-                        )
-                        
-                        if auth_code.is_verified:
-                            # User is verified, log them in
+                        # Check if user has verified their email before
+                        if user.is_email_verified:
+                            # User is already verified, log them in directly
                             login(request, user)
                             messages.success(request, 'Login successful!')
                             return redirect('auth_check')
                         else:
-                            # User needs email verification
+                            # User needs email verification (first time or not yet verified)
+                            auth_code, created = AuthCode.objects.get_or_create(
+                                email=email,
+                                session_key=request.session.session_key or request.session.cycle_key(),
+                                defaults={'code': f"{secrets.randbelow(100000000):08d}"}
+                            )
+                            
                             request.session['auth_email'] = email
                             request.session['auth_password'] = password  # Store for after verification
-                            messages.info(request, f'Please send an email to verify@math.moshchuk.com with the code: {auth_code.code}')
+                            messages.info(request, f'Please verify your email by sending the code to verify@math.moshchuk.com: {auth_code.code}')
                             return redirect('email_verification')
                     else:
                         messages.error(request, 'Invalid email or password.')
@@ -136,8 +93,9 @@ class AdvancedAuthView(View):
                     return render(request, 'authentication/advanced_auth.html')
             
             else:
-                # Signup flow
+                # Signup flow - always requires email verification
                 user = User.objects.create_user(email=email, password=password)
+                # is_email_verified defaults to False for new users
                 
                 # Generate auth code for email verification
                 auth_code = AuthCode.objects.create(
@@ -148,7 +106,7 @@ class AdvancedAuthView(View):
                 
                 request.session['auth_email'] = email
                 request.session['auth_password'] = password
-                messages.success(request, f'Account created! Please send an email to verify@math.moshchuk.com with the code: {auth_code.code}')
+                messages.success(request, f'Account created! Please verify your email by sending the code to verify@math.moshchuk.com: {auth_code.code}')
                 return redirect('email_verification')
                 
         except Exception as e:
@@ -175,12 +133,19 @@ class EmailVerificationView(View):
                 user = User.objects.get(email=email)
                 
                 if user.check_password(password):
+                    # Mark user as email verified
+                    user.is_email_verified = True
+                    user.save()
+                    
                     login(request, user)
                     # Clean up session
-                    del request.session['auth_email']
-                    del request.session['auth_password']
+                    request.session.pop('auth_email', None)
+                    request.session.pop('auth_password', None)
                     messages.success(request, 'Email verified successfully!')
-                    return redirect('auth_check')
+                    response = redirect('auth_check')
+                    # Mark that we just verified, so the message is only shown once
+                    request.session['just_verified'] = True
+                    return response
             
             return render(request, 'authentication/email_verification.html', {
                 'email': email,

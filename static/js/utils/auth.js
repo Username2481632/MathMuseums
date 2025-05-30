@@ -23,7 +23,7 @@ const AuthClient = (function() {
             } else {
                 isAuthenticated = false;
                 // Redirect to login page if not authenticated
-                window.location.href = '/auth/request/';
+                window.location.href = '/auth/';
                 return false;
             }
         } catch (error) {
@@ -56,7 +56,7 @@ const AuthClient = (function() {
                     'X-CSRFToken': getCSRFToken()
                 }
             });
-            window.location.href = '/auth/request/';
+            window.location.href = '/auth/';
         } catch (error) {
             console.error('Logout failed:', error);
         }

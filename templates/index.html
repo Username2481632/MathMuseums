@@ -41,8 +41,10 @@
     <!-- Home view template -->
     <template id="home-template">
         <section id="home-view" class="view">
-            <div class="tiles-container">
-                <!-- Tiles will be inserted here dynamically -->
+            <div class="aspect-ratio-container">
+                <div class="tiles-container">
+                    <!-- Tiles will be inserted here dynamically -->
+                </div>
             </div>
         </section>
     </template>
@@ -118,10 +120,10 @@
                     <h3>Screen Fit</h3>
                     <div class="settings-options">
                         <label>
-                            <input type="radio" name="screen-fit" value="fit" checked> Fit (add black bars)
+                            <input type="radio" name="screen-fit" id="screen-fit-radio-fit" value="fit" checked> Fit (add black bars)
                         </label>
                         <label>
-                            <input type="radio" name="screen-fit" value="fill"> Fill (add scrolling)
+                            <input type="radio" name="screen-fit" id="screen-fit-radio-fill" value="fill"> Fill (add scrolling)
                         </label>
                     </div>
                 </div>

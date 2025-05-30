@@ -14,9 +14,36 @@ const HomeController = (function() {
     let dragCooldownTimer = null; // Timer for drag cooldown
     let thumbnailQueue = []; // Queue for thumbnail generation to prevent overloading
 
-    // Undo/Redo stacks for layout editing
+    // Undo/Redo stacks for layout editing (persisted in localStorage)
     let undoStack = [];
     let redoStack = [];
+
+    // LocalStorage keys for undo/redo
+    const UNDO_KEY = 'mm_undoStack';
+    const REDO_KEY = 'mm_redoStack';
+
+    // Helper: Save stacks to localStorage
+    function saveStacks() {
+        try {
+            localStorage.setItem(UNDO_KEY, JSON.stringify(undoStack));
+            localStorage.setItem(REDO_KEY, JSON.stringify(redoStack));
+        } catch (e) {
+            // Ignore quota errors
+        }
+    }
+
+    // Helper: Load stacks from localStorage
+    function loadStacks() {
+        try {
+            const u = localStorage.getItem(UNDO_KEY);
+            const r = localStorage.getItem(REDO_KEY);
+            undoStack = u ? JSON.parse(u) : [];
+            redoStack = r ? JSON.parse(r) : [];
+        } catch (e) {
+            undoStack = [];
+            redoStack = [];
+        }
+    }
 
     // Resize variables
     let isResizing = false;
@@ -30,25 +57,44 @@ const HomeController = (function() {
 
     // Helper: Get current layout state (positions/sizes of all tiles)
     function getCurrentLayoutState() {
-        return concepts.map(concept => ({
-            id: concept.id,
-            x: concept.x,
-            y: concept.y,
-            width: concept.width,
-            height: concept.height
-        }));
+        const state = concepts.map(concept => {
+            // Extract position and size from the nested objects (used by drag/resize handlers)
+            const x = concept.position?.x ?? concept.x ?? 0;
+            const y = concept.position?.y ?? concept.y ?? 0;
+            const width = concept.size?.width ?? concept.width ?? 250;
+            const height = concept.size?.height ?? concept.height ?? 200;
+            
+            return {
+                id: concept.id,
+                x: x,
+                y: y,
+                width: width,
+                height: height
+            };
+        });
+        
+        return state;
     }
     
     // Helper: Restore layout state
     function restoreLayoutState(state) {
         if (!Array.isArray(state)) return;
         for (const s of state) {
-            const concept = concepts.find(c => c.id === s.id);
-            if (concept) {
-                concept.x = s.x;
-                concept.y = s.y;
-                concept.width = s.width;
-                concept.height = s.height;
+            const conceptIndex = concepts.findIndex(c => c.id === s.id);
+            if (conceptIndex !== -1) {
+                const concept = concepts[conceptIndex];
+                
+                // Update using the same format as the drag/resize handlers
+                const updatedConcept = ConceptModel.updateConcept(concept, {
+                    position: { x: s.x, y: s.y },
+                    size: { width: s.width, height: s.height }
+                });
+                
+                // Update the concept in the array
+                concepts[conceptIndex] = updatedConcept;
+                
+                // Save to storage to maintain persistence
+                StorageManager.saveConcept(updatedConcept);
             }
         }
         renderConceptTiles();
@@ -61,28 +107,38 @@ const HomeController = (function() {
         if (undoStack.length > 100) undoStack.shift();
         // Clear redo stack on new action
         redoStack = [];
+        saveStacks();
     }
     
     // Undo action
     function undoLayout() {
-        if (undoStack.length === 0) return;
+        if (undoStack.length === 0) {
+            return;
+        }
         redoStack.push(JSON.parse(JSON.stringify(getCurrentLayoutState())));
         const prev = undoStack.pop();
         restoreLayoutState(prev);
+        saveStacks();
     }
     
     // Redo action
     function redoLayout() {
-        if (redoStack.length === 0) return;
+        if (redoStack.length === 0) {
+            return;
+        }
         undoStack.push(JSON.parse(JSON.stringify(getCurrentLayoutState())));
         const next = redoStack.pop();
         restoreLayoutState(next);
+        saveStacks();
     }
     
     /**
      * Initialize the home controller
      */
     async function init() {
+        // Restore undo/redo stacks from localStorage
+        loadStacks();
+        
         // Get concepts from storage
         concepts = await loadConcepts();
         
@@ -158,25 +214,31 @@ const HomeController = (function() {
             // Always use absolute positioning
             tile.style.position = 'absolute';
             
-            // If concept has saved position, use it
-            if (concept.position && (concept.position.x !== 0 || concept.position.y !== 0)) {
-                tile.style.left = `${concept.position.x}px`;
-                tile.style.top = `${concept.position.y}px`;
+            // Check for both position formats (x/y and position.x/y for backward compatibility)
+            let tileX, tileY;
+            if (concept.x !== undefined && concept.y !== undefined) {
+                tileX = concept.x;
+                tileY = concept.y;
+            } else if (concept.position && (concept.position.x !== 0 || concept.position.y !== 0)) {
+                tileX = concept.position.x;
+                tileY = concept.position.y;
             } else {
-                // Otherwise position in a grid pattern (3 columns)
+                // Position in a grid pattern (3 columns)
                 const col = index % 3;
                 const row = Math.floor(index / 3);
-                const x = padding + col * (defaultTileWidth + padding);
-                const y = padding + row * (defaultTileHeight + padding);
+                tileX = padding + col * (defaultTileWidth + padding);
+                tileY = padding + row * (defaultTileHeight + padding);
                 
-                // Update concept position
-                concept.position = { x, y };
+                // Update concept with new position
+                concept.x = tileX;
+                concept.y = tileY;
+                concept.position = { x: tileX, y: tileY };
                 StorageManager.saveConcept(concept);
-                
-                // Set tile position
-                tile.style.left = `${x}px`;
-                tile.style.top = `${y}px`;
             }
+            
+            // Set tile position
+            tile.style.left = `${tileX}px`;
+            tile.style.top = `${tileY}px`;
         });
     }
     
@@ -191,18 +253,27 @@ const HomeController = (function() {
         tile.className = 'concept-tile';
         tile.dataset.id = concept.id;
         
-        // Apply tile size if it exists
-        if (concept.size) {
-            tile.style.width = `${concept.size.width}px`;
-            tile.style.height = `${concept.size.height}px`;
+        // Apply tile size - check for both formats (width/height and size.width/height)
+        let tileWidth, tileHeight;
+        if (concept.width !== undefined && concept.height !== undefined) {
+            tileWidth = concept.width;
+            tileHeight = concept.height;
+        } else if (concept.size) {
+            tileWidth = concept.size.width;
+            tileHeight = concept.size.height;
         } else {
             // Use default size if not set
-            tile.style.width = '250px';
-            tile.style.height = '200px';
+            tileWidth = 250;
+            tileHeight = 200;
             // Update the concept with default size
-            concept.size = { width: 250, height: 200 };
+            concept.width = tileWidth;
+            concept.height = tileHeight;
+            concept.size = { width: tileWidth, height: tileHeight };
             StorageManager.saveConcept(concept);
         }
+        
+        tile.style.width = `${tileWidth}px`;
+        tile.style.height = `${tileHeight}px`;
         
         // Create the tile header
         const header = document.createElement('div');
@@ -425,6 +496,7 @@ const HomeController = (function() {
      * @param {number} clientY - Client Y coordinate
      */
     function startDragging(tile, clientX, clientY) {
+        pushUndoState(); // Save state before dragging starts
         isDragging = true;
         draggedTile = tile;
         
@@ -535,7 +607,6 @@ const HomeController = (function() {
      * Finish dragging and save position
      */
     function finishDragging() {
-        pushUndoState(); // Save state for undo
         if (!draggedTile) return;
         
         // Reset dragging state
@@ -607,6 +678,7 @@ const HomeController = (function() {
         }
         
         // Set resizing flag
+        pushUndoState(); // Save state before resizing starts
         isResizing = true;
         
         // Add resizing class
@@ -713,7 +785,6 @@ const HomeController = (function() {
      * @param {MouseEvent} event - Mouse up event
      */
     function handleResizeEnd() {
-        pushUndoState(); // Save state for undo
         if (!isResizing || !resizingTile) {
             return;
         }
@@ -806,6 +877,7 @@ const HomeController = (function() {
         }
         
         // Set resizing flag
+        pushUndoState(); // Save state before resizing starts
         isResizing = true;
         
         // Add resizing class
@@ -1126,6 +1198,69 @@ const HomeController = (function() {
         };
     }
     
+    // --- FIT/FILL MODE LOGIC ---
+    function applyScreenFitMode(mode) {
+        const homeView = document.getElementById('home-view');
+        if (!homeView) return;
+        homeView.classList.remove('screen-fit-mode', 'screen-fill-mode');
+        if (mode === 'fit') {
+            homeView.classList.add('screen-fit-mode');
+        } else if (mode === 'fill') {
+            homeView.classList.add('screen-fill-mode');
+        }
+    }
+
+    function getSavedScreenFitMode() {
+        // Try to get from localStorage or default to 'fit'
+        return (localStorage.getItem('screen-fit-mode') || 'fit');
+    }
+
+    function saveScreenFitMode(mode) {
+        localStorage.setItem('screen-fit-mode', mode);
+    }
+
+    function setupScreenFitListeners() {
+        const fitRadio = document.getElementById('screen-fit-radio-fit');
+        const fillRadio = document.getElementById('screen-fit-radio-fill');
+        if (!fitRadio || !fillRadio) return;
+        [fitRadio, fillRadio].forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (fitRadio.checked) {
+                    applyScreenFitMode('fit');
+                    saveScreenFitMode('fit');
+                } else if (fillRadio.checked) {
+                    applyScreenFitMode('fill');
+                    saveScreenFitMode('fill');
+                }
+            });
+        });
+    }
+
+    // Patch render to apply mode and listeners after rendering
+    const origRender = render;
+    render = function() {
+        origRender.apply(this, arguments);
+        // Wait for DOM update
+        setTimeout(() => {
+            applyScreenFitMode(getSavedScreenFitMode());
+            setupScreenFitListeners();
+        }, 0);
+    };
+
+    // --- Keyboard Undo/Redo Shortcuts ---
+    document.addEventListener('keydown', function(e) {
+        // Only trigger if home view is visible
+        const homeView = document.getElementById('home-view');
+        if (!homeView || (homeView.style.display === 'none')) return;
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            undoLayout();
+        } else if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && e.key.toLowerCase() === 'z') || e.key.toLowerCase() === 'y')) {
+            e.preventDefault();
+            redoLayout();
+        }
+    });
+
     // Public API
     return {
         init,

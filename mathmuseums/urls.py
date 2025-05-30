@@ -29,7 +29,7 @@ def auth_check(request):
     if request.user.is_authenticated:
         return redirect('app')
     else:
-        return redirect('advanced_auth')
+        return redirect('auth_main')
 
 @login_required
 def app_view(request):
@@ -45,14 +45,14 @@ def protected_static(request, path):
 def protected_js(request, path):
     """Serve JS files only to authenticated users"""
     if not request.user.is_authenticated:
-        return redirect('auth_request')
+        return redirect('auth_main')
     full_path = f"js/{path}"
     return serve_static_file(full_path)
 
 def protected_css(request, path):
     """Serve CSS files only to authenticated users"""
     if not request.user.is_authenticated:
-        return redirect('auth_request')
+        return redirect('auth_main')
     full_path = f"css/{path}"
     return serve_static_file(full_path)
 

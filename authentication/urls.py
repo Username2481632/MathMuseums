@@ -2,11 +2,8 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # Legacy OTP authentication (keeping for backwards compatibility)
-    path('request/', views.auth_request_view, name='auth_request'),
-    path('verify/', views.verify_otp_view, name='verify_otp'),
-    
-    # Advanced Login Flow
+    # Main authentication flow
+    path('', views.AdvancedAuthView.as_view(), name='auth_main'),
     path('login/', views.AdvancedAuthView.as_view(), name='advanced_auth'),
     path('email-check/', views.EmailCheckView.as_view(), name='email_check'),
     path('email-verification/', views.EmailVerificationView.as_view(), name='email_verification'),

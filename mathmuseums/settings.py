@@ -192,9 +192,9 @@ DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 AUTH_USER_MODEL = 'authentication.User'
 
 # Authentication settings
-LOGIN_URL = '/auth/request/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/auth/request/'
+LOGIN_URL = '/auth/'
+LOGIN_REDIRECT_URL = '/app/'
+LOGOUT_REDIRECT_URL = '/auth/'
 
 # Logging configuration
 LOGGING = {
