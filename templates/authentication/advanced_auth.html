@@ -168,40 +168,7 @@
             let emailCheckTimeout;
             let websocket;
             
-            // Initialize WebSocket connection
-            function initWebSocket() {
-                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-                const wsUrl = `${protocol}//${window.location.host}/ws/auth/email-check/`;
-                
-                websocket = new WebSocket(wsUrl);
-                
-                websocket.onopen = function(e) {
-                    console.log('WebSocket connected');
-                };
-                
-                websocket.onmessage = function(e) {
-                    const data = JSON.parse(e.data);
-                    
-                    if (data.type === 'email_check_result') {
-                        updateUIForEmailCheck(data.email, data.exists);
-                    } else if (data.type === 'error') {
-                        console.error('WebSocket error:', data.message);
-                        // Fallback to AJAX if WebSocket fails
-                        checkEmailAjax(data.email);
-                    }
-                };
-                
-                websocket.onerror = function(e) {
-                    console.error('WebSocket error:', e);
-                    // Fallback to AJAX
-                    websocket = null;
-                };
-                
-                websocket.onclose = function(e) {
-                    console.log('WebSocket closed');
-                    websocket = null;
-                };
-            }
+
             
             // Fallback AJAX email checking
             function checkEmailAjax(email) {
@@ -257,11 +224,7 @@
                     
                     // Debounce email checking
                     emailCheckTimeout = setTimeout(() => {
-                        if (websocket && websocket.readyState === WebSocket.OPEN) {
-                            websocket.send(JSON.stringify({ email: email }));
-                        } else {
-                            checkEmailAjax(email);
-                        }
+                        checkEmailAjax(email);
                     }, 500);
                 } else {
                     emailStatus.textContent = '';
@@ -279,8 +242,7 @@
                 authForm.classList.add('loading');
             });
             
-            // Initialize WebSocket
-            initWebSocket();
+
         });
     </script>
 </body>
