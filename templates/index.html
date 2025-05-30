@@ -5,11 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Math Museums</title>
+    <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
     <link rel="stylesheet" href="{% static 'css/home.css' %}">
     <link rel="stylesheet" href="{% static 'css/detail.css' %}">
     <link rel="stylesheet" href="{% static 'css/onboarding.css' %}">
     <link rel="stylesheet" href="{% static 'css/sync.css' %}">
+    <link rel="stylesheet" href="{% static 'css/display-settings.css' %}">
     <script src="https://www.desmos.com/api/v1.10/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
 </head>
 <body>
@@ -22,6 +24,7 @@
                 <input type="checkbox" id="share-toggle"> Share with Classmates
             </label>
             <button id="sync-button" class="sync-btn btn">Sync Now</button>
+            <button id="settings-button" class="settings-btn btn"><i class="gear-icon">⚙</i></button>
             <form method="post" action="/auth/logout/" style="margin:0;">
                 {% csrf_token %}
                 <button type="submit" class="logout-btn btn">Logout</button>
@@ -88,6 +91,47 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-settings-modal">&times;</span>
+            <h2>Display Settings</h2>
+            <div class="settings-container">
+                <div class="settings-group">
+                    <h3>Aspect Ratio</h3>
+                    <div class="settings-options">
+                        <label>
+                            <input type="radio" name="aspect-ratio" value="16:9" checked> 16:9
+                        </label>
+                        <label>
+                            <input type="radio" name="aspect-ratio" value="4:3"> 4:3
+                        </label>
+                        <label>
+                            <input type="radio" name="aspect-ratio" value="1:1"> 1:1 (Square)
+                        </label>
+                        <label>
+                            <input type="radio" name="aspect-ratio" value="none"> Automatic
+                        </label>
+                    </div>
+                </div>
+                <div class="settings-group">
+                    <h3>Screen Fit</h3>
+                    <div class="settings-options">
+                        <label>
+                            <input type="radio" name="screen-fit" value="fit" checked> Fit (add black bars)
+                        </label>
+                        <label>
+                            <input type="radio" name="screen-fit" value="fill"> Fill (add scrolling)
+                        </label>
+                    </div>
+                </div>
+                <div class="settings-actions">
+                    <button id="save-settings" class="btn">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Core scripts -->
     <script src="{% static 'js/utils/auth.js' %}"></script>
     <script src="{% static 'js/utils/storage.js' %}"></script>
@@ -99,6 +143,7 @@
     <script src="{% static 'js/controllers/home.js' %}"></script>
     <script src="{% static 'js/controllers/detail.js' %}"></script>
     <script src="{% static 'js/controllers/onboarding.js' %}"></script>
+    <script src="{% static 'js/controllers/settings.js' %}"></script>
     <script src="{% static 'js/app.js' %}"></script>
 </body>
 </html>

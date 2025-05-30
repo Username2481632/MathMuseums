@@ -180,6 +180,17 @@ main {
 .header-controls .sync-btn:hover {
     background: #3d8b40; /* Darker shade for sync */
 }
+.header-controls .settings-btn {
+    background: var(--secondary-color);
+    padding: 0.5em 0.75em;
+}
+.header-controls .settings-btn:hover {
+    background: #2980b9;
+}
+.gear-icon {
+    font-size: 1.3em;
+    font-style: normal;
+}
 
 
 /* Modal Styles (Moved from inline styles in index.html) */

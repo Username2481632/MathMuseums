@@ -2,7 +2,7 @@
  * Main Application Entry Point
  * Initializes the application and sets up routing
  */
-(function() {
+var App = (function() {
     // Initialize the application
     async function init() {
         try {

@@ -13,7 +13,11 @@ const HomeController = (function() {
     let recentlyDragged = false; // Track whether dragging just ended
     let dragCooldownTimer = null; // Timer for drag cooldown
     let thumbnailQueue = []; // Queue for thumbnail generation to prevent overloading
-    
+
+    // Undo/Redo stacks for layout editing
+    let undoStack = [];
+    let redoStack = [];
+
     // Resize variables
     let isResizing = false;
     let resizingTile = null;
@@ -23,6 +27,57 @@ const HomeController = (function() {
     let resizeStartPos = { x: 0, y: 0 };
     let recentlyResized = false; // Track whether resize just ended
     let resizeCooldownTimer = null; // Timer for resize cooldown
+
+    // Helper: Get current layout state (positions/sizes of all tiles)
+    function getCurrentLayoutState() {
+        return concepts.map(concept => ({
+            id: concept.id,
+            x: concept.x,
+            y: concept.y,
+            width: concept.width,
+            height: concept.height
+        }));
+    }
+    
+    // Helper: Restore layout state
+    function restoreLayoutState(state) {
+        if (!Array.isArray(state)) return;
+        for (const s of state) {
+            const concept = concepts.find(c => c.id === s.id);
+            if (concept) {
+                concept.x = s.x;
+                concept.y = s.y;
+                concept.width = s.width;
+                concept.height = s.height;
+            }
+        }
+        renderConceptTiles();
+    }
+    
+    // Helper: Push current layout to undo stack
+    function pushUndoState() {
+        undoStack.push(JSON.parse(JSON.stringify(getCurrentLayoutState())));
+        // Limit stack size if desired
+        if (undoStack.length > 100) undoStack.shift();
+        // Clear redo stack on new action
+        redoStack = [];
+    }
+    
+    // Undo action
+    function undoLayout() {
+        if (undoStack.length === 0) return;
+        redoStack.push(JSON.parse(JSON.stringify(getCurrentLayoutState())));
+        const prev = undoStack.pop();
+        restoreLayoutState(prev);
+    }
+    
+    // Redo action
+    function redoLayout() {
+        if (redoStack.length === 0) return;
+        undoStack.push(JSON.parse(JSON.stringify(getCurrentLayoutState())));
+        const next = redoStack.pop();
+        restoreLayoutState(next);
+    }
     
     /**
      * Initialize the home controller
@@ -226,35 +281,34 @@ const HomeController = (function() {
     }
     
     /**
-     * Setup event listeners for the home view
+     * Setup event listeners for tiles and dragging
      */
     function setupEventListeners() {
-        // Delegate click events on tiles
+        // Add click event to tiles container for delegation
         tilesContainer.addEventListener('click', handleTileClick);
         
-        // Long press to enter drag mode
+        // Add mousedown event for drag start
         tilesContainer.addEventListener('mousedown', handleTileMouseDown);
+        
+        // Add touch events for mobile drag
+        tilesContainer.addEventListener('touchstart', handleTileTouchStart);
+        
+        // Add document-level event listeners for drag operations
         document.addEventListener('mousemove', handleMouseMove);
         document.addEventListener('mouseup', handleMouseUp);
-        
-        // Touch events for mobile (simplified)
-        tilesContainer.addEventListener('touchstart', handleTileTouchStart);
-        document.addEventListener('touchmove', handleTouchMove);
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
         document.addEventListener('touchend', handleTouchEnd);
         
-        // Resize event handlers
+        // Add document-level event listeners for resize operations
         document.addEventListener('mousemove', handleResizeMove);
         document.addEventListener('mouseup', handleResizeEnd);
-        
-        // Touch resize event handlers
-        tilesContainer.addEventListener('touchstart', handleTouchResizeStart);
-        document.addEventListener('touchmove', handleTouchResizeMove);
+        document.addEventListener('touchmove', handleTouchResizeMove, { passive: false });
         document.addEventListener('touchend', handleTouchResizeEnd);
     }
     
     /**
      * Handle tile click
-     * @param {Event} event - Click event
+     * @param {MouseEvent} event - Click event
      */
     function handleTileClick(event) {
         // Ignore clicks during drag operations
@@ -379,7 +433,6 @@ const HomeController = (function() {
         
         // Ensure we're working with the resolved current position
         const tileRect = draggedTile.getBoundingClientRect();
-        const containerRect = tilesContainer.getBoundingClientRect();
         
         // Calculate offset from cursor to tile corner
         dragOffset.x = clientX - tileRect.left;
@@ -482,6 +535,7 @@ const HomeController = (function() {
      * Finish dragging and save position
      */
     function finishDragging() {
+        pushUndoState(); // Save state for undo
         if (!draggedTile) return;
         
         // Reset dragging state
@@ -659,6 +713,7 @@ const HomeController = (function() {
      * @param {MouseEvent} event - Mouse up event
      */
     function handleResizeEnd() {
+        pushUndoState(); // Save state for undo
         if (!isResizing || !resizingTile) {
             return;
         }
@@ -853,6 +908,79 @@ const HomeController = (function() {
     }
     
     /**
+     * Handle touch resize end
+     * @param {TouchEvent} event - Touch end event
+     */
+    function handleTouchResizeEnd(event) {
+        pushUndoState(); // Save state for undo
+        if (!isResizing || !resizingTile) {
+            return;
+        }
+
+        // Remove resizing class
+        resizingTile.classList.remove('resizing');
+
+        // Reset z-index
+        resizingTile.style.zIndex = '1';
+
+        // Remove the resizing data attribute
+        if (resizingTile.dataset.resizing) {
+            delete resizingTile.dataset.resizing;
+        }
+
+        // Get the concept ID
+        const conceptId = resizingTile.dataset.id;
+
+        // Find the concept
+        const concept = concepts.find(c => c.id === conceptId);
+        if (!concept) {
+            isResizing = false;
+            resizingTile = null;
+            resizeHandle = null;
+            return;
+        }
+
+        // Update concept size and position
+        const updatedConcept = ConceptModel.updateConcept(concept, {
+            size: {
+                width: parseInt(resizingTile.style.width, 10),
+                height: parseInt(resizingTile.style.height, 10)
+            },
+            position: {
+                x: parseInt(resizingTile.style.left, 10),
+                y: parseInt(resizingTile.style.top, 10)
+            }
+        });
+
+        // Update the concept in the array
+        const index = concepts.findIndex(c => c.id === conceptId);
+        if (index !== -1) {
+            concepts[index] = updatedConcept;
+        }
+
+        // Save immediately to ensure size/position is preserved
+        StorageManager.saveConcept(updatedConcept);
+
+        // Set recently resized flag to prevent click events
+        recentlyResized = true;
+
+        // Clear any existing cooldown timer
+        if (resizeCooldownTimer) {
+            clearTimeout(resizeCooldownTimer);
+        }
+
+        // Reset the recently resized flag after a short delay
+        resizeCooldownTimer = setTimeout(() => {
+            recentlyResized = false;
+        }, 500);
+
+        // Reset resizing state
+        isResizing = false;
+        resizingTile = null;
+        resizeHandle = null;
+    }
+    
+    /**
      * Generate a thumbnail with retry mechanism
      * @param {Object} concept - Concept to generate thumbnail for
      * @param {HTMLElement} previewElement - Element to update with the thumbnail
@@ -1043,7 +1171,3 @@ const HomeController = (function() {
         }
     };
 })();
-
-function handleTouchResizeEnd(e) {
-    handleResizeEnd(e);
-}
