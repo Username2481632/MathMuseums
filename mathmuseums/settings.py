@@ -94,6 +94,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'mathmuseums.wsgi.application'
+ASGI_APPLICATION = 'mathmuseums.asgi.application'
 
 
 # Database

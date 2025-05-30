@@ -25,8 +25,11 @@ from django.views.static import serve
 import os
 
 def auth_check(request):
-    """Minimal page that only checks authentication before loading app resources"""
-    return render(request, 'auth_check.html')
+    """Redirect to new Advanced Login Flow or app if authenticated"""
+    if request.user.is_authenticated:
+        return redirect('app')
+    else:
+        return redirect('advanced_auth')
 
 @login_required
 def app_view(request):

@@ -1,0 +1,287 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Museums - Login</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <style>
+        .auth-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+        
+        .form-group input {
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        
+        .submit-btn {
+            padding: 0.75rem;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .submit-btn:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Dynamic styling classes */
+        .existing-user .password-label {
+            color: #28a745;
+        }
+        
+        .new-user .password-label {
+            color: #007bff;
+        }
+        
+        .existing-user .submit-btn {
+            background: #28a745;
+        }
+        
+        .existing-user .submit-btn:hover {
+            background: #1e7e34;
+        }
+        
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        
+        .email-status {
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            transition: all 0.3s ease;
+        }
+        
+        .email-status.checking {
+            color: #6c757d;
+        }
+        
+        .email-status.existing {
+            color: #28a745;
+        }
+        
+        .email-status.new {
+            color: #007bff;
+        }
+        
+        .back-link {
+            text-align: center;
+            margin-top: 1rem;
+        }
+        
+        .back-link a {
+            color: #6c757d;
+            text-decoration: none;
+        }
+        
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <h1>Math Museums</h1>
+        <p>Sign in to access your mathematical concept museum</p>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+        
+        <form method="post" class="auth-form" id="auth-form">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" required>
+                <div class="email-status" id="email-status"></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="password" class="password-label">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="submit-btn" id="submit-btn">Continue</button>
+        </form>
+        
+        <div class="back-link">
+            <a href="{% url 'auth_request' %}">Use legacy email verification instead</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const emailInput = document.getElementById('email');
+            const passwordLabel = document.querySelector('.password-label');
+            const submitBtn = document.getElementById('submit-btn');
+            const emailStatus = document.getElementById('email-status');
+            const authForm = document.getElementById('auth-form');
+            
+            let emailCheckTimeout;
+            let websocket;
+            
+            // Initialize WebSocket connection
+            function initWebSocket() {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/auth/email-check/`;
+                
+                websocket = new WebSocket(wsUrl);
+                
+                websocket.onopen = function(e) {
+                    console.log('WebSocket connected');
+                };
+                
+                websocket.onmessage = function(e) {
+                    const data = JSON.parse(e.data);
+                    
+                    if (data.type === 'email_check_result') {
+                        updateUIForEmailCheck(data.email, data.exists);
+                    } else if (data.type === 'error') {
+                        console.error('WebSocket error:', data.message);
+                        // Fallback to AJAX if WebSocket fails
+                        checkEmailAjax(data.email);
+                    }
+                };
+                
+                websocket.onerror = function(e) {
+                    console.error('WebSocket error:', e);
+                    // Fallback to AJAX
+                    websocket = null;
+                };
+                
+                websocket.onclose = function(e) {
+                    console.log('WebSocket closed');
+                    websocket = null;
+                };
+            }
+            
+            // Fallback AJAX email checking
+            function checkEmailAjax(email) {
+                fetch('{% url "email_check" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({ email: email })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        emailStatus.textContent = '';
+                        emailStatus.className = 'email-status';
+                    } else {
+                        updateUIForEmailCheck(email, data.exists);
+                    }
+                })
+                .catch(error => {
+                    console.error('Email check error:', error);
+                    emailStatus.textContent = '';
+                    emailStatus.className = 'email-status';
+                });
+            }
+            
+            // Update UI based on email check result
+            function updateUIForEmailCheck(email, exists) {
+                authForm.className = `auth-form ${exists ? 'existing-user' : 'new-user'}`;
+                passwordLabel.textContent = exists ? 'Enter your Password' : 'Choose a Password';
+                submitBtn.textContent = exists ? 'Log In' : 'Sign Up';
+                
+                if (exists) {
+                    emailStatus.textContent = 'Welcome back!';
+                    emailStatus.className = 'email-status existing';
+                } else {
+                    emailStatus.textContent = 'New account will be created';
+                    emailStatus.className = 'email-status new';
+                }
+            }
+            
+            // Email input event listener
+            emailInput.addEventListener('input', function() {
+                const email = this.value.trim();
+                
+                // Clear previous timeout
+                clearTimeout(emailCheckTimeout);
+                
+                if (email && email.includes('@')) {
+                    emailStatus.textContent = 'Checking...';
+                    emailStatus.className = 'email-status checking';
+                    
+                    // Debounce email checking
+                    emailCheckTimeout = setTimeout(() => {
+                        if (websocket && websocket.readyState === WebSocket.OPEN) {
+                            websocket.send(JSON.stringify({ email: email }));
+                        } else {
+                            checkEmailAjax(email);
+                        }
+                    }, 500);
+                } else {
+                    emailStatus.textContent = '';
+                    emailStatus.className = 'email-status';
+                    authForm.className = 'auth-form';
+                    passwordLabel.textContent = 'Password';
+                    submitBtn.textContent = 'Continue';
+                }
+            });
+            
+            // Form submission
+            authForm.addEventListener('submit', function(e) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Processing...';
+                authForm.classList.add('loading');
+            });
+            
+            // Initialize WebSocket
+            initWebSocket();
+        });
+    </script>
+</body>
+</html>
