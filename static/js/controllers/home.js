@@ -100,7 +100,7 @@ const HomeController = (function() {
                 StorageManager.saveConcept(updatedConcept);
             }
         }
-        renderTilesOnPoster(homePoster, concepts);
+        renderTilesOnPoster(homePoster, concepts, { handleResizeStart, handleTouchResizeStart });
     }
     
     // Helper: Push current layout to undo stack
@@ -182,7 +182,7 @@ const HomeController = (function() {
         const homeView = template.content.cloneNode(true);
         appContainer.appendChild(homeView);
         homePoster = setupHomePoster();
-        renderTilesOnPoster(homePoster, concepts);
+        renderTilesOnPoster(homePoster, concepts, { handleResizeStart, handleTouchResizeStart });
     }
     
     /**
@@ -1248,3 +1248,5 @@ const HomeController = (function() {
         }
     };
 })();
+
+window.HomeController = HomeController;

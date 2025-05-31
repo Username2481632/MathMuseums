@@ -1,7 +1,7 @@
 // tileRenderer.js
 // Handles rendering and creation of tiles on the home poster for the Math Museums home view.
 
-export function renderTilesOnPoster(homePoster, concepts) {
+export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, handleTouchResizeStart }) {
     // Clear the home poster
     homePoster.innerHTML = '';
     // Get home poster dimensions for initial positioning
@@ -10,7 +10,7 @@ export function renderTilesOnPoster(homePoster, concepts) {
     const defaultTileHeight = 200;
     const padding = 20;
     concepts.forEach((concept, index) => {
-        const tile = createConceptTile(concept);
+        const tile = createConceptTile(concept, handleResizeStart, handleTouchResizeStart);
         homePoster.appendChild(tile);
         tile.style.position = 'absolute';
         let tileX, tileY;
@@ -35,7 +35,7 @@ export function renderTilesOnPoster(homePoster, concepts) {
     });
 }
 
-function createConceptTile(concept) {
+function createConceptTile(concept, handleResizeStart, handleTouchResizeStart) {
     // Create the tile element
     const tile = document.createElement('div');
     tile.className = 'concept-tile';
@@ -127,12 +127,10 @@ function createConceptTile(concept) {
         const handle = document.createElement('div');
         handle.className = `resize-handle ${pos}`;
         handle.dataset.position = pos;
-        
         // Add mouse down event for resize start
         handle.addEventListener('mousedown', handleResizeStart);
         // Add touch start event for resize start
         handle.addEventListener('touchstart', handleTouchResizeStart);
-        
         tile.appendChild(handle);
     });
     
