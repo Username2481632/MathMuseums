@@ -2,6 +2,9 @@
  * Home Controller
  * Manages the home poster view with draggable tile grid
  */
+import { setupHomePoster } from './homePoster.js';
+import { renderTilesOnPoster } from './tileRenderer.js';
+
 const HomeController = (function() {
     // Private variables
     let homePoster; // formerly tilesContainer
@@ -97,7 +100,7 @@ const HomeController = (function() {
                 StorageManager.saveConcept(updatedConcept);
             }
         }
-        renderTilesOnPoster();
+        renderTilesOnPoster(homePoster, concepts);
     }
     
     // Helper: Push current layout to undo stack
@@ -170,52 +173,6 @@ const HomeController = (function() {
     }
     
     /**
-     * Set up the home poster (white region) with correct sizing and aspect ratio
-     */
-    function setupHomePoster() {
-        // This function can be expanded to handle sizing/aspect ratio logic if needed
-        // For now, it just ensures the home poster exists
-        homePoster = document.querySelector('.tiles-container');
-    }
-
-    /**
-     * Render all concept tiles on the home poster
-     */
-    function renderTilesOnPoster() {
-        // Clear the home poster
-        homePoster.innerHTML = '';
-        // Get home poster dimensions for initial positioning
-        const posterRect = homePoster.getBoundingClientRect();
-        const defaultTileWidth = 250;
-        const defaultTileHeight = 200;
-        const padding = 20;
-        concepts.forEach((concept, index) => {
-            const tile = createConceptTile(concept);
-            homePoster.appendChild(tile);
-            tile.style.position = 'absolute';
-            let tileX, tileY;
-            if (concept.x !== undefined && concept.y !== undefined) {
-                tileX = concept.x;
-                tileY = concept.y;
-            } else if (concept.position && (concept.position.x !== 0 || concept.position.y !== 0)) {
-                tileX = concept.position.x;
-                tileY = concept.position.y;
-            } else {
-                const col = index % 3;
-                const row = Math.floor(index / 3);
-                tileX = padding + col * (defaultTileWidth + padding);
-                tileY = padding + row * (defaultTileHeight + padding);
-                concept.x = tileX;
-                concept.y = tileY;
-                concept.position = { x: tileX, y: tileY };
-                StorageManager.saveConcept(concept);
-            }
-            tile.style.left = `${tileX}px`;
-            tile.style.top = `${tileY}px`;
-        });
-    }
-
-    /**
      * Render the home view (home poster and tiles)
      */
     function render() {
@@ -224,8 +181,8 @@ const HomeController = (function() {
         const template = document.getElementById('home-template');
         const homeView = template.content.cloneNode(true);
         appContainer.appendChild(homeView);
-        setupHomePoster();
-        renderTilesOnPoster();
+        homePoster = setupHomePoster();
+        renderTilesOnPoster(homePoster, concepts);
     }
     
     /**
