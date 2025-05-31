@@ -6,14 +6,45 @@ var App = (function() {
     // Initialize the application
     async function init() {
         try {
+            console.log('🚀 Starting application initialization...');
+            
+            // Check that all required modules are available
+            const requiredModules = {
+                'AuthClient': typeof AuthClient !== 'undefined',
+                'StorageManager': typeof StorageManager !== 'undefined',
+                'PreferencesClient': typeof PreferencesClient !== 'undefined',
+                'CoordinateUtils': typeof CoordinateUtils !== 'undefined',
+                'ConceptModel': typeof ConceptModel !== 'undefined',
+                'SettingsController': typeof SettingsController !== 'undefined'
+            };
+            
+            console.log('📦 Module availability check:', requiredModules);
+            
+            const missingModules = Object.entries(requiredModules)
+                .filter(([name, available]) => !available)
+                .map(([name]) => name);
+                
+            if (missingModules.length > 0) {
+                throw new Error(`Missing required modules: ${missingModules.join(', ')}`);
+            }
+            
             // Initialize auth first
+            console.log('🔐 Initializing authentication...');
             await AuthClient.init();
             
             // Initialize storage
+            console.log('💾 Initializing storage...');
             await StorageManager.init();
             
             // Initialize preferences
+            console.log('⚙️ Initializing preferences...');
             await PreferencesClient.init(); // Ensure this completes before accessing prefs
+            
+            // Initialize controllers that depend on PreferencesClient
+            console.log('🎛️ Initializing settings controller...');
+            SettingsController.init();
+            
+            console.log('✅ Core modules initialized successfully');
             
             // Initialize sync client (after storage and auth)
             SyncClient.init();

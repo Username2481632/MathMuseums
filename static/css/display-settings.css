@@ -48,20 +48,31 @@
 /* Specific Aspect Ratios */
 .aspect-ratio-16-9 {
     position: relative;
-    padding-top: 56.25%; /* 9/16 = 0.5625 */
     width: 100%;
+    height: 0;
+    padding-top: 56.25%; /* 9/16 = 0.5625 */
 }
 
 .aspect-ratio-4-3 {
     position: relative;
-    padding-top: 75%; /* 3/4 = 0.75 */
     width: 100%;
+    height: 0;
+    padding-top: 75%; /* 3/4 = 0.75 */
 }
 
 .aspect-ratio-1-1 {
     position: relative;
-    padding-top: 100%; /* 1/1 = 1.0 */
     width: 100%;
+    height: 0;
+    padding-top: 100%; /* 1/1 = 1.0 */
+}
+
+/* Override aspect ratio behavior in fit mode */
+#home-view.screen-fit-mode .aspect-ratio-16-9,
+#home-view.screen-fit-mode .aspect-ratio-4-3,
+#home-view.screen-fit-mode .aspect-ratio-1-1 {
+    padding-top: 0;
+    height: 100%;
 }
 
 /* Content inside aspect ratio container */
@@ -73,33 +84,72 @@
     height: 100%;
 }
 
-/* Fit Mode (with black bars) */
-.screen-fit-mode {
+/* Fit Mode (scale down to fit viewport with no scrolling) */
+#home-view.screen-fit-mode {
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: #222; /* Darkened background but not pure black */
-    min-height: 100vh;
+    height: calc(100vh - 70px);
+    width: 100vw;
+    position: fixed;
+    top: 70px; /* Start below the header */
+    left: 0;
+    z-index: 999; /* Below header but above everything else */
     padding: 0;
+    margin: 0;
+    overflow: hidden; /* Prevent any scrolling */
+    box-sizing: border-box;
 }
 
-.screen-fit-mode .aspect-ratio-container {
-    max-width: 100%;
-    max-height: 100vh;
-    /* Ensure the container doesn't collapse */
-    min-height: 400px;
+#home-view.screen-fit-mode .aspect-ratio-container {
+    /* Dimensions will be set by JavaScript */
+    transform-origin: center center;
+    position: relative;
+    /* Remove any default constraints */
 }
 
 /* Fill Mode (with scrolling) */
-.screen-fill-mode {
+#home-view.screen-fill-mode {
     overflow-y: auto;
     min-height: 100vh;
     background-color: var(--bg-color); /* Use the standard background color */
 }
 
-.screen-fill-mode .aspect-ratio-container {
+#home-view.screen-fill-mode .aspect-ratio-container {
     margin: 0 auto;
     max-width: 100%;
     /* Ensure the container doesn't collapse */
     min-height: 400px;
+}
+
+/* Aspect Ratio Input Styling */
+.aspect-ratio-inputs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: var(--spacing-md) 0;
+}
+
+.aspect-ratio-inputs input[type="number"] {
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 16px;
+    text-align: center;
+    width: 60px;
+    min-width: 60px;
+}
+
+.aspect-ratio-inputs input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.aspect-ratio-inputs span {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--text-color);
+    margin: 0 10px;
+    user-select: none;
 }

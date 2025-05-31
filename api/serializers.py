@@ -14,7 +14,7 @@ class ConceptTileSerializer(serializers.ModelSerializer):
 class UserPreferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserPreference
-        fields = ['onboarding_disabled', 'theme']
+        fields = ['onboarding_disabled', 'theme', 'share_with_classmates', 'aspect_ratio_width', 'aspect_ratio_height', 'screen_fit']
 
 class SyncLogSerializer(serializers.ModelSerializer):
     class Meta:

@@ -1,10 +1,10 @@
 /**
  * Home Controller
- * Manages the home view with draggable tile grid
+ * Manages the home poster view with draggable tile grid
  */
 const HomeController = (function() {
     // Private variables
-    let tilesContainer;
+    let homePoster; // formerly tilesContainer
     let concepts = [];
     let isDragging = false;
     let draggedTile = null;
@@ -186,22 +186,22 @@ const HomeController = (function() {
         // Append the home view to the container
         appContainer.appendChild(homeView);
         
-        // Get the tiles container
-        tilesContainer = document.querySelector('.tiles-container');
+        // Get the home poster (was tilesContainer)
+        homePoster = document.querySelector('.tiles-container');
         
         // Render the concept tiles
         renderConceptTiles();
     }
     
     /**
-     * Render the concept tiles
+     * Render the concept tiles on the home poster
      */
     function renderConceptTiles() {
-        // Clear the tiles container
-        tilesContainer.innerHTML = '';
+        // Clear the home poster
+        homePoster.innerHTML = '';
         
-        // Get container dimensions for initial positioning
-        const containerRect = tilesContainer.getBoundingClientRect();
+        // Get home poster dimensions for initial positioning
+        const posterRect = homePoster.getBoundingClientRect();
         const defaultTileWidth = 250; // Default width for new tiles
         const defaultTileHeight = 200; // Default height for new tiles
         const padding = 20; // Padding between tiles
@@ -209,7 +209,7 @@ const HomeController = (function() {
         // Create and append tiles for each concept
         concepts.forEach((concept, index) => {
             const tile = createConceptTile(concept);
-            tilesContainer.appendChild(tile);
+            homePoster.appendChild(tile);
             
             // Always use absolute positioning
             tile.style.position = 'absolute';
@@ -352,17 +352,17 @@ const HomeController = (function() {
     }
     
     /**
-     * Setup event listeners for tiles and dragging
+     * Setup event listeners for tiles and dragging on the home poster
      */
     function setupEventListeners() {
-        // Add click event to tiles container for delegation
-        tilesContainer.addEventListener('click', handleTileClick);
+        // Add click event to home poster for delegation
+        homePoster.addEventListener('click', handleTileClick);
         
         // Add mousedown event for drag start
-        tilesContainer.addEventListener('mousedown', handleTileMouseDown);
+        homePoster.addEventListener('mousedown', handleTileMouseDown);
         
         // Add touch events for mobile drag
-        tilesContainer.addEventListener('touchstart', handleTileTouchStart);
+        homePoster.addEventListener('touchstart', handleTileTouchStart);
         
         // Add document-level event listeners for drag operations
         document.addEventListener('mousemove', handleMouseMove);
@@ -552,10 +552,10 @@ const HomeController = (function() {
         if (!draggedTile) return;
         
         // Calculate new position relative to container
-        const containerRect = tilesContainer.getBoundingClientRect();
+        const containerRect = homePoster.getBoundingClientRect();
         
         // Get the padding values for consistent constraints
-        const padding = getContainerPadding();
+        const padding = getHomePosterPadding();
         
         // Calculate position where the cursor is
         const x = clientX - containerRect.left - dragOffset.x;
@@ -757,7 +757,7 @@ const HomeController = (function() {
         }
         
         // Get container dimensions
-        const containerRect = tilesContainer.getBoundingClientRect();
+        const containerRect = homePoster.getBoundingClientRect();
         
         // Apply constraints using the shared function
         const constrained = constrainResizeDimensions({
@@ -956,7 +956,7 @@ const HomeController = (function() {
         }
         
         // Get container dimensions
-        const containerRect = tilesContainer.getBoundingClientRect();
+        const containerRect = homePoster.getBoundingClientRect();
         
         // Apply constraints using the shared function
         const constrained = constrainResizeDimensions({
@@ -1110,14 +1110,14 @@ const HomeController = (function() {
     }
     
     /**
-     * Constrain resize dimensions to stay within container bounds
+     * Constrain resize dimensions to stay within home poster bounds
      * @param {Object} dimensions - The dimensions to constrain {x, y, width, height}
-     * @param {DOMRect} containerRect - The container rectangle
+     * @param {DOMRect} posterRect - The home poster rectangle
      * @returns {Object} - The constrained dimensions
      */
-    function constrainResizeDimensions(dimensions, containerRect) {
-        // Get container dimensions with padding
-        const padding = getContainerPadding();
+    function constrainResizeDimensions(dimensions, posterRect) {
+        // Get home poster padding values
+        const padding = getHomePosterPadding();
         
         // Make a copy to avoid modifying the original object
         let result = { ...dimensions };
@@ -1153,7 +1153,7 @@ const HomeController = (function() {
         }
         
         // Handle right boundary
-        const rightEdge = containerRect.width - padding.right;
+        const rightEdge = posterRect.width - padding.right;
         if (result.x + result.width > rightEdge) {
             const overflow = (result.x + result.width) - rightEdge;
             
@@ -1168,7 +1168,7 @@ const HomeController = (function() {
         }
         
         // Handle bottom boundary
-        const bottomEdge = containerRect.height - padding.bottom;
+        const bottomEdge = posterRect.height - padding.bottom;
         if (result.y + result.height > bottomEdge) {
             const overflow = (result.y + result.height) - bottomEdge;
             
@@ -1186,10 +1186,10 @@ const HomeController = (function() {
     }
     
     /**
-     * Get container padding values
+     * Get home poster padding values
      * @returns {Object} Object containing padding values
      */
-    function getContainerPadding() {
+    function getHomePosterPadding() {
         return {
             left: 0,
             right: 0,
@@ -1284,10 +1284,10 @@ const HomeController = (function() {
             resizeHandle = null;
             
             // Remove event listeners
-            if (tilesContainer) {
-                tilesContainer.removeEventListener('click', handleTileClick);
-                tilesContainer.removeEventListener('mousedown', handleTileMouseDown);
-                tilesContainer.removeEventListener('touchstart', handleTileTouchStart);
+            if (homePoster) {
+                homePoster.removeEventListener('click', handleTileClick);
+                homePoster.removeEventListener('mousedown', handleTileMouseDown);
+                homePoster.removeEventListener('touchstart', handleTileTouchStart);
             }
             
             document.removeEventListener('mousemove', handleMouseMove);
@@ -1300,7 +1300,7 @@ const HomeController = (function() {
             document.removeEventListener('mouseup', handleResizeEnd);
             
             // Remove touch resize event listeners
-            tilesContainer.removeEventListener('touchstart', handleTouchResizeStart);
+            homePoster.removeEventListener('touchstart', handleTouchResizeStart);
             document.removeEventListener('touchmove', handleTouchResizeMove);
             document.removeEventListener('touchend', handleTouchResizeEnd);
         }

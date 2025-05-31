@@ -391,3 +391,8 @@ const StorageManager = (function() {
         decrementUnsyncedChanges
     };
 })();
+
+// Expose StorageManager globally
+if (typeof window !== 'undefined') {
+    window.StorageManager = StorageManager;
+}

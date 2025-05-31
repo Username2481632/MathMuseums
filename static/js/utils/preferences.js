@@ -8,10 +8,12 @@ const PreferencesClient = (function() {
         onboardingDisabled: false,
         theme: 'light',
         share_with_classmates: true, // Default to true
-        aspectRatio: '16:9', // Default aspect ratio
-        screenFit: 'fit' // Default screen fit mode (fit or fill)
+        aspectRatioWidth: 1, // Default aspect ratio 1:1
+        aspectRatioHeight: 1,
+        screenFit: 'fit' // Default screen fit mode (fit or fill) - stored in localStorage only
     };
     let loaded = false;
+    let originalContentBounds = null; // Store original content bounds for consistent scaling
     
     /**
      * Load preferences from storage or server
@@ -35,15 +37,20 @@ const PreferencesClient = (function() {
                     
                     if (response.ok) {
                         const serverPrefs = await response.json();
+                        
+                        // Get screen fit from localStorage (not stored on server)
+                        const localScreenFit = localStorage.getItem('screenFit') || 'fit';
+                        
                         preferences = {
                             onboardingDisabled: serverPrefs.onboarding_disabled,
                             theme: serverPrefs.theme,
                             share_with_classmates: serverPrefs.share_with_classmates,
-                            aspectRatio: serverPrefs.aspect_ratio || '16:9',
-                            screenFit: serverPrefs.screen_fit || 'fit'
+                            aspectRatioWidth: serverPrefs.aspect_ratio_width || 1,
+                            aspectRatioHeight: serverPrefs.aspect_ratio_height || 1,
+                            screenFit: localScreenFit
                         };
                         
-                        // Update local storage
+                        // Update local storage (but screen fit is handled separately)
                         savePreferencesToLocalStorage(preferences);
                     } else {
                         console.warn('Failed to load preferences from server, using local/default.');
@@ -69,17 +76,23 @@ const PreferencesClient = (function() {
             // Update local preferences
             preferences = { ...preferences, ...newPrefs };
             
+            // Save screen fit to localStorage only
+            if (newPrefs.screenFit) {
+                localStorage.setItem('screenFit', newPrefs.screenFit);
+            }
+            
             // Save to local storage
             savePreferencesToLocalStorage(preferences);
             
-            // Save to server if authenticated
+            // Save to server if authenticated (excluding screenFit which is localStorage only)
             if (AuthClient.isAuthenticated()) {
                 const payload = {
                     onboarding_disabled: preferences.onboardingDisabled,
                     theme: preferences.theme,
                     share_with_classmates: preferences.share_with_classmates,
-                    aspect_ratio: preferences.aspectRatio,
-                    screen_fit: preferences.screenFit
+                    aspect_ratio_width: preferences.aspectRatioWidth,
+                    aspect_ratio_height: preferences.aspectRatioHeight,
+                    screen_fit: preferences.screenFit // Still include for now, but will be localStorage only
                 };
                 console.log('Saving preferences to server:', payload); // Debug log
                 await fetch('/api/preferences/', {
@@ -113,63 +126,346 @@ const PreferencesClient = (function() {
     /**
      * Apply display settings (aspect ratio and screen fit mode)
      */
-    function applyDisplaySettings() {
-        const appContainer = document.getElementById('app-container');
-        if (!appContainer) return;
-        
-        // Clean existing classes
-        appContainer.classList.remove(
-            'screen-fit-mode', 'screen-fill-mode',
-            'aspect-ratio-16-9', 'aspect-ratio-4-3', 'aspect-ratio-1-1'
-        );
-        
-        // Apply screen fit mode
-        if (preferences.screenFit === 'fit') {
-            appContainer.classList.add('screen-fit-mode');
-        } else if (preferences.screenFit === 'fill') {
-            appContainer.classList.add('screen-fill-mode');
+    // Track last aspect ratio to detect changes
+    let lastAspectRatio = null;
+
+    function getLastAspectRatio() {
+        // Return previous aspect ratio, but if this is the first call, we need to figure out
+        // what the previous dimensions actually were
+        if (lastAspectRatio && lastAspectRatio !== `${preferences.aspectRatioWidth}:${preferences.aspectRatioHeight}`) {
+            const parts = lastAspectRatio.split(':');
+            return {
+                width: parseFloat(parts[0]) || 1,
+                height: parseFloat(parts[1]) || 1
+            };
         }
         
-        // Apply aspect ratio if not 'none'
-        if (preferences.aspectRatio !== 'none') {
-            // Convert aspect ratio format (e.g., '16:9') to class name format ('aspect-ratio-16-9')
-            const aspectRatioClass = 'aspect-ratio-' + preferences.aspectRatio.replace(':', '-');
-            appContainer.classList.add(aspectRatioClass);
+        // If no previous aspect ratio, try to determine from current container size
+        const aspectRatioContainer = document.querySelector('#home-view .aspect-ratio-container');
+        if (aspectRatioContainer && aspectRatioContainer.style.width && aspectRatioContainer.style.height) {
+            const currentWidth = parseInt(aspectRatioContainer.style.width, 10);
+            const currentHeight = parseInt(aspectRatioContainer.style.height, 10);
+            const currentAspect = currentWidth / currentHeight;
             
-            // Wrap content in aspect ratio container if not already wrapped
-            let container = document.querySelector('#app-container > .aspect-ratio-container');
-            if (!container) {
-                // Get all current children
-                const children = Array.from(appContainer.children);
-                
-                // Create container
-                container = document.createElement('div');
-                container.className = 'aspect-ratio-container';
-                
-                // Create content div
-                const content = document.createElement('div');
-                content.className = 'aspect-ratio-content';
-                
-                // Move all children to content div
-                children.forEach(child => content.appendChild(child));
-                
-                // Append content to container, and container to app
-                container.appendChild(content);
-                appContainer.appendChild(container);
+            // Convert back to whole number ratio
+            const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
+            const ratio = currentAspect;
+            
+            // Try to match common ratios
+            if (Math.abs(ratio - 1) < 0.1) return { width: 1, height: 1 };
+            if (Math.abs(ratio - 0.5) < 0.1) return { width: 1, height: 2 };
+            if (Math.abs(ratio - 2) < 0.1) return { width: 2, height: 1 };
+            if (Math.abs(ratio - 16/9) < 0.1) return { width: 16, height: 9 };
+            if (Math.abs(ratio - 4/3) < 0.1) return { width: 4, height: 3 };
+            
+            return { width: 1, height: 1 }; // Default fallback
+        }
+        
+        // Final fallback - assume square
+        return { width: 1, height: 1 };
+    }
+
+    function applyDisplaySettings() {
+        const homeView = document.getElementById('home-view');
+        const aspectRatioContainer = document.querySelector('#home-view .aspect-ratio-container');
+        if (!homeView) return;
+
+        // Clean existing classes from home view
+        homeView.classList.remove('screen-fit-mode', 'screen-fill-mode');
+
+        // Clean up aspect ratio container
+        if (aspectRatioContainer) {
+            aspectRatioContainer.classList.remove('aspect-ratio-16-9', 'aspect-ratio-4-3', 'aspect-ratio-1-1');
+            aspectRatioContainer.style.transform = '';
+            aspectRatioContainer.style.width = '';
+            aspectRatioContainer.style.height = '';
+            aspectRatioContainer.style.maxWidth = '';
+            aspectRatioContainer.style.maxHeight = '';
+        }
+
+        // Always set up the container with the correct aspect ratio
+        if (aspectRatioContainer) {
+            // Calculate container dimensions based on current aspect ratio
+            const headerHeight = 70;
+            const availableWidth = window.innerWidth;
+            const availableHeight = window.innerHeight - headerHeight;
+            const targetAspect = preferences.aspectRatioWidth / preferences.aspectRatioHeight;
+            
+            let containerWidth = availableWidth;
+            let containerHeight = containerWidth / targetAspect;
+            if (containerHeight > availableHeight) {
+                containerHeight = availableHeight;
+                containerWidth = containerHeight * targetAspect;
             }
+            
+            aspectRatioContainer.style.width = `${containerWidth}px`;
+            aspectRatioContainer.style.height = `${containerHeight}px`;
+            aspectRatioContainer.style.maxWidth = 'none';
+            aspectRatioContainer.style.maxHeight = 'none';
+        }
+
+        // Detect aspect ratio change
+        const currentAspectRatio = `${preferences.aspectRatioWidth}:${preferences.aspectRatioHeight}`;
+        const aspectRatioChanged = lastAspectRatio !== null && lastAspectRatio !== currentAspectRatio;
+        
+        // Only scale tiles if aspect ratio changed (not on initial load)
+        if (aspectRatioChanged && aspectRatioContainer) {
+            // Run async scaling in background
+            scaleTilesForAspectRatioChange(aspectRatioContainer, preferences.aspectRatioWidth, preferences.aspectRatioHeight)
+                .catch(error => console.error('Error scaling tiles:', error));
+        }
+        
+        // Update last aspect ratio after processing
+        lastAspectRatio = currentAspectRatio;
+
+        // Apply screen fit/fill mode for display scaling only
+        if (preferences.screenFit === 'fit') {
+            homeView.classList.add('screen-fit-mode');
+            setTimeout(() => applyFitModeDisplayScaling(), 100);
+        } else if (preferences.screenFit === 'fill') {
+            homeView.classList.add('screen-fill-mode');
+            setTimeout(() => applyFillModeDisplayScaling(), 100);
+        }
+    }
+    
+    /**
+     * Apply scaling to fit the content within the viewport for fit mode
+     */
+    // Only handles display scaling/letterboxing for fit mode
+    function applyFitModeDisplayScaling() {
+        const homeView = document.getElementById('home-view');
+        const aspectRatioContainer = document.querySelector('#home-view .aspect-ratio-container');
+        if (!homeView || !aspectRatioContainer || !homeView.classList.contains('screen-fit-mode')) return;
+
+        // Calculate available viewport dimensions (accounting for header)
+        const headerHeight = 70;
+        const availableWidth = window.innerWidth;
+        const availableHeight = window.innerHeight - headerHeight;
+        const targetAspectRatio = preferences.aspectRatioWidth / preferences.aspectRatioHeight;
+
+        console.log('Container sizing debug:', {
+            aspectRatioWidth: preferences.aspectRatioWidth,
+            aspectRatioHeight: preferences.aspectRatioHeight,
+            targetAspectRatio,
+            availableWidth,
+            availableHeight
+        });
+
+        // Compute the largest size for the aspect ratio container that fits in the viewport
+        let containerWidth = availableWidth;
+        let containerHeight = containerWidth / targetAspectRatio;
+        if (containerHeight > availableHeight) {
+            containerHeight = availableHeight;
+            containerWidth = containerHeight * targetAspectRatio;
+        }
+
+        console.log('Calculated container size:', { containerWidth, containerHeight });
+
+        // Set the container size (this creates black bars if needed)
+        aspectRatioContainer.style.width = `${containerWidth}px`;
+        aspectRatioContainer.style.height = `${containerHeight}px`;
+        aspectRatioContainer.style.maxWidth = 'none';
+        aspectRatioContainer.style.maxHeight = 'none';
+        aspectRatioContainer.style.transform = 'none';
+
+        // Center the container
+        homeView.style.alignItems = 'center';
+        homeView.style.justifyContent = 'center';
+        
+        // Re-render tiles now that container has proper dimensions
+        console.log('Container sizing complete - checking for HomeController');
+        console.log('HomeController available:', !!window.HomeController);
+        console.log('renderConceptTiles available:', !!(window.HomeController && window.HomeController.renderConceptTiles));
+        
+        if (window.HomeController && window.HomeController.renderConceptTiles) {
+            setTimeout(() => {
+                console.log('Re-rendering tiles after container sizing');
+                window.HomeController.renderConceptTiles();
+            }, 50);
         } else {
-            // If aspect ratio is 'none', remove the aspect ratio container wrapper if it exists
-            const container = document.querySelector('#app-container > .aspect-ratio-container');
-            if (container) {
-                const content = container.querySelector('.aspect-ratio-content');
-                if (content) {
-                    // Move all children back to app container
-                    Array.from(content.children).forEach(child => appContainer.appendChild(child));
+            // Fallback - try to trigger a re-render through the router or direct call
+            console.log('HomeController not available, trying alternative approach');
+            setTimeout(() => {
+                const aspectRatioContainer = document.querySelector('#home-view .aspect-ratio-container');
+                if (aspectRatioContainer) {
+                    const rect = aspectRatioContainer.getBoundingClientRect();
+                    console.log('Alternative check - container dimensions now:', rect.width, 'x', rect.height);
                 }
-                // Remove the container
-                container.remove();
+                
+                // Dispatch a custom event that the home controller can listen for
+                const event = new CustomEvent('containerSized', {
+                    detail: { width: containerWidth, height: containerHeight }
+                });
+                document.dispatchEvent(event);
+            }, 50);
+        }
+    }
+    
+    /**
+     * Apply proportional scaling for fill mode
+     */
+    // Only handles display scaling for fill mode (no black bars, just fills viewport)
+    function applyFillModeDisplayScaling() {
+        const homeView = document.getElementById('home-view');
+        const aspectRatioContainer = document.querySelector('#home-view .aspect-ratio-container');
+        if (!homeView || !aspectRatioContainer || !homeView.classList.contains('screen-fill-mode')) return;
+
+        // Fill the viewport, possibly cropping the page
+        aspectRatioContainer.style.width = '100vw';
+        aspectRatioContainer.style.height = `calc(100vh - 70px)`;
+        aspectRatioContainer.style.maxWidth = 'none';
+        aspectRatioContainer.style.maxHeight = 'none';
+        aspectRatioContainer.style.transform = 'none';
+        homeView.style.alignItems = 'center';
+        homeView.style.justifyContent = 'center';
+    }
+
+    // Transform tiles when aspect ratio changes with aspect ratio compensation
+    async function scaleTilesForAspectRatioChange(aspectRatioContainer, aspectRatioWidth, aspectRatioHeight) {
+        const tiles = aspectRatioContainer.querySelectorAll('.concept-tile');
+        if (!tiles || tiles.length === 0) return;
+
+        console.log(`Transforming tiles for aspect ratio change: ${aspectRatioWidth}:${aspectRatioHeight}`);
+        
+        // Get old aspect ratio
+        const oldAspectRatio = getLastAspectRatio();
+        if (!oldAspectRatio) {
+            console.log('No previous aspect ratio found, using simple re-render');
+            // Fall back to simple re-render if no previous aspect ratio
+            return simpleReRenderTiles(aspectRatioContainer, aspectRatioWidth, aspectRatioHeight);
+        }
+        
+        const oldAspectX = oldAspectRatio.width;
+        const oldAspectY = oldAspectRatio.height;
+        const newAspectX = aspectRatioWidth;
+        const newAspectY = aspectRatioHeight;
+        
+        console.log(`Old aspect: ${oldAspectX}:${oldAspectY}, New aspect: ${newAspectX}:${newAspectY}`);
+        
+        // Calculate transformation factor: newValue *= Math.min((oldAspectX/oldAspectY)/(newAspectX/newAspectY), (newAspectX/newAspectY)/(oldAspectX/oldAspectY))
+        const oldRatio = oldAspectX / oldAspectY;
+        const newRatio = newAspectX / newAspectY;
+        const transformFactor = Math.min(oldRatio / newRatio, newRatio / oldRatio);
+        
+        console.log(`Transform factor: ${transformFactor.toFixed(4)}`);
+        
+        // Get new container dimensions (should already be set by applyDisplaySettings)
+        const containerRect = aspectRatioContainer.getBoundingClientRect();
+        const containerWidth = containerRect.width;
+        const containerHeight = containerRect.height;
+        
+        console.log(`New container: ${containerWidth}x${containerHeight}`);
+        
+        // Transform all tiles using the aspect ratio compensation factor
+        for (const tile of tiles) {
+            const conceptId = tile.dataset.id;
+            if (conceptId && window.StorageManager && window.ConceptModel) {
+                try {
+                    const concept = await window.StorageManager.getConcept(conceptId);
+                    if (concept) {
+                        // Get existing percentage coordinates
+                        const coords = window.ConceptModel.getCoordinates(concept);
+                        
+                        // Apply transformation to all coordinate values
+                        const transformedCoords = {
+                            anchorX: coords.anchorX * transformFactor,
+                            anchorY: coords.anchorY * transformFactor,
+                            width: coords.width * transformFactor,
+                            height: coords.height * transformFactor
+                        };
+                        
+                        console.log(`Tile ${conceptId}: (${coords.anchorX.toFixed(1)}, ${coords.anchorY.toFixed(1)}, ${coords.width.toFixed(1)}, ${coords.height.toFixed(1)}) → (${transformedCoords.anchorX.toFixed(1)}, ${transformedCoords.anchorY.toFixed(1)}, ${transformedCoords.width.toFixed(1)}, ${transformedCoords.height.toFixed(1)})`);
+                        
+                        // Update the concept with transformed coordinates
+                        const updatedConcept = window.ConceptModel.updateCoordinates(concept, transformedCoords);
+                        await window.StorageManager.saveConcept(updatedConcept);
+                        
+                        // Convert to pixels using new container dimensions
+                        const pixelCoords = window.CoordinateUtils.percentageToPixels(
+                            transformedCoords.anchorX, transformedCoords.anchorY, 
+                            transformedCoords.width, transformedCoords.height,
+                            containerWidth, containerHeight
+                        );
+                        
+                        // Apply to tile element
+                        tile.style.left = `${pixelCoords.x}px`;
+                        tile.style.top = `${pixelCoords.y}px`;
+                        tile.style.width = `${pixelCoords.width}px`;
+                        tile.style.height = `${pixelCoords.height}px`;
+                    }
+                } catch (error) {
+                    console.error(`Error transforming tile ${conceptId}:`, error);
+                }
             }
         }
+    }
+    
+    // Simple re-render fallback for when no previous aspect ratio is available
+    async function simpleReRenderTiles(aspectRatioContainer, aspectRatioWidth, aspectRatioHeight) {
+        const tiles = aspectRatioContainer.querySelectorAll('.concept-tile');
+        if (!tiles || tiles.length === 0) return;
+        
+        // Get new container dimensions
+        const containerRect = aspectRatioContainer.getBoundingClientRect();
+        const containerWidth = containerRect.width;
+        const containerHeight = containerRect.height;
+        
+        // Simply re-render all tiles using their existing percentage coordinates
+        for (const tile of tiles) {
+            const conceptId = tile.dataset.id;
+            if (conceptId && window.StorageManager && window.ConceptModel) {
+                try {
+                    const concept = await window.StorageManager.getConcept(conceptId);
+                    if (concept) {
+                        const coords = window.ConceptModel.getCoordinates(concept);
+                        
+                        const pixelCoords = window.CoordinateUtils.percentageToPixels(
+                            coords.anchorX, coords.anchorY, coords.width, coords.height,
+                            containerWidth, containerHeight
+                        );
+                        
+                        tile.style.left = `${pixelCoords.x}px`;
+                        tile.style.top = `${pixelCoords.y}px`;
+                        tile.style.width = `${pixelCoords.width}px`;
+                        tile.style.height = `${pixelCoords.height}px`;
+                    }
+                } catch (error) {
+                    console.error(`Error re-rendering tile ${conceptId}:`, error);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Calculate the bounding box of all tiles (kept for backward compatibility)
+     * @param {NodeList} tiles - All tile elements
+     * @returns {Object|null} Bounding box {minX, minY, maxX, maxY, width, height}
+     */
+    function calculateContentBounds(tiles) {
+        if (!tiles || tiles.length === 0) return null;
+        
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        
+        tiles.forEach(tile => {
+            const x = parseInt(tile.style.left, 10) || 0;
+            const y = parseInt(tile.style.top, 10) || 0;
+            const width = parseInt(tile.style.width, 10) || 250;
+            const height = parseInt(tile.style.height, 10) || 200;
+            
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x + width);
+            maxY = Math.max(maxY, y + height);
+        });
+        
+        return {
+            minX,
+            minY,
+            maxX,
+            maxY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
     }
     
     /**
@@ -241,14 +537,43 @@ const PreferencesClient = (function() {
      */
     function init() {
         loadPreferences();
+        
+        // Add window resize listener for scaling
+        window.addEventListener('resize', () => {
+            if (preferences.screenFit === 'fit') {
+                applyFitModeDisplayScaling();
+            } else if (preferences.screenFit === 'fill') {
+                applyFillModeDisplayScaling();
+            }
+        });
     }
     
     /**
      * Get aspect ratio setting
-     * @returns {string} Current aspect ratio setting
+     * @returns {Object} Current aspect ratio setting with width and height
      */
     function getAspectRatio() {
-        return preferences.aspectRatio;
+        return {
+            width: preferences.aspectRatioWidth,
+            height: preferences.aspectRatioHeight,
+            ratio: preferences.aspectRatioWidth / preferences.aspectRatioHeight
+        };
+    }
+    
+    /**
+     * Get aspect ratio width
+     * @returns {number} Current aspect ratio width
+     */
+    function getAspectRatioWidth() {
+        return preferences.aspectRatioWidth;
+    }
+    
+    /**
+     * Get aspect ratio height
+     * @returns {number} Current aspect ratio height
+     */
+    function getAspectRatioHeight() {
+        return preferences.aspectRatioHeight;
     }
     
     /**
@@ -257,6 +582,42 @@ const PreferencesClient = (function() {
      */
     function getScreenFit() {
         return preferences.screenFit;
+    }
+    
+    /**
+     * Reset the stored original content bounds
+     * Call this when tiles are added, removed, or manually repositioned
+     */
+    function resetOriginalContentBounds() {
+        originalContentBounds = null;
+    }
+    
+    /**
+     * Calculate optimal scaling factor for percentage coordinates
+     * @param {number} newWidth - New aspect ratio width
+     * @param {number} newHeight - New aspect ratio height
+     * @param {number} oldWidth - Previous aspect ratio width  
+     * @param {number} oldHeight - Previous aspect ratio height
+     * @returns {number} Scale factor to apply to percentage coordinates
+     */
+    function calculateOptimalScaling(newWidth, newHeight, oldWidth, oldHeight) {
+        // Calculate the base size change (max dimension change)
+        const oldBaseSize = Math.max(oldWidth, oldHeight);
+        const newBaseSize = Math.max(newWidth, newHeight);
+        
+        // Return the simple scale factor
+        return newBaseSize / oldBaseSize;
+    }
+    
+    /**
+     * Debug function to log scaling information
+     * @param {string} action - Action being performed
+     * @param {Object} data - Data to log
+     */
+    function debugScaling(action, data) {
+        if (window.location.search.includes('debug=true')) {
+            console.log(`[AspectRatio] ${action}:`, data);
+        }
     }
     
     // Public API
@@ -268,7 +629,19 @@ const PreferencesClient = (function() {
         getPreferences, // Expose getPreferences
         isLoaded: () => loaded,
         getAspectRatio,
+        getAspectRatioWidth,
+        getAspectRatioHeight,
         getScreenFit,
-        applyDisplaySettings
+        applyDisplaySettings,
+        applyFitModeDisplayScaling,
+        applyFillModeDisplayScaling,
+        calculateContentBounds,
+        calculateOptimalScaling,
+        resetOriginalContentBounds // Expose the reset function
     };
 })();
+
+// Expose PreferencesClient globally
+if (typeof window !== 'undefined') {
+    window.PreferencesClient = PreferencesClient;
+}

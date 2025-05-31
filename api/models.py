@@ -42,7 +42,9 @@ class UserPreference(models.Model):
     onboarding_disabled = models.BooleanField(default=False)
     theme = models.CharField(max_length=20, default='light')
     share_with_classmates = models.BooleanField(default=True)  # New: opt-in for sharing work
-    # Add more preferences as needed
+    aspect_ratio_width = models.IntegerField(default=1)  # Default to 1:1 aspect ratio
+    aspect_ratio_height = models.IntegerField(default=1)
+    screen_fit = models.CharField(max_length=10, default='fit', choices=[('fit', 'Fit'), ('fill', 'Fill')])
 
     def __str__(self):
         return f"Preferences for {self.user.email}"

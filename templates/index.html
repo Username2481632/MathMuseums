@@ -42,8 +42,10 @@
     <template id="home-template">
         <section id="home-view" class="view">
             <div class="aspect-ratio-container">
-                <div class="tiles-container">
-                    <!-- Tiles will be inserted here dynamically -->
+                <div class="aspect-ratio-content">
+                    <div class="tiles-container">
+                        <!-- Tiles will be inserted here dynamically -->
+                    </div>
                 </div>
             </div>
         </section>
@@ -101,19 +103,10 @@
             <div class="settings-container">
                 <div class="settings-group">
                     <h3>Aspect Ratio</h3>
-                    <div class="settings-options">
-                        <label>
-                            <input type="radio" name="aspect-ratio" value="16:9" checked> 16:9
-                        </label>
-                        <label>
-                            <input type="radio" name="aspect-ratio" value="4:3"> 4:3
-                        </label>
-                        <label>
-                            <input type="radio" name="aspect-ratio" value="1:1"> 1:1 (Square)
-                        </label>
-                        <label>
-                            <input type="radio" name="aspect-ratio" value="none"> Automatic
-                        </label>
+                    <div class="aspect-ratio-inputs">
+                        <input type="number" id="aspect-width" min="1" value="1" style="width: 60px; text-align: center;">
+                        <span style="margin: 0 10px; font-weight: bold;">:</span>
+                        <input type="number" id="aspect-height" min="1" value="1" style="width: 60px; text-align: center;">
                     </div>
                 </div>
                 <div class="settings-group">
@@ -137,6 +130,7 @@
     <!-- Core scripts -->
     <script src="{% static 'js/utils/auth.js' %}"></script>
     <script src="{% static 'js/utils/storage.js' %}"></script>
+    <script src="{% static 'js/utils/coordinates.js' %}"></script>
     <script src="{% static 'js/utils/preferences.js' %}"></script>
     <script src="{% static 'js/utils/sync.js' %}"></script>
     <script src="{% static 'js/utils/router.js' %}"></script>
@@ -146,6 +140,7 @@
     <script src="{% static 'js/controllers/detail.js' %}"></script>
     <script src="{% static 'js/controllers/onboarding.js' %}"></script>
     <script src="{% static 'js/controllers/settings.js' %}"></script>
+    <script src="{% static 'js/test-coordinates.js' %}"></script>
     <script src="{% static 'js/app.js' %}"></script>
 </body>
 </html>
