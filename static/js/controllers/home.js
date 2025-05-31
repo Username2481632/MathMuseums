@@ -97,7 +97,7 @@ const HomeController = (function() {
                 StorageManager.saveConcept(updatedConcept);
             }
         }
-        renderConceptTiles();
+        renderTilesOnPoster();
     }
     
     // Helper: Push current layout to undo stack
@@ -170,51 +170,29 @@ const HomeController = (function() {
     }
     
     /**
-     * Render the home view
+     * Set up the home poster (white region) with correct sizing and aspect ratio
      */
-    function render() {
-        // Get the app container
-        const appContainer = document.getElementById('app-container');
-        
-        // Clear the container
-        appContainer.innerHTML = '';
-        
-        // Clone the template
-        const template = document.getElementById('home-template');
-        const homeView = template.content.cloneNode(true);
-        
-        // Append the home view to the container
-        appContainer.appendChild(homeView);
-        
-        // Get the home poster (was tilesContainer)
+    function setupHomePoster() {
+        // This function can be expanded to handle sizing/aspect ratio logic if needed
+        // For now, it just ensures the home poster exists
         homePoster = document.querySelector('.tiles-container');
-        
-        // Render the concept tiles
-        renderConceptTiles();
     }
-    
+
     /**
-     * Render the concept tiles on the home poster
+     * Render all concept tiles on the home poster
      */
-    function renderConceptTiles() {
+    function renderTilesOnPoster() {
         // Clear the home poster
         homePoster.innerHTML = '';
-        
         // Get home poster dimensions for initial positioning
         const posterRect = homePoster.getBoundingClientRect();
-        const defaultTileWidth = 250; // Default width for new tiles
-        const defaultTileHeight = 200; // Default height for new tiles
-        const padding = 20; // Padding between tiles
-        
-        // Create and append tiles for each concept
+        const defaultTileWidth = 250;
+        const defaultTileHeight = 200;
+        const padding = 20;
         concepts.forEach((concept, index) => {
             const tile = createConceptTile(concept);
             homePoster.appendChild(tile);
-            
-            // Always use absolute positioning
             tile.style.position = 'absolute';
-            
-            // Check for both position formats (x/y and position.x/y for backward compatibility)
             let tileX, tileY;
             if (concept.x !== undefined && concept.y !== undefined) {
                 tileX = concept.x;
@@ -223,23 +201,31 @@ const HomeController = (function() {
                 tileX = concept.position.x;
                 tileY = concept.position.y;
             } else {
-                // Position in a grid pattern (3 columns)
                 const col = index % 3;
                 const row = Math.floor(index / 3);
                 tileX = padding + col * (defaultTileWidth + padding);
                 tileY = padding + row * (defaultTileHeight + padding);
-                
-                // Update concept with new position
                 concept.x = tileX;
                 concept.y = tileY;
                 concept.position = { x: tileX, y: tileY };
                 StorageManager.saveConcept(concept);
             }
-            
-            // Set tile position
             tile.style.left = `${tileX}px`;
             tile.style.top = `${tileY}px`;
         });
+    }
+
+    /**
+     * Render the home view (home poster and tiles)
+     */
+    function render() {
+        const appContainer = document.getElementById('app-container');
+        appContainer.innerHTML = '';
+        const template = document.getElementById('home-template');
+        const homeView = template.content.cloneNode(true);
+        appContainer.appendChild(homeView);
+        setupHomePoster();
+        renderTilesOnPoster();
     }
     
     /**
@@ -1240,7 +1226,6 @@ const HomeController = (function() {
     const origRender = render;
     render = function() {
         origRender.apply(this, arguments);
-        // Wait for DOM update
         setTimeout(() => {
             applyScreenFitMode(getSavedScreenFitMode());
             setupScreenFitListeners();
