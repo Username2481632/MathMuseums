@@ -273,32 +273,18 @@ const PreferencesClient = (function() {
         homeView.style.justifyContent = 'center';
         
         // Re-render tiles now that container has proper dimensions
-        console.log('Container sizing complete - checking for HomeController');
-        console.log('HomeController available:', !!window.HomeController);
-        console.log('renderConceptTiles available:', !!(window.HomeController && window.HomeController.renderConceptTiles));
-        
-        if (window.HomeController && window.HomeController.renderConceptTiles) {
-            setTimeout(() => {
-                console.log('Re-rendering tiles after container sizing');
-                window.HomeController.renderConceptTiles();
-            }, 50);
-        } else {
-            // Fallback - try to trigger a re-render through the router or direct call
-            console.log('HomeController not available, trying alternative approach');
-            setTimeout(() => {
-                const aspectRatioContainer = document.querySelector('#home-view .aspect-ratio-container');
-                if (aspectRatioContainer) {
-                    const rect = aspectRatioContainer.getBoundingClientRect();
-                    console.log('Alternative check - container dimensions now:', rect.width, 'x', rect.height);
-                }
-                
-                // Dispatch a custom event that the home controller can listen for
-                const event = new CustomEvent('containerSized', {
-                    detail: { width: containerWidth, height: containerHeight }
-                });
-                document.dispatchEvent(event);
-            }, 50);
+        function waitForRenderTilesOnPoster(callback) {
+            if (window.renderTilesOnPoster) {
+                callback();
+            } else {
+                setTimeout(() => waitForRenderTilesOnPoster(callback), 50);
+            }
         }
+
+        waitForRenderTilesOnPoster(() => {
+            console.log('Container sizing complete - dispatching containerSized event');
+            document.dispatchEvent(new CustomEvent('containerSized'));
+        });
     }
     
     /**

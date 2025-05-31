@@ -4,6 +4,11 @@
  */
 import { setupHomePoster } from './homePoster.js';
 import { renderTilesOnPoster } from './tileRenderer.js';
+import { createUndoRedoManager } from '../managers/undoRedoManager.js';
+import { createDragManager } from '../managers/dragManager.js';
+import { createResizeManager } from '../managers/resizeManager.js';
+import { constrainResizeDimensions, getHomePosterPadding } from '../helpers/homeHelpers.js';
+import { applyScreenFitMode, getSavedScreenFitMode, saveScreenFitMode, setupScreenFitListeners } from '../helpers/screenFitMode.js';
 
 const HomeController = (function() {
     // Private variables
@@ -17,36 +22,79 @@ const HomeController = (function() {
     let dragCooldownTimer = null; // Timer for drag cooldown
     let thumbnailQueue = []; // Queue for thumbnail generation to prevent overloading
 
-    // Undo/Redo stacks for layout editing (persisted in localStorage)
-    let undoStack = [];
-    let redoStack = [];
+    // Undo/Redo manager for layout editing
+    const undoRedoManager = createUndoRedoManager({
+        getCurrentLayoutState,
+        restoreLayoutState
+    });
 
-    // LocalStorage keys for undo/redo
-    const UNDO_KEY = 'mm_undoStack';
-    const REDO_KEY = 'mm_redoStack';
+    // Drag manager
+    const dragManager = createDragManager({
+        onStart: () => {},
+        onUpdate: (tile, clientX, clientY, dragOffset) => {
+            // Calculate new position relative to container
+            const containerRect = homePoster.getBoundingClientRect();
+            const padding = getHomePosterPadding();
+            const x = clientX - containerRect.left - dragOffset.x;
+            const y = clientY - containerRect.top - dragOffset.y;
+            const tileWidth = parseInt(tile.style.width, 10) || 250;
+            const tileHeight = parseInt(tile.style.height, 10) || 200;
+            const minX = padding.left;
+            const minY = padding.top;
+            const maxX = containerRect.width - padding.right - tileWidth;
+            const maxY = containerRect.height - padding.bottom - tileHeight;
+            const constrainedX = Math.max(minX, Math.min(x, maxX));
+            const constrainedY = Math.max(minY, Math.min(y, maxY));
+            tile.style.left = `${constrainedX}px`;
+            tile.style.top = `${constrainedY}px`;
+        },
+        onFinish: (tile) => {
+            const conceptId = tile.dataset.id;
+            const concept = concepts.find(c => c.id === conceptId);
+            if (!concept) return;
+            const position = {
+                x: parseInt(tile.style.left, 10),
+                y: parseInt(tile.style.top, 10)
+            };
+            const updatedConcept = ConceptModel.updateConcept(concept, { position });
+            const index = concepts.findIndex(c => c.id === conceptId);
+            if (index !== -1) concepts[index] = updatedConcept;
+            StorageManager.saveConcept(updatedConcept);
+        },
+        getTileById: id => concepts.find(c => c.id === id),
+        pushUndoState: () => undoRedoManager.pushUndoState()
+    });
 
-    // Helper: Save stacks to localStorage
-    function saveStacks() {
-        try {
-            localStorage.setItem(UNDO_KEY, JSON.stringify(undoStack));
-            localStorage.setItem(REDO_KEY, JSON.stringify(redoStack));
-        } catch (e) {
-            // Ignore quota errors
-        }
-    }
-
-    // Helper: Load stacks from localStorage
-    function loadStacks() {
-        try {
-            const u = localStorage.getItem(UNDO_KEY);
-            const r = localStorage.getItem(REDO_KEY);
-            undoStack = u ? JSON.parse(u) : [];
-            redoStack = r ? JSON.parse(r) : [];
-        } catch (e) {
-            undoStack = [];
-            redoStack = [];
-        }
-    }
+    // Resize manager
+    const resizeManager = createResizeManager({
+        onStart: () => {},
+        onUpdate: (tile, constrained) => {
+            tile.style.width = `${constrained.width}px`;
+            tile.style.height = `${constrained.height}px`;
+            tile.style.left = `${constrained.x}px`;
+            tile.style.top = `${constrained.y}px`;
+        },
+        onFinish: (tile) => {
+            const conceptId = tile.dataset.id;
+            const concept = concepts.find(c => c.id === conceptId);
+            if (!concept) return;
+            const size = {
+                width: parseInt(tile.style.width, 10),
+                height: parseInt(tile.style.height, 10)
+            };
+            const position = {
+                x: parseInt(tile.style.left, 10),
+                y: parseInt(tile.style.top, 10)
+            };
+            const updatedConcept = ConceptModel.updateConcept(concept, { size, position });
+            const index = concepts.findIndex(c => c.id === conceptId);
+            if (index !== -1) concepts[index] = updatedConcept;
+            StorageManager.saveConcept(updatedConcept);
+        },
+        getTileById: id => concepts.find(c => c.id === id),
+        pushUndoState: () => undoRedoManager.pushUndoState(),
+        constrainDimensions: constrainResizeDimensions
+    });
 
     // Resize variables
     let isResizing = false;
@@ -103,44 +151,12 @@ const HomeController = (function() {
         renderTilesOnPoster(homePoster, concepts, { handleResizeStart, handleTouchResizeStart });
     }
     
-    // Helper: Push current layout to undo stack
-    function pushUndoState() {
-        undoStack.push(JSON.parse(JSON.stringify(getCurrentLayoutState())));
-        // Limit stack size if desired
-        if (undoStack.length > 100) undoStack.shift();
-        // Clear redo stack on new action
-        redoStack = [];
-        saveStacks();
-    }
-    
-    // Undo action
-    function undoLayout() {
-        if (undoStack.length === 0) {
-            return;
-        }
-        redoStack.push(JSON.parse(JSON.stringify(getCurrentLayoutState())));
-        const prev = undoStack.pop();
-        restoreLayoutState(prev);
-        saveStacks();
-    }
-    
-    // Redo action
-    function redoLayout() {
-        if (redoStack.length === 0) {
-            return;
-        }
-        undoStack.push(JSON.parse(JSON.stringify(getCurrentLayoutState())));
-        const next = redoStack.pop();
-        restoreLayoutState(next);
-        saveStacks();
-    }
-    
     /**
      * Initialize the home controller
      */
     async function init() {
         // Restore undo/redo stacks from localStorage
-        loadStacks();
+        undoRedoManager.loadStacks();
         
         // Get concepts from storage
         concepts = await loadConcepts();
@@ -298,26 +314,17 @@ const HomeController = (function() {
      * Setup event listeners for tiles and dragging on the home poster
      */
     function setupEventListeners() {
-        // Add click event to home poster for delegation
         homePoster.addEventListener('click', handleTileClick);
-        
-        // Add mousedown event for drag start
-        homePoster.addEventListener('mousedown', handleTileMouseDown);
-        
-        // Add touch events for mobile drag
-        homePoster.addEventListener('touchstart', handleTileTouchStart);
-        
-        // Add document-level event listeners for drag operations
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-        document.addEventListener('touchmove', handleTouchMove, { passive: false });
-        document.addEventListener('touchend', handleTouchEnd);
-        
-        // Add document-level event listeners for resize operations
-        document.addEventListener('mousemove', handleResizeMove);
-        document.addEventListener('mouseup', handleResizeEnd);
-        document.addEventListener('touchmove', handleTouchResizeMove, { passive: false });
-        document.addEventListener('touchend', handleTouchResizeEnd);
+        homePoster.addEventListener('mousedown', dragManager.handleTileMouseDown);
+        homePoster.addEventListener('touchstart', dragManager.handleTileTouchStart);
+        document.addEventListener('mousemove', dragManager.handleMouseMove);
+        document.addEventListener('mouseup', dragManager.handleMouseUp);
+        document.addEventListener('touchmove', dragManager.handleTouchMove, { passive: false });
+        document.addEventListener('touchend', dragManager.handleTouchEnd);
+        document.addEventListener('mousemove', (e) => resizeManager.handleResizeMove(e, homePoster.getBoundingClientRect()));
+        document.addEventListener('mouseup', resizeManager.handleResizeEnd);
+        document.addEventListener('touchmove', (e) => resizeManager.handleTouchResizeMove(e, homePoster.getBoundingClientRect()), { passive: false });
+        document.addEventListener('touchend', resizeManager.handleTouchResizeEnd);
     }
     
     /**
@@ -368,239 +375,6 @@ const HomeController = (function() {
         
         // Navigate to the detail view
         Router.navigate('detail', { id: conceptId });
-    }
-    
-    /**
-     * Handle tile mouse down
-     * @param {MouseEvent} event - Mouse down event
-     */
-    function handleTileMouseDown(event) {
-        // Find the tile element
-        const tile = event.target.closest('.concept-tile');
-        if (!tile) {
-            return;
-        }
-        
-        // Start a timer for long press
-        const longPressTimer = setTimeout(() => {
-            // Get the concept ID
-            const conceptId = tile.dataset.id;
-            
-            // Find the concept
-            const concept = concepts.find(c => c.id === conceptId);
-            if (!concept) {
-                return;
-            }
-            
-            // Start dragging
-            startDragging(tile, event.clientX, event.clientY);
-        }, 500); // 500ms for long press
-        
-        // Clear the timer on mouse up
-        tile.addEventListener('mouseup', () => clearTimeout(longPressTimer), { once: true });
-        tile.addEventListener('mouseleave', () => clearTimeout(longPressTimer), { once: true });
-    }
-    
-    /**
-     * Handle tile touch start
-     * @param {TouchEvent} event - Touch start event
-     */
-    function handleTileTouchStart(event) {
-        // Find the tile element
-        const tile = event.target.closest('.concept-tile');
-        if (!tile) {
-            return;
-        }
-        
-        // Start a timer for long press
-        const longPressTimer = setTimeout(() => {
-            // Get the concept ID
-            const conceptId = tile.dataset.id;
-            
-            // Find the concept
-            const concept = concepts.find(c => c.id === conceptId);
-            if (!concept) {
-                return;
-            }
-            
-            // Start dragging
-            startDragging(tile, event.touches[0].clientX, event.touches[0].clientY);
-        }, 500); // 500ms for long press
-        
-        // Clear the timer on touch end
-        tile.addEventListener('touchend', () => clearTimeout(longPressTimer), { once: true });
-        tile.addEventListener('touchcancel', () => clearTimeout(longPressTimer), { once: true });
-    }
-    
-    /**
-     * Start dragging a tile
-     * @param {HTMLElement} tile - Tile element
-     * @param {number} clientX - Client X coordinate
-     * @param {number} clientY - Client Y coordinate
-     */
-    function startDragging(tile, clientX, clientY) {
-        pushUndoState(); // Save state before dragging starts
-        isDragging = true;
-        draggedTile = tile;
-        
-        // Add dragging class
-        draggedTile.classList.add('dragging');
-        
-        // Ensure we're working with the resolved current position
-        const tileRect = draggedTile.getBoundingClientRect();
-        
-        // Calculate offset from cursor to tile corner
-        dragOffset.x = clientX - tileRect.left;
-        dragOffset.y = clientY - tileRect.top;
-        
-        // Set the z-index higher for dragging
-        draggedTile.style.zIndex = '100';
-        
-        // Move the tile to the current position
-        updateTilePosition(clientX, clientY);
-    }
-    
-    /**
-     * Handle mouse move
-     * @param {MouseEvent} event - Mouse move event
-     */
-    function handleMouseMove(event) {
-        if (!isDragging) {
-            return;
-        }
-        
-        event.preventDefault();
-        updateTilePosition(event.clientX, event.clientY);
-    }
-    
-    /**
-     * Handle touch move
-     * @param {TouchEvent} event - Touch move event
-     */
-    function handleTouchMove(event) {
-        if (!isDragging) {
-            return;
-        }
-        
-        event.preventDefault();
-        updateTilePosition(event.touches[0].clientX, event.touches[0].clientY);
-    }
-    
-    /**
-     * Update tile position during dragging
-     * @param {number} clientX - Client X coordinate
-     * @param {number} clientY - Client Y coordinate
-     */
-    function updateTilePosition(clientX, clientY) {
-        if (!draggedTile) return;
-        
-        // Calculate new position relative to container
-        const containerRect = homePoster.getBoundingClientRect();
-        
-        // Get the padding values for consistent constraints
-        const padding = getHomePosterPadding();
-        
-        // Calculate position where the cursor is
-        const x = clientX - containerRect.left - dragOffset.x;
-        const y = clientY - containerRect.top - dragOffset.y;
-        
-        // Get the tile's current size
-        const tileWidth = parseInt(draggedTile.style.width, 10) || 250; // Default to 250 if not set
-        const tileHeight = parseInt(draggedTile.style.height, 10) || 200; // Default to 200 if not set
-        
-        // Constrain to container bounds with padding
-        const minX = padding.left;
-        const minY = padding.top;
-        const maxX = containerRect.width - padding.right - tileWidth;
-        const maxY = containerRect.height - padding.bottom - tileHeight;
-        
-        const constrainedX = Math.max(minX, Math.min(x, maxX));
-        const constrainedY = Math.max(minY, Math.min(y, maxY));
-        
-        // Apply position directly (no animation)
-        draggedTile.style.left = `${constrainedX}px`;
-        draggedTile.style.top = `${constrainedY}px`;
-    }
-    
-    /**
-     * Handle mouse up
-     * @param {MouseEvent} event - Mouse up event
-     */
-    function handleMouseUp() {
-        if (!isDragging) {
-            return;
-        }
-        
-        finishDragging();
-    }
-    
-    /**
-     * Handle touch end
-     * @param {TouchEvent} event - Touch end event
-     */
-    function handleTouchEnd() {
-        if (!isDragging) {
-            return;
-        }
-        
-        finishDragging();
-    }
-    
-    /**
-     * Finish dragging and save position
-     */
-    function finishDragging() {
-        if (!draggedTile) return;
-        
-        // Reset dragging state
-        isDragging = false;
-        
-        // Set recently dragged flag to prevent click events
-        recentlyDragged = true;
-        
-        // Clear any existing cooldown timer
-        if (dragCooldownTimer) {
-            clearTimeout(dragCooldownTimer);
-        }
-        
-        // Reset the recently dragged flag after a short delay
-        dragCooldownTimer = setTimeout(() => {
-            recentlyDragged = false;
-        }, 300); // 300ms cooldown before clicks are registered again
-        
-        // Remove dragging class and reset z-index
-        draggedTile.classList.remove('dragging');
-        draggedTile.style.zIndex = '1';
-        
-        // Get the concept ID
-        const conceptId = draggedTile.dataset.id;
-        
-        // Find the concept
-        const concept = concepts.find(c => c.id === conceptId);
-        if (!concept) {
-            draggedTile = null;
-            return;
-        }
-        
-        // Update concept position
-        const position = {
-            x: parseInt(draggedTile.style.left, 10),
-            y: parseInt(draggedTile.style.top, 10)
-        };
-        
-        // Update concept and save to storage
-        const updatedConcept = ConceptModel.updateConcept(concept, { position });
-        
-        // Update the concept in the array
-        const index = concepts.findIndex(c => c.id === conceptId);
-        if (index !== -1) {
-            concepts[index] = updatedConcept;
-        }
-        
-        // Save immediately to ensure position is preserved
-        StorageManager.saveConcept(updatedConcept);
-        
-        draggedTile = null;
     }
     
     /**
@@ -1052,95 +826,6 @@ const HomeController = (function() {
         }, queueIndex * 100); // Stagger by 100ms per item in queue
     }
     
-    /**
-     * Constrain resize dimensions to stay within home poster bounds
-     * @param {Object} dimensions - The dimensions to constrain {x, y, width, height}
-     * @param {DOMRect} posterRect - The home poster rectangle
-     * @returns {Object} - The constrained dimensions
-     */
-    function constrainResizeDimensions(dimensions, posterRect) {
-        // Get home poster padding values
-        const padding = getHomePosterPadding();
-        
-        // Make a copy to avoid modifying the original object
-        let result = { ...dimensions };
-        
-        // Enforce minimum size
-        result.width = Math.max(200, result.width);
-        result.height = Math.max(150, result.height);
-        
-        // Apply max constraints
-        result.width = Math.min(500, result.width);
-        result.height = Math.min(400, result.height);
-        
-        // Handle left boundary
-        if (result.x < padding.left) {
-            const overflow = padding.left - result.x;
-            result.x = padding.left;
-            
-            // If we're dragging from left side, adjust width
-            if (result.adjustWidthFromLeft) {
-                result.width = Math.max(200, result.width - overflow);
-            }
-        }
-        
-        // Handle top boundary
-        if (result.y < padding.top) {
-            const overflow = padding.top - result.y;
-            result.y = padding.top;
-            
-            // If we're dragging from top side, adjust height
-            if (result.adjustHeightFromTop) {
-                result.height = Math.max(150, result.height - overflow);
-            }
-        }
-        
-        // Handle right boundary
-        const rightEdge = posterRect.width - padding.right;
-        if (result.x + result.width > rightEdge) {
-            const overflow = (result.x + result.width) - rightEdge;
-            
-            // If we're dragging from right side, adjust width
-            if (!result.adjustWidthFromLeft) {
-                result.width = Math.max(200, result.width - overflow);
-            } else {
-                // Otherwise adjust position and maintain width
-                result.width = Math.max(200, result.width);
-                result.x = Math.min(result.x, rightEdge - result.width);
-            }
-        }
-        
-        // Handle bottom boundary
-        const bottomEdge = posterRect.height - padding.bottom;
-        if (result.y + result.height > bottomEdge) {
-            const overflow = (result.y + result.height) - bottomEdge;
-            
-            // If we're dragging from bottom side, adjust height
-            if (!result.adjustHeightFromTop) {
-                result.height = Math.max(150, result.height - overflow);
-            } else {
-                // Otherwise adjust position and maintain height
-                result.height = Math.max(150, result.height);
-                result.y = Math.min(result.y, bottomEdge - result.height);
-            }
-        }
-        
-        return result;
-    }
-    
-    /**
-     * Get home poster padding values
-     * @returns {Object} Object containing padding values
-     */
-    function getHomePosterPadding() {
-        return {
-            left: 0,
-            right: 0,
-            top: 0,
-            bottom: 0
-        };
-    }
-    
     // --- FIT/FILL MODE LOGIC ---
     function applyScreenFitMode(mode) {
         const homeView = document.getElementById('home-view');
@@ -1203,6 +888,13 @@ const HomeController = (function() {
         }
     });
 
+    // --- Listen for containerSized event from preferences.js ---
+    document.addEventListener('containerSized', function() {
+        if (homePoster && concepts.length > 0) {
+            renderTilesOnPoster(homePoster, concepts, { handleResizeStart, handleTouchResizeStart });
+        }
+    });
+
     // Public API
     return {
         init,
@@ -1228,14 +920,14 @@ const HomeController = (function() {
             // Remove event listeners
             if (homePoster) {
                 homePoster.removeEventListener('click', handleTileClick);
-                homePoster.removeEventListener('mousedown', handleTileMouseDown);
-                homePoster.removeEventListener('touchstart', handleTileTouchStart);
+                homePoster.removeEventListener('mousedown', dragManager.handleTileMouseDown);
+                homePoster.removeEventListener('touchstart', dragManager.handleTileTouchStart);
             }
             
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-            document.removeEventListener('touchmove', handleTouchMove);
-            document.removeEventListener('touchend', handleTouchEnd);
+            document.removeEventListener('mousemove', dragManager.handleMouseMove);
+            document.removeEventListener('mouseup', dragManager.handleMouseUp);
+            document.removeEventListener('touchmove', dragManager.handleTouchMove);
+            document.removeEventListener('touchend', dragManager.handleTouchEnd);
             
             // Remove resize event listeners
             document.removeEventListener('mousemove', handleResizeMove);
@@ -1250,3 +942,4 @@ const HomeController = (function() {
 })();
 
 window.HomeController = HomeController;
+window.renderTilesOnPoster = renderTilesOnPoster;
