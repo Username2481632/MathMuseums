@@ -28,6 +28,12 @@ const HomeController = (function() {
         restoreLayoutState
     });
 
+    // Safe pushUndoState function that checks restoration state
+    const safePushUndoState = () => {
+        // The undoRedoManager internally checks isRestoring flag
+        undoRedoManager.pushUndoState();
+    };
+
     // Drag manager
     const dragManager = createDragManager({
         onStart: () => {},
@@ -62,7 +68,7 @@ const HomeController = (function() {
             StorageManager.saveConcept(updatedConcept);
         },
         getTileById: id => concepts.find(c => c.id === id),
-        pushUndoState: () => undoRedoManager.pushUndoState()
+        pushUndoState: safePushUndoState
     });
 
     // Resize manager
@@ -92,7 +98,7 @@ const HomeController = (function() {
             StorageManager.saveConcept(updatedConcept);
         },
         getTileById: id => concepts.find(c => c.id === id),
-        pushUndoState: () => undoRedoManager.pushUndoState(),
+        pushUndoState: safePushUndoState,
         constrainDimensions: constrainResizeDimensions
     });
 
@@ -129,6 +135,7 @@ const HomeController = (function() {
     
     // Helper: Restore layout state
     function restoreLayoutState(state) {
+        console.log('Restoring layout state:', state);
         if (!Array.isArray(state)) return;
         for (const s of state) {
             const conceptIndex = concepts.findIndex(c => c.id === s.id);
@@ -137,6 +144,10 @@ const HomeController = (function() {
                 
                 // Update using the same format as the drag/resize handlers
                 const updatedConcept = ConceptModel.updateConcept(concept, {
+                    x: s.x,
+                    y: s.y,
+                    width: s.width,
+                    height: s.height,
                     position: { x: s.x, y: s.y },
                     size: { width: s.width, height: s.height }
                 });
@@ -333,31 +344,26 @@ const HomeController = (function() {
      */
     function handleTileClick(event) {
         // Ignore clicks during drag operations
-        if (isDragging) {
+        if (dragManager.isDragging()) {
             return;
         }
-        
+        // Ignore clicks immediately after dragging (prevents detail view opening after drag)
+        if (dragManager.recentlyDragged()) {
+            return;
+        }
         // Ignore clicks during resize operations
         if (isResizing) {
             return;
         }
-        
-        // Ignore clicks immediately after dragging (prevents detail view opening after drag)
-        if (recentlyDragged) {
-            return;
-        }
-        
         // Ignore clicks immediately after resizing
         if (recentlyResized) {
             return;
         }
-        
         // Don't trigger clicks when the resize handle is clicked
         if (event.target.classList.contains('resize-handle')) {
             event.stopPropagation();
             return;
         }
-        
         // Check for explicit resizing data attribute
         const tile = event.target.closest('.concept-tile');
         if (tile && tile.dataset.resizing === 'true') {
@@ -365,14 +371,11 @@ const HomeController = (function() {
             event.preventDefault();
             return;
         }
-        
         if (!tile) {
             return;
         }
-        
         // Get the concept ID
         const conceptId = tile.dataset.id;
-        
         // Navigate to the detail view
         Router.navigate('detail', { id: conceptId });
     }
@@ -395,7 +398,7 @@ const HomeController = (function() {
         }
         
         // Set resizing flag
-        pushUndoState(); // Save state before resizing starts
+        safePushUndoState(); // Save state before resizing starts
         isResizing = true;
         
         // Add resizing class
@@ -594,7 +597,7 @@ const HomeController = (function() {
         }
         
         // Set resizing flag
-        pushUndoState(); // Save state before resizing starts
+        safePushUndoState(); // Save state before resizing starts
         isResizing = true;
         
         // Add resizing class
@@ -701,7 +704,7 @@ const HomeController = (function() {
      * @param {TouchEvent} event - Touch end event
      */
     function handleTouchResizeEnd(event) {
-        pushUndoState(); // Save state for undo
+        safePushUndoState(); // Save state for undo
         if (!isResizing || !resizingTile) {
             return;
         }
@@ -881,10 +884,10 @@ const HomeController = (function() {
         if (!homeView || (homeView.style.display === 'none')) return;
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
             e.preventDefault();
-            undoLayout();
+            undoRedoManager.undoLayout();
         } else if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && e.key.toLowerCase() === 'z') || e.key.toLowerCase() === 'y')) {
             e.preventDefault();
-            redoLayout();
+            undoRedoManager.redoLayout();
         }
     });
 
