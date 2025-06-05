@@ -43,24 +43,34 @@ const ConceptModel = (function() {
     /**
      * Create a new concept
      * @param {string} type - Concept type
+     * @param {number} index - Index for positioning (optional)
      * @returns {Object} New concept object
      */
-    function createConcept(type) {
+    function createConcept(type, index = 0) {
         if (!CONCEPT_TYPES.includes(type)) {
             console.error(`Invalid concept type: ${type}`);
             return null;
         }
+
+        // Calculate grid position for this concept using center-based coordinates
+        const col = index % 3;
+        const row = Math.floor(index / 3);
+        
+        // Convert grid position to center-based percentage coordinates
+        // Place tiles in a 3x3 grid, centered around the origin (0,0)
+        const centerX = (col - 1) * 25; // -25, 0, 25 for left, center, right
+        const centerY = (row - 1) * 25; // -25, 0, 25 for top, center, bottom
         
         return {
             id: type,
             type: type,
             displayName: getDisplayName(type),
-            // New percentage-based coordinate system (proportional anchor-based)
+            // Center-based coordinate system (percentage of baseSize from center)
             coordinates: {
-                anchorX: 12.5, // Default anchor position as percentage of container width
-                anchorY: 10,   // Default anchor position as percentage of container height 
-                width: 25,     // Default width as percentage of base size
-                height: 20     // Default height as percentage of base size
+                centerX: centerX,   // Center X position relative to container center
+                centerY: centerY,   // Center Y position relative to container center
+                width: 25,          // Default width as percentage of base size
+                height: 20          // Default height as percentage of base size
             },
             // Legacy pixel-based coordinates (for backward compatibility)
             position: { x: 0, y: 0 },
@@ -93,7 +103,7 @@ const ConceptModel = (function() {
      * @returns {Array} Array of all concept objects
      */
     function createAllConcepts() {
-        return CONCEPT_TYPES.map(type => createConcept(type));
+        return CONCEPT_TYPES.map((type, index) => createConcept(type, index));
     }
     
     /**
@@ -207,33 +217,46 @@ const ConceptModel = (function() {
     }
     
     /**
-     * Get the current coordinates of a concept (percentage-based, anchor-based)
-     * @param {Object} concept - Concept to get coordinates for
-     * @returns {Object} Coordinates {anchorX, anchorY, width, height}
+     * Get simple center-based coordinates for a concept
+     * @param {Object} concept - Concept object
+     * @returns {Object} Simple center-based coordinates {centerX, centerY, width, height} as percentages (0-100)
      */
     function getCoordinates(concept) {
-        if (concept.coordinates) {
-            return { ...concept.coordinates };
+        // Return simple center-based coordinates or defaults
+        if (concept.coordinates && 
+            concept.coordinates.centerX !== undefined && 
+            concept.coordinates.centerY !== undefined) {
+            return {
+                centerX: concept.coordinates.centerX || 50,  // Default to center
+                centerY: concept.coordinates.centerY || 50,  // Default to center
+                width: concept.coordinates.width || 25,     // Default to 25% width
+                height: concept.coordinates.height || 20    // Default to 20% height
+            };
         }
         
-        // Return default anchor-based coordinates if none exist
+        // If no coordinates, return defaults (center of container)
         return {
-            anchorX: 12.5,
-            anchorY: 10,
-            width: 25,
-            height: 20
+            centerX: 50,    // 50% = center horizontally
+            centerY: 50,    // 50% = center vertically
+            width: 25,      // 25% of container width
+            height: 20      // 20% of container height
         };
     }
     
     /**
-     * Update the coordinates of a concept
+     * Update coordinates for a concept (simplified)
      * @param {Object} concept - Concept to update
-     * @param {Object} coordinates - New coordinates {anchorX, anchorY, width, height}
+     * @param {Object} coordinates - New coordinates {centerX, centerY, width, height}
      * @returns {Object} Updated concept
      */
     function updateCoordinates(concept, coordinates) {
         return updateConcept(concept, {
-            coordinates: { ...concept.coordinates, ...coordinates }
+            coordinates: {
+                centerX: coordinates.centerX,
+                centerY: coordinates.centerY,
+                width: coordinates.width,
+                height: coordinates.height
+            }
         });
     }
 
@@ -245,7 +268,6 @@ const ConceptModel = (function() {
         createAllConcepts,
         hasImage,
         getDisplayName,
-        migrateToPercentageCoordinates,
         getCoordinates,
         updateCoordinates
     };

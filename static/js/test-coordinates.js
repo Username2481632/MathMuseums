@@ -37,7 +37,7 @@ function testAspectRatio(containerWidth, containerHeight, description) {
     console.log(`Testing ${description} (${containerWidth}x${containerHeight})`);
     
     // Test center tile (should be in middle of container)
-    const centerCoords = { centerX: 50, centerY: 50, width: 20, height: 15 };
+    const centerCoords = { centerX: 0, centerY: 0, width: 20, height: 15 };
     
     const pixelCoords = CoordinateUtils.percentageToPixels(
         centerCoords.centerX, centerCoords.centerY,
@@ -77,12 +77,12 @@ function testAspectRatio(containerWidth, containerHeight, description) {
     
     // Test extreme positions and see how they get constrained
     const testPositions = [
-        { centerX: 0, centerY: 0, label: 'top-left corner' },
-        { centerX: 100, centerY: 100, label: 'bottom-right corner' },
-        { centerX: 50, centerY: 0, label: 'top center' },
-        { centerX: 50, centerY: 100, label: 'bottom center' },
-        { centerX: 0, centerY: 50, label: 'left center' },
-        { centerX: 100, centerY: 50, label: 'right center' }
+        { centerX: -50, centerY: -50, label: 'top-left corner' },
+        { centerX: 50, centerY: 50, label: 'bottom-right corner' },
+        { centerX: 0, centerY: -50, label: 'top center' },
+        { centerX: 0, centerY: 50, label: 'bottom center' },
+        { centerX: -50, centerY: 0, label: 'left center' },
+        { centerX: 50, centerY: 0, label: 'right center' }
     ];
     
     testPositions.forEach(pos => {

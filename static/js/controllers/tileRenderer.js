@@ -4,15 +4,59 @@
 export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, handleTouchResizeStart }) {
     // Clear the home poster
     homePoster.innerHTML = '';
-    // Get home poster dimensions for initial positioning
-    const posterRect = homePoster.getBoundingClientRect();
+    
+    // Get container dimensions - use actual set dimensions if available, otherwise getBoundingClientRect
+    let containerWidth, containerHeight;
+    // Always use offsetWidth/offsetHeight for consistent dimensions
+    containerWidth = homePoster.offsetWidth;
+    containerHeight = homePoster.offsetHeight;
+    
+    console.log('renderTilesOnPoster using container:', containerWidth, 'x', containerHeight);
+    
     const defaultTileWidth = 250;
     const defaultTileHeight = 200;
     const padding = 20;
+    
     concepts.forEach((concept, index) => {
         const tile = createConceptTile(concept, handleResizeStart, handleTouchResizeStart);
         homePoster.appendChild(tile);
         tile.style.position = 'absolute';
+        
+        // Use percentage-based coordinate system if available
+        if (concept.coordinates && window.CoordinateUtils) {
+            try {
+                const coords = window.ConceptModel.getCoordinates(concept);
+                
+                // If coordinates are default center (50, 50) and we have an index, generate grid position
+                if (coords.centerX === 50 && coords.centerY === 50 && index > 0) {
+                    const col = index % 3;
+                    const row = Math.floor(index / 3);
+                    coords.centerX = 20 + (col * 30); // 20%, 50%, 80%
+                    coords.centerY = 20 + (row * 30); // 20%, 50%, 80%
+                    
+                    // Update the concept with the new coordinates
+                    const updatedConcept = window.ConceptModel.updateCoordinates(concept, coords);
+                    concepts[index] = updatedConcept;
+                    window.StorageManager.saveConcept(updatedConcept);
+                }
+                
+                const pixelCoords = window.CoordinateUtils.percentageToPixels(
+                    coords.centerX, coords.centerY, coords.width, coords.height,
+                    containerWidth, containerHeight
+                );
+                
+                tile.style.left = `${pixelCoords.x}px`;
+                tile.style.top = `${pixelCoords.y}px`;
+                tile.style.width = `${pixelCoords.width}px`;
+                tile.style.height = `${pixelCoords.height}px`;
+                return;
+            } catch (error) {
+                console.error('Error converting percentage coordinates:', error);
+                // Fall back to pixel coordinates below
+            }
+        }
+        
+        // Fallback to legacy pixel coordinates
         let tileX, tileY;
         if (concept.x !== undefined && concept.y !== undefined) {
             tileX = concept.x;

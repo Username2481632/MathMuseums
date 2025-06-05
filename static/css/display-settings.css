@@ -111,16 +111,27 @@
 
 /* Fill Mode (with scrolling) */
 #home-view.screen-fill-mode {
-    overflow-y: auto;
-    min-height: 100vh;
-    background-color: var(--bg-color); /* Use the standard background color */
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
+    background-color: var(--bg-color);
+    height: calc(100vh - 70px);
+    width: 100vw;
+    position: fixed;
+    top: 70px; /* Start below the header */
+    left: 0;
+    z-index: 999; /* Below header but above everything else */
+    padding: 0;
+    margin: 0;
+    overflow: auto; /* Enable scrolling when content exceeds viewport */
+    box-sizing: border-box;
 }
 
 #home-view.screen-fill-mode .aspect-ratio-container {
-    margin: 0 auto;
-    max-width: 100%;
-    /* Ensure the container doesn't collapse */
-    min-height: 400px;
+    /* Dimensions will be set by JavaScript */
+    transform-origin: center center;
+    position: relative;
+    flex-shrink: 0; /* Prevent shrinking when content overflows */
 }
 
 /* Aspect Ratio Input Styling */

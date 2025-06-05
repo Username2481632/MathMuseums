@@ -73,6 +73,14 @@ const PreferencesClient = (function() {
      */
     async function savePreferences(newPrefs) {
         try {
+            // Track previous aspect ratio before updating
+            if ((newPrefs.aspectRatioWidth !== undefined || newPrefs.aspectRatioHeight !== undefined) &&
+                (newPrefs.aspectRatioWidth !== preferences.aspectRatioWidth || 
+                 newPrefs.aspectRatioHeight !== preferences.aspectRatioHeight)) {
+                lastAspectRatio = `${preferences.aspectRatioWidth}:${preferences.aspectRatioHeight}`;
+                console.log('Saved previous aspect ratio:', lastAspectRatio);
+            }
+            
             // Update local preferences
             preferences = { ...preferences, ...newPrefs };
             
@@ -290,111 +298,174 @@ const PreferencesClient = (function() {
     /**
      * Apply proportional scaling for fill mode
      */
-    // Only handles display scaling for fill mode (no black bars, just fills viewport)
+    // Only handles display scaling for fill mode (fills viewport in one dimension, allows scrolling in the other)
     function applyFillModeDisplayScaling() {
         const homeView = document.getElementById('home-view');
         const aspectRatioContainer = document.querySelector('#home-view .aspect-ratio-container');
         if (!homeView || !aspectRatioContainer || !homeView.classList.contains('screen-fill-mode')) return;
 
-        // Fill the viewport, possibly cropping the page
-        aspectRatioContainer.style.width = '100vw';
-        aspectRatioContainer.style.height = `calc(100vh - 70px)`;
+        // Calculate available viewport dimensions (accounting for header)
+        const headerHeight = 70;
+        const availableWidth = window.innerWidth;
+        const availableHeight = window.innerHeight - headerHeight;
+        const targetAspectRatio = preferences.aspectRatioWidth / preferences.aspectRatioHeight;
+
+        console.log('Fill mode sizing debug:', {
+            aspectRatioWidth: preferences.aspectRatioWidth,
+            aspectRatioHeight: preferences.aspectRatioHeight,
+            targetAspectRatio,
+            availableWidth,
+            availableHeight
+        });
+
+        // Calculate dimensions for both scenarios:
+        // 1. Fill width (height might exceed viewport)
+        const fillWidthHeight = availableWidth / targetAspectRatio;
+        
+        // 2. Fill height (width might exceed viewport)
+        const fillHeightWidth = availableHeight * targetAspectRatio;
+
+        let containerWidth, containerHeight;
+        
+        // Choose the option that makes the container larger (maximizes content area)
+        // This ensures fill mode actually "fills" the viewport, allowing scrolling for overflow
+        if (fillWidthHeight >= fillHeightWidth) {
+            // Fill width, allow vertical scrolling if needed
+            containerWidth = availableWidth;
+            containerHeight = fillWidthHeight;
+        } else {
+            // Fill height, allow horizontal scrolling if needed
+            containerWidth = fillHeightWidth;
+            containerHeight = availableHeight;
+        }
+
+        console.log('Fill mode calculated size:', { containerWidth, containerHeight });
+
+        // Set the container size
+        aspectRatioContainer.style.width = `${containerWidth}px`;
+        aspectRatioContainer.style.height = `${containerHeight}px`;
         aspectRatioContainer.style.maxWidth = 'none';
         aspectRatioContainer.style.maxHeight = 'none';
         aspectRatioContainer.style.transform = 'none';
-        homeView.style.alignItems = 'center';
-        homeView.style.justifyContent = 'center';
+
+        // Configure scrolling for home view
+        // If container is larger than viewport, enable scrolling
+        if (containerWidth > availableWidth || containerHeight > availableHeight) {
+            homeView.style.overflow = 'auto';
+        } else {
+            homeView.style.overflow = 'hidden';
+        }
+
+        // Center the container if it's smaller than viewport
+        homeView.style.alignItems = containerHeight <= availableHeight ? 'center' : 'flex-start';
+        homeView.style.justifyContent = containerWidth <= availableWidth ? 'center' : 'flex-start';
+        
+        // Re-render tiles now that container has proper dimensions
+        function waitForRenderTilesOnPoster(callback) {
+            if (window.renderTilesOnPoster) {
+                callback();
+            } else {
+                setTimeout(() => waitForRenderTilesOnPoster(callback), 50);
+            }
+        }
+
+        waitForRenderTilesOnPoster(() => {
+            console.log('Fill mode container sizing complete - dispatching containerSized event');
+            document.dispatchEvent(new CustomEvent('containerSized'));
+        });
     }
 
-    // Transform tiles when aspect ratio changes with aspect ratio compensation
+    // Scale tiles for aspect ratio change using center-based proportional scaling
     async function scaleTilesForAspectRatioChange(aspectRatioContainer, aspectRatioWidth, aspectRatioHeight) {
+        console.log(`Scaling tiles for aspect ratio change: ${aspectRatioWidth}:${aspectRatioHeight}`);
+        
         const tiles = aspectRatioContainer.querySelectorAll('.concept-tile');
         if (!tiles || tiles.length === 0) return;
-
-        console.log(`Transforming tiles for aspect ratio change: ${aspectRatioWidth}:${aspectRatioHeight}`);
         
         // Get old aspect ratio
         const oldAspectRatio = getLastAspectRatio();
         if (!oldAspectRatio) {
             console.log('No previous aspect ratio found, using simple re-render');
-            // Fall back to simple re-render if no previous aspect ratio
             return simpleReRenderTiles(aspectRatioContainer, aspectRatioWidth, aspectRatioHeight);
         }
         
-        const oldAspectX = oldAspectRatio.width;
-        const oldAspectY = oldAspectRatio.height;
-        const newAspectX = aspectRatioWidth;
-        const newAspectY = aspectRatioHeight;
+        const oldRatio = oldAspectRatio.width / oldAspectRatio.height;
+        const newRatio = aspectRatioWidth / aspectRatioHeight;
         
-        console.log(`Old aspect: ${oldAspectX}:${oldAspectY}, New aspect: ${newAspectX}:${newAspectY}`);
+        console.log(`Old ratio: ${oldRatio.toFixed(3)}, New ratio: ${newRatio.toFixed(3)}`);
         
-        // Calculate transformation factor: newValue *= Math.min((oldAspectX/oldAspectY)/(newAspectX/newAspectY), (newAspectX/newAspectY)/(oldAspectX/oldAspectY))
-        const oldRatio = oldAspectX / oldAspectY;
-        const newRatio = newAspectX / newAspectY;
-        const transformFactor = Math.min(oldRatio / newRatio, newRatio / oldRatio);
+        // Calculate scale factor to fit content into new aspect ratio
+        // If new ratio is wider (landscape), scale based on height
+        // If new ratio is taller (portrait), scale based on width
+        let scaleX, scaleY;
         
-        console.log(`Transform factor: ${transformFactor.toFixed(4)}`);
+        if (newRatio > oldRatio) {
+            // New aspect is wider - scale to fit height, center horizontally
+            scaleY = 1.0;
+            scaleX = oldRatio / newRatio;
+        } else {
+            // New aspect is taller - scale to fit width, center vertically  
+            scaleX = 1.0;
+            scaleY = newRatio / oldRatio;
+        }
         
-        // Get new container dimensions (should already be set by applyDisplaySettings)
-        const containerRect = aspectRatioContainer.getBoundingClientRect();
-        const containerWidth = containerRect.width;
-        const containerHeight = containerRect.height;
+        console.log(`Scale factors: scaleX=${scaleX.toFixed(3)}, scaleY=${scaleY.toFixed(3)}`);
         
-        console.log(`New container: ${containerWidth}x${containerHeight}`);
-        
-        // Transform all tiles using the aspect ratio compensation factor
+        // Transform all tiles using center-based scaling
         for (const tile of tiles) {
             const conceptId = tile.dataset.id;
             if (conceptId && window.StorageManager && window.ConceptModel) {
                 try {
                     const concept = await window.StorageManager.getConcept(conceptId);
                     if (concept) {
-                        // Get existing percentage coordinates
                         const coords = window.ConceptModel.getCoordinates(concept);
                         
-                        // Apply transformation to all coordinate values
-                        const transformedCoords = {
-                            anchorX: coords.anchorX * transformFactor,
-                            anchorY: coords.anchorY * transformFactor,
-                            width: coords.width * transformFactor,
-                            height: coords.height * transformFactor
+                        // Scale coordinates from center (50, 50)
+                        // Transform: newPos = 50 + (oldPos - 50) * scale
+                        const scaledCoords = {
+                            centerX: 50 + (coords.centerX - 50) * scaleX,
+                            centerY: 50 + (coords.centerY - 50) * scaleY,
+                            width: coords.width * scaleX,
+                            height: coords.height * scaleY
                         };
                         
-                        console.log(`Tile ${conceptId}: (${coords.anchorX.toFixed(1)}, ${coords.anchorY.toFixed(1)}, ${coords.width.toFixed(1)}, ${coords.height.toFixed(1)}) → (${transformedCoords.anchorX.toFixed(1)}, ${transformedCoords.anchorY.toFixed(1)}, ${transformedCoords.width.toFixed(1)}, ${transformedCoords.height.toFixed(1)})`);
+                        console.log(`Tile ${conceptId}: (${coords.centerX.toFixed(1)}, ${coords.centerY.toFixed(1)}) → (${scaledCoords.centerX.toFixed(1)}, ${scaledCoords.centerY.toFixed(1)})`);
                         
-                        // Update the concept with transformed coordinates
-                        const updatedConcept = window.ConceptModel.updateCoordinates(concept, transformedCoords);
+                        // Update the concept with scaled coordinates
+                        const updatedConcept = window.ConceptModel.updateCoordinates(concept, scaledCoords);
                         await window.StorageManager.saveConcept(updatedConcept);
                         
-                        // Convert to pixels using new container dimensions
+                        // Convert to pixels and apply to tile
+                        const containerWidth = aspectRatioContainer.offsetWidth;
+                        const containerHeight = aspectRatioContainer.offsetHeight;
                         const pixelCoords = window.CoordinateUtils.percentageToPixels(
-                            transformedCoords.anchorX, transformedCoords.anchorY, 
-                            transformedCoords.width, transformedCoords.height,
+                            scaledCoords.centerX, scaledCoords.centerY, 
+                            scaledCoords.width, scaledCoords.height,
                             containerWidth, containerHeight
                         );
                         
-                        // Apply to tile element
                         tile.style.left = `${pixelCoords.x}px`;
                         tile.style.top = `${pixelCoords.y}px`;
                         tile.style.width = `${pixelCoords.width}px`;
                         tile.style.height = `${pixelCoords.height}px`;
                     }
                 } catch (error) {
-                    console.error(`Error transforming tile ${conceptId}:`, error);
+                    console.error(`Error scaling tile ${conceptId}:`, error);
                 }
             }
         }
+        
+        console.log('Aspect ratio scaling complete');
     }
-    
+
     // Simple re-render fallback for when no previous aspect ratio is available
     async function simpleReRenderTiles(aspectRatioContainer, aspectRatioWidth, aspectRatioHeight) {
         const tiles = aspectRatioContainer.querySelectorAll('.concept-tile');
         if (!tiles || tiles.length === 0) return;
         
-        // Get new container dimensions
-        const containerRect = aspectRatioContainer.getBoundingClientRect();
-        const containerWidth = containerRect.width;
-        const containerHeight = containerRect.height;
+        // Get new container dimensions using consistent offsetWidth/offsetHeight
+        const containerWidth = aspectRatioContainer.offsetWidth;
+        const containerHeight = aspectRatioContainer.offsetHeight;
         
         // Simply re-render all tiles using their existing percentage coordinates
         for (const tile of tiles) {
@@ -406,7 +477,7 @@ const PreferencesClient = (function() {
                         const coords = window.ConceptModel.getCoordinates(concept);
                         
                         const pixelCoords = window.CoordinateUtils.percentageToPixels(
-                            coords.anchorX, coords.anchorY, coords.width, coords.height,
+                            coords.centerX, coords.centerY, coords.width, coords.height,
                             containerWidth, containerHeight
                         );
                         

@@ -1,173 +1,78 @@
 /**
- * Coordinate System Utilities
- * Handles conversion between percentage-based proportional anchor coordinates and pixel-based top-left coordinates
+ * Simple Tile-Center-Based Coordinate System
+ * Stores tile center positions and sizes as percentages of container dimensions
  */
 const CoordinateUtils = (function() {
     
-/**
- * Convert from top-left tile coordinates (pixelX, pixelY) to 
- * anchor percentages (anchorX%, anchorY%) in the bounding box.
- *
- * Forward was: pixelX = (anchorX/100) * (containerWidth - tilePixelWidth)
- *
- * Therefore invert:
- *   anchorX = pixelX / (containerWidth - tilePixelWidth) * 100
- *   anchorY = pixelY / (containerHeight - tilePixelHeight) * 100
- *
- * @param {number} pixelX           - The tile's current top-left x in px.
- * @param {number} pixelY           - The tile's current top-left y in px.
- * @param {number} tilePixelWidth   - The tile’s width in pixels (read from DOM).
- * @param {number} tilePixelHeight  - The tile’s height in pixels (read from DOM).
- * @param {number} containerWidth   - The container’s width in px.
- * @param {number} containerHeight  - The container’s height in px.
- * @returns {Object} 
- *   { anchorX: number, anchorY: number } 
- *   where each is clamped to [0, 100].
- */
-function pixelsToPercentage(
-  pixelX, 
-  pixelY, 
-  tilePixelWidth, 
-  tilePixelHeight, 
-  containerWidth, 
-  containerHeight
-) {
-  // Avoid division by zero:
-  const availableX = containerWidth  - tilePixelWidth;
-  const availableY = containerHeight - tilePixelHeight;
-  
-  let anchorX, anchorY;
-
-  if (availableX <= 0) {
-    // If the tile is bigger than (or exactly) the container in X,
-    // we’ll just pin anchorX to 0 (or you could decide 50 or 100).
-    anchorX = 0;
-  } else {
-    anchorX = (pixelX / availableX) * 100;
-  }
-
-  if (availableY <= 0) {
-    anchorY = 0;
-  } else {
-    anchorY = (pixelY / availableY) * 100;
-  }
-  
-  // Clamp to [0..100]
-  anchorX = Math.min(100, Math.max(0, anchorX));
-  anchorY = Math.min(100, Math.max(0, anchorY));
-
-  return { anchorX, anchorY };
-}
-
-    
     /**
-     * Convert from percentage coordinates (proportional anchor-based) to pixel coordinates (top-left)
-     * @param {number} anchorX - Anchor X position as percentage of container width
-     * @param {number} anchorY - Anchor Y position as percentage of container height
-     * @param {number} width - Width as percentage of base size
-     * @param {number} height - Height as percentage of base size
+     * Convert pixel coordinates to simple percentage coordinates
+     * @param {number} pixelX - Tile top-left X in pixels
+     * @param {number} pixelY - Tile top-left Y in pixels
+     * @param {number} tileWidth - Tile width in pixels
+     * @param {number} tileHeight - Tile height in pixels
      * @param {number} containerWidth - Container width in pixels
      * @param {number} containerHeight - Container height in pixels
-     * @returns {Object} Pixel-based coordinates {x, y, width, height}
+     * @returns {Object} {centerX, centerY, width, height} as percentages (0-100)
      */
-    function percentageToPixels(anchorX, anchorY, width, height, containerWidth, containerHeight) {
-        const baseSize = Math.max(containerWidth, containerHeight);
-
-        // Calculate tile pixel size from percentages and baseSize
-        const pixelWidth = (width / 100) * baseSize;
-        const pixelHeight = (height / 100) * baseSize;
+    function pixelsToPercentage(pixelX, pixelY, tileWidth, tileHeight, containerWidth, containerHeight) {
+        // Calculate tile center in pixels
+        const centerPixelX = pixelX + (tileWidth / 2);
+        const centerPixelY = pixelY + (tileHeight / 2);
         
-        console.log('percentageToPixels debug:');
-        console.log('  Input %: width=', width, 'height=', height);
-        console.log('  Container:', containerWidth, 'x', containerHeight);
-        console.log('  BaseSize:', baseSize);
-        console.log('  Calculated pixels:', pixelWidth, 'x', pixelHeight);
+        // Convert to simple percentages of container dimensions
+        const centerX = (centerPixelX / containerWidth) * 100;
+        const centerY = (centerPixelY / containerHeight) * 100;
+        const width = (tileWidth / containerWidth) * 100;
+        const height = (tileHeight / containerHeight) * 100;
+        
+        return { centerX, centerY, width, height };
+    }
 
-        // Anchor pixel position in container
-        const anchorPixelX = (anchorX / 100) * containerWidth;
-        const anchorPixelY = (anchorY / 100) * containerHeight;
-
-        // Relative center position of tile anchor in container (0 to 1)
-        const relativeCenterX = anchorPixelX / containerWidth;
-        const relativeCenterY = anchorPixelY / containerHeight;
-
-        // Anchor offset inside tile (based on proportional center)
-        const anchorOffsetX = relativeCenterX * pixelWidth;
-        const anchorOffsetY = relativeCenterY * pixelHeight;
-
-        // Compute top-left pixel coords of tile
-        const x = anchorPixelX - anchorOffsetX;
-        const y = anchorPixelY - anchorOffsetY;
-
+    /**
+     * Convert simple percentage coordinates to pixel coordinates
+     * @param {number} centerX - Center X as percentage (0-100)
+     * @param {number} centerY - Center Y as percentage (0-100)
+     * @param {number} width - Width as percentage (0-100)
+     * @param {number} height - Height as percentage (0-100)
+     * @param {number} containerWidth - Container width in pixels
+     * @param {number} containerHeight - Container height in pixels
+     * @returns {Object} {x, y, width, height} in pixels (top-left based)
+     */
+    function percentageToPixels(centerX, centerY, width, height, containerWidth, containerHeight) {
+        // Convert percentages to pixels
+        const centerPixelX = (centerX / 100) * containerWidth;
+        const centerPixelY = (centerY / 100) * containerHeight;
+        const pixelWidth = (width / 100) * containerWidth;
+        const pixelHeight = (height / 100) * containerHeight;
+        
+        // Calculate top-left position from center
+        const x = centerPixelX - (pixelWidth / 2);
+        const y = centerPixelY - (pixelHeight / 2);
+        
         return { x, y, width: pixelWidth, height: pixelHeight };
     }
-
     
     /**
-     * Get the base size (min of width and height) for a container
-     * @param {number} containerWidth - Container width in pixels
-     * @param {number} containerHeight - Container height in pixels
-     * @returns {number} Base size for percentage calculations
+     * Constrain tile center coordinates to keep tile within container bounds
+     * @param {number} centerX - Center X percentage
+     * @param {number} centerY - Center Y percentage  
+     * @param {number} width - Width percentage
+     * @param {number} height - Height percentage
+     * @returns {Object} Constrained coordinates
      */
-    function getBaseSize(containerWidth, containerHeight) {
-        return Math.max(containerWidth, containerHeight);
-    }
-    
-    /**
-     * Scale percentage coordinates for aspect ratio changes
-     * @param {number} anchorX - Anchor X position as percentage
-     * @param {number} anchorY - Anchor Y position as percentage
-     * @param {number} width - Width as percentage
-     * @param {number} height - Height as percentage
-     * @param {number} scaleFactor - Scaling factor to apply
-     * @returns {Object} Scaled coordinates {anchorX, anchorY, width, height}
-     */
-    function scalePercentageCoordinates(anchorX, anchorY, width, height, scaleFactor) {
-        return {
-            anchorX: anchorX * scaleFactor,
-            anchorY: anchorY * scaleFactor,
-            width: width * scaleFactor,
-            height: height * scaleFactor
-        };
-    }
-    
-    /**
-     * Get the valid coordinate limits for anchor-based coordinates
-     * The anchor point itself should never exceed the container boundaries
-     * @param {number} aspectRatioWidth - Aspect ratio width component
-     * @param {number} aspectRatioHeight - Aspect ratio height component
-     * @param {number} tileWidth - Tile width as percentage of base size (optional, unused for anchor limits)
-     * @param {number} tileHeight - Tile height as percentage of base size (optional, unused for anchor limits)
-     * @returns {Object} Coordinate limits {minX, maxX, minY, maxY}
-     */
-    function getCoordinateLimits(aspectRatioWidth, aspectRatioHeight, tileWidth = 0, tileHeight = 0) {
-        // For anchor-based coordinates, the anchor point should simply stay within 
-        // the container boundaries (0-100% of container width/height)
-        return {
-            minX: 0,
-            maxX: 100,
-            minY: 0,
-            maxY: 100
-        };
-    }
-    
-    /**
-     * Constrain coordinates to valid limits (anchor-based)
-     * @param {number} anchorX - Anchor X position as percentage
-     * @param {number} anchorY - Anchor Y position as percentage
-     * @param {number} width - Width as percentage
-     * @param {number} height - Height as percentage
-     * @param {Object} limits - Coordinate limits from getCoordinateLimits()
-     * @returns {Object} Constrained coordinates {anchorX, anchorY, width, height}
-     */
-    function constrainCoordinates(anchorX, anchorY, width, height, limits) {
-        // Simply constrain the anchor point to stay within the container boundaries
-        const constrainedAnchorX = Math.max(limits.minX, Math.min(limits.maxX, anchorX));
-        const constrainedAnchorY = Math.max(limits.minY, Math.min(limits.maxY, anchorY));
+    function constrainCoordinates(centerX, centerY, width, height) {
+        // Calculate the bounds for the center position
+        const minCenterX = width / 2;  // Half tile width from left edge
+        const maxCenterX = 100 - (width / 2);  // Half tile width from right edge
+        const minCenterY = height / 2;  // Half tile height from top edge
+        const maxCenterY = 100 - (height / 2);  // Half tile height from bottom edge
+        
+        const constrainedCenterX = Math.max(minCenterX, Math.min(maxCenterX, centerX));
+        const constrainedCenterY = Math.max(minCenterY, Math.min(maxCenterY, centerY));
         
         return {
-            anchorX: constrainedAnchorX,
-            anchorY: constrainedAnchorY,
+            centerX: constrainedCenterX,
+            centerY: constrainedCenterY,
             width,
             height
         };
@@ -177,9 +82,6 @@ function pixelsToPercentage(
     return {
         pixelsToPercentage,
         percentageToPixels,
-        getBaseSize,
-        scalePercentageCoordinates,
-        getCoordinateLimits,
         constrainCoordinates
     };
 })();

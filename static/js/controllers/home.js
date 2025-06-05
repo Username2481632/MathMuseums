@@ -34,23 +34,29 @@ const HomeController = (function() {
         undoRedoManager.pushUndoState();
     };
 
-    // Drag manager
+    // Drag manager with constrained coordinates
     const dragManager = createDragManager({
         onStart: () => {},
         onUpdate: (tile, clientX, clientY, dragOffset) => {
-            // Calculate new position relative to container
+            // Calculate new position relative to container using consistent offsetWidth/offsetHeight
             const containerRect = homePoster.getBoundingClientRect();
-            const padding = getHomePosterPadding();
+            const containerWidth = homePoster.offsetWidth;
+            const containerHeight = homePoster.offsetHeight;
+            
             const x = clientX - containerRect.left - dragOffset.x;
             const y = clientY - containerRect.top - dragOffset.y;
             const tileWidth = parseInt(tile.style.width, 10) || 250;
             const tileHeight = parseInt(tile.style.height, 10) || 200;
-            const minX = padding.left;
-            const minY = padding.top;
-            const maxX = containerRect.width - padding.right - tileWidth;
-            const maxY = containerRect.height - padding.bottom - tileHeight;
+            
+            // Simple boundary constraints - keep tile fully within container
+            const minX = 0;
+            const minY = 0;
+            const maxX = containerWidth - tileWidth;
+            const maxY = containerHeight - tileHeight;
+            
             const constrainedX = Math.max(minX, Math.min(x, maxX));
             const constrainedY = Math.max(minY, Math.min(y, maxY));
+            
             tile.style.left = `${constrainedX}px`;
             tile.style.top = `${constrainedY}px`;
         },
@@ -58,11 +64,27 @@ const HomeController = (function() {
             const conceptId = tile.dataset.id;
             const concept = concepts.find(c => c.id === conceptId);
             if (!concept) return;
-            const position = {
-                x: parseInt(tile.style.left, 10),
-                y: parseInt(tile.style.top, 10)
-            };
-            const updatedConcept = ConceptModel.updateConcept(concept, { position });
+            
+            // Get current pixel position and size
+            const pixelX = parseInt(tile.style.left, 10);
+            const pixelY = parseInt(tile.style.top, 10);
+            const pixelWidth = parseInt(tile.style.width, 10);
+            const pixelHeight = parseInt(tile.style.height, 10);
+            
+            // Convert to simple center-based coordinates
+            const containerWidth = homePoster.offsetWidth;
+            const containerHeight = homePoster.offsetHeight;
+            const centerCoords = window.CoordinateUtils.pixelsToPercentage(
+                pixelX, pixelY, pixelWidth, pixelHeight, containerWidth, containerHeight
+            );
+            
+            // Constrain coordinates to keep tile within bounds
+            const constrainedCoords = window.CoordinateUtils.constrainCoordinates(
+                centerCoords.centerX, centerCoords.centerY, centerCoords.width, centerCoords.height
+            );
+            
+            // Update with constrained center coordinates
+            const updatedConcept = ConceptModel.updateCoordinates(concept, constrainedCoords);
             const index = concepts.findIndex(c => c.id === conceptId);
             if (index !== -1) concepts[index] = updatedConcept;
             StorageManager.saveConcept(updatedConcept);
@@ -84,15 +106,27 @@ const HomeController = (function() {
             const conceptId = tile.dataset.id;
             const concept = concepts.find(c => c.id === conceptId);
             if (!concept) return;
-            const size = {
-                width: parseInt(tile.style.width, 10),
-                height: parseInt(tile.style.height, 10)
-            };
-            const position = {
-                x: parseInt(tile.style.left, 10),
-                y: parseInt(tile.style.top, 10)
-            };
-            const updatedConcept = ConceptModel.updateConcept(concept, { size, position });
+            
+            // Get current pixel position and size
+            const pixelX = parseInt(tile.style.left, 10);
+            const pixelY = parseInt(tile.style.top, 10);
+            const pixelWidth = parseInt(tile.style.width, 10);
+            const pixelHeight = parseInt(tile.style.height, 10);
+            
+            // Convert to simple center-based coordinates
+            const containerWidth = homePoster.offsetWidth;
+            const containerHeight = homePoster.offsetHeight;
+            const centerCoords = window.CoordinateUtils.pixelsToPercentage(
+                pixelX, pixelY, pixelWidth, pixelHeight, containerWidth, containerHeight
+            );
+            
+            // Constrain coordinates to keep tile within bounds
+            const constrainedCoords = window.CoordinateUtils.constrainCoordinates(
+                centerCoords.centerX, centerCoords.centerY, centerCoords.width, centerCoords.height
+            );
+            
+            // Update with constrained center coordinates
+            const updatedConcept = ConceptModel.updateCoordinates(concept, constrainedCoords);
             const index = concepts.findIndex(c => c.id === conceptId);
             if (index !== -1) concepts[index] = updatedConcept;
             StorageManager.saveConcept(updatedConcept);
@@ -112,28 +146,25 @@ const HomeController = (function() {
     let recentlyResized = false; // Track whether resize just ended
     let resizeCooldownTimer = null; // Timer for resize cooldown
 
-    // Helper: Get current layout state (positions/sizes of all tiles)
+    // Helper: Get current layout state (center-based coordinates)
     function getCurrentLayoutState() {
         const state = concepts.map(concept => {
-            // Extract position and size from the nested objects (used by drag/resize handlers)
-            const x = concept.position?.x ?? concept.x ?? 0;
-            const y = concept.position?.y ?? concept.y ?? 0;
-            const width = concept.size?.width ?? concept.width ?? 250;
-            const height = concept.size?.height ?? concept.height ?? 200;
-            
+            const coords = ConceptModel.getCoordinates(concept);
             return {
                 id: concept.id,
-                x: x,
-                y: y,
-                width: width,
-                height: height
+                coordinates: {
+                    centerX: coords.centerX,
+                    centerY: coords.centerY,
+                    width: coords.width,
+                    height: coords.height
+                }
             };
         });
         
         return state;
     }
     
-    // Helper: Restore layout state
+    // Helper: Restore layout state (center-based coordinates)
     function restoreLayoutState(state) {
         console.log('Restoring layout state:', state);
         if (!Array.isArray(state)) return;
@@ -142,15 +173,8 @@ const HomeController = (function() {
             if (conceptIndex !== -1) {
                 const concept = concepts[conceptIndex];
                 
-                // Update using the same format as the drag/resize handlers
-                const updatedConcept = ConceptModel.updateConcept(concept, {
-                    x: s.x,
-                    y: s.y,
-                    width: s.width,
-                    height: s.height,
-                    position: { x: s.x, y: s.y },
-                    size: { width: s.width, height: s.height }
-                });
+                // Update using center-based coordinates
+                const updatedConcept = ConceptModel.updateCoordinates(concept, s.coordinates);
                 
                 // Update the concept in the array
                 concepts[conceptIndex] = updatedConcept;
@@ -332,9 +356,9 @@ const HomeController = (function() {
         document.addEventListener('mouseup', dragManager.handleMouseUp);
         document.addEventListener('touchmove', dragManager.handleTouchMove, { passive: false });
         document.addEventListener('touchend', dragManager.handleTouchEnd);
-        document.addEventListener('mousemove', (e) => resizeManager.handleResizeMove(e, homePoster.getBoundingClientRect()));
+        document.addEventListener('mousemove', (e) => resizeManager.handleResizeMove(e, { width: homePoster.offsetWidth, height: homePoster.offsetHeight }));
         document.addEventListener('mouseup', resizeManager.handleResizeEnd);
-        document.addEventListener('touchmove', (e) => resizeManager.handleTouchResizeMove(e, homePoster.getBoundingClientRect()), { passive: false });
+        document.addEventListener('touchmove', (e) => resizeManager.handleTouchResizeMove(e, { width: homePoster.offsetWidth, height: homePoster.offsetHeight }), { passive: false });
         document.addEventListener('touchend', resizeManager.handleTouchResizeEnd);
     }
     
@@ -425,6 +449,14 @@ const HomeController = (function() {
         };
     }
     
+    // Helper function to get consistent container dimensions
+    function getContainerDimensions() {
+        return {
+            width: homePoster.offsetWidth,
+            height: homePoster.offsetHeight
+        };
+    }
+
     /**
      * Handle resize move
      * @param {MouseEvent} event - Mouse move event
@@ -443,14 +475,14 @@ const HomeController = (function() {
         const deltaX = event.clientX - resizeStartPos.x;
         const deltaY = event.clientY - resizeStartPos.y;
         
-        // Get the handle's position
+        // Get current position and handle type from stored values
         const position = resizeHandle.dataset.position;
         
-        // Calculate new size and position based on which handle is being dragged
-        let newWidth = originalSize.width;
-        let newHeight = originalSize.height;
+        // Calculate new dimensions based on resize handle position
         let newX = originalPosition.x;
         let newY = originalPosition.y;
+        let newWidth = originalSize.width;
+        let newHeight = originalSize.height;
         let adjustWidthFromLeft = false;
         let adjustHeightFromTop = false;
         
@@ -476,8 +508,8 @@ const HomeController = (function() {
             newHeight = Math.max(150, originalSize.height + deltaY);
         }
         
-        // Get container dimensions
-        const containerRect = homePoster.getBoundingClientRect();
+        // Get container dimensions using consistent method
+        const containerRect = getContainerDimensions();
         
         // Apply constraints using the shared function
         const constrained = constrainResizeDimensions({
@@ -675,8 +707,8 @@ const HomeController = (function() {
             newHeight = Math.max(150, originalSize.height + deltaY);
         }
         
-        // Get container dimensions
-        const containerRect = homePoster.getBoundingClientRect();
+        // Get container dimensions using consistent method
+        const containerRect = getContainerDimensions();
         
         // Apply constraints using the shared function
         const constrained = constrainResizeDimensions({
