@@ -115,6 +115,14 @@
         {% endif %}
         
 
+        <div class="auth-code">{{ auth_code }}</div>
+        
+        {% if verification_mode == 'dummy' %}
+        <div class="verification-status pending">
+            <strong>Development Mode:</strong> Your email will be automatically verified after 20 seconds.
+            <br><small>No need to send an actual email - this is for testing purposes.</small>
+        </div>
+        {% else %}
         <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
             <a class="email-address" 
                href="https://mail.google.com/mail/?view=cm&fs=1&to=verify@math.moshchuk.com&su=Math%20Museums%20Verification&body=Verification%20code%3A%20{{ auth_code }}" 
@@ -134,20 +142,32 @@
                 Send with your email app
             </a>
         </div>
-        <div class="auth-code">{{ auth_code }}</div>
+        {% endif %}
         
         <div class="instructions">
+            {% if verification_mode == 'dummy' %}
+            <h3>Development Mode Instructions</h3>
+            <p>This is a dummy verification mode for development and testing. Your email will be automatically verified after 20 seconds - no need to send any emails!</p>
+            <p><strong>Wait time:</strong> ~20 seconds</p>
+            {% else %}
+            <h3>Email Verification Instructions</h3>
             <ol>
                 <li>Copy the code above</li>
                 <li>Paste it into the body of your email</li>
                 <li>Send the email and wait for verification</li>
             </ol>
             <p><strong>Note:</strong> You can send the email from any email client or service. Verification is automatic once we receive your email.</p>
+            {% endif %}
         </div>
         
+        {% if verification_mode == 'dummy' %}
+        <button id="scan-email-btn" style="margin:1rem auto;display:block;padding:0.75em 1.5em;font-size:1rem;background:#28a745;color:white;border:none;border-radius:4px;font-weight:600;cursor:pointer;">Check Verification (Auto after 20s)</button>
+        {% else %}
         <button id="scan-email-btn" style="margin:1rem auto;display:block;padding:0.75em 1.5em;font-size:1rem;background:#28a745;color:white;border:none;border-radius:4px;font-weight:600;cursor:pointer;">Scan Email</button>
+        {% endif %}
+        
         <div id="scan-progress" style="display:none;margin-bottom:1rem;text-align:center;">
-            <span id="scan-progress-text">Scanning for new emails...</span>
+            <span id="scan-progress-text">{% if verification_mode == 'dummy' %}Checking verification status...{% else %}Scanning for new emails...{% endif %}</span>
             <div style="background:#e9ecef;border-radius:4px;height:8px;width:100%;margin-top:8px;">
                 <div id="scan-progress-bar" style="height:8px;width:0%;background:#28a745;border-radius:4px;"></div>
             </div>
@@ -263,8 +283,28 @@
                 });
             }
             
-            // Start checking after 2 seconds
+            // Different behavior based on verification mode
+            {% if verification_mode == 'dummy' %}
+            // In dummy mode, start checking immediately and check more frequently
+            statusText.textContent = 'Waiting for auto-verification (20 seconds)...';
+            setTimeout(checkVerificationStatus, 1000);  // Start after 1 second
+            
+            // Update status text to show countdown
+            let secondsLeft = 20;
+            const countdown = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft > 0) {
+                    statusText.textContent = `Auto-verification in ${secondsLeft} seconds...`;
+                } else {
+                    statusText.textContent = 'Checking verification status...';
+                    clearInterval(countdown);
+                }
+            }, 1000);
+            
+            {% else %}
+            // In IMAP mode, start checking after 2 seconds
             setTimeout(checkVerificationStatus, 2000);
+            {% endif %}
         });
     </script>
 </body>

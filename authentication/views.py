@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views import View
+from django.conf import settings
 import json
 import secrets
 from .models import User, AuthCode
@@ -149,7 +150,8 @@ class EmailVerificationView(View):
             
             return render(request, 'authentication/email_verification.html', {
                 'email': email,
-                'auth_code': auth_code.code
+                'auth_code': auth_code.code,
+                'verification_mode': getattr(settings, 'EMAIL_VERIFICATION_MODE', 'dummy')
             })
             
         except AuthCode.DoesNotExist:

@@ -30,6 +30,7 @@ env = environ.Env(
     DATABASE_PASSWORD=(str, 'development_password'),
     DATABASE_HOST=(str, 'localhost'),
     DATABASE_PORT=(int, 3306),  # Changed from 5432 (Postgres) to 3306 (MySQL/MariaDB default)
+    EMAIL_VERIFICATION_MODE=(str, 'dummy'),  # 'dummy' for testing, 'imap' for real email
 )
 
 # Read .env file if it exists
@@ -174,20 +175,11 @@ REST_FRAMEWORK = {
 }
 
 # Email settings
-if DEBUG:
-    # Use console backend for development
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-else:
-    # Use SMTP backend for production
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = env('EMAIL_HOST')
-    EMAIL_PORT = env('EMAIL_PORT')
-    EMAIL_HOST_USER = env('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
-    EMAIL_USE_SSL = env.bool('EMAIL_USE_SSL')
-    EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS')
+# Use console backend for development - no SMTP needed since we use IMAP verification
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
+# Email verification mode ('dummy' for testing, 'imap' for real email)
+EMAIL_VERIFICATION_MODE = env('EMAIL_VERIFICATION_MODE')
 
 AUTH_USER_MODEL = 'authentication.User'
 
