@@ -136,16 +136,6 @@ const HomeController = (function() {
         constrainDimensions: constrainResizeDimensions
     });
 
-    // Resize variables
-    let isResizing = false;
-    let resizingTile = null;
-    let resizeHandle = null;
-    let originalSize = { width: 0, height: 0 };
-    let originalPosition = { x: 0, y: 0 };
-    let resizeStartPos = { x: 0, y: 0 };
-    let recentlyResized = false; // Track whether resize just ended
-    let resizeCooldownTimer = null; // Timer for resize cooldown
-
     // Helper: Get current layout state (center-based coordinates)
     function getCurrentLayoutState() {
         const state = concepts.map(concept => {
@@ -183,7 +173,10 @@ const HomeController = (function() {
                 StorageManager.saveConcept(updatedConcept);
             }
         }
-        renderTilesOnPoster(homePoster, concepts, { handleResizeStart, handleTouchResizeStart });
+        renderTilesOnPoster(homePoster, concepts, { 
+            handleResizeStart: resizeManager.handleResizeStart, 
+            handleTouchResizeStart: resizeManager.handleTouchResizeStart 
+        });
     }
     
     /**
@@ -233,7 +226,10 @@ const HomeController = (function() {
         const homeView = template.content.cloneNode(true);
         appContainer.appendChild(homeView);
         homePoster = setupHomePoster();
-        renderTilesOnPoster(homePoster, concepts, { handleResizeStart, handleTouchResizeStart });
+        renderTilesOnPoster(homePoster, concepts, { 
+            handleResizeStart: resizeManager.handleResizeStart, 
+            handleTouchResizeStart: resizeManager.handleTouchResizeStart 
+        });
     }
     
     /**
@@ -333,12 +329,9 @@ const HomeController = (function() {
             const handle = document.createElement('div');
             handle.className = `resize-handle ${pos}`;
             handle.dataset.position = pos;
-            
-            // Add mouse down event for resize start
-            handle.addEventListener('mousedown', handleResizeStart);
-            // Add touch start event for resize start
-            handle.addEventListener('touchstart', handleTouchResizeStart);
-            
+            // Use resizeManager's handlers
+            handle.addEventListener('mousedown', resizeManager.handleResizeStart);
+            handle.addEventListener('touchstart', resizeManager.handleTouchResizeStart);
             tile.appendChild(handle);
         });
         
@@ -402,406 +395,6 @@ const HomeController = (function() {
         const conceptId = tile.dataset.id;
         // Navigate to the detail view
         Router.navigate('detail', { id: conceptId });
-    }
-    
-    /**
-     * Handle resize start
-     * @param {MouseEvent} event - Mouse down event
-     */
-    function handleResizeStart(event) {
-        // Prevent default and stop propagation to avoid triggering other events
-        event.preventDefault();
-        event.stopPropagation();
-        
-        // Get the resize handle and tile
-        resizeHandle = event.target;
-        resizingTile = resizeHandle.closest('.concept-tile');
-        
-        if (!resizingTile) {
-            return;
-        }
-        
-        // Set resizing flag
-        safePushUndoState(); // Save state before resizing starts
-        isResizing = true;
-        
-        // Add resizing class
-        resizingTile.classList.add('resizing');
-        
-        // Set z-index higher for resizing
-        resizingTile.style.zIndex = '100';
-        
-        // Store original size and position
-        originalSize = {
-            width: parseInt(resizingTile.style.width, 10),
-            height: parseInt(resizingTile.style.height, 10)
-        };
-        
-        originalPosition = {
-            x: parseInt(resizingTile.style.left, 10),
-            y: parseInt(resizingTile.style.top, 10)
-        };
-        
-        // Store the start position
-        resizeStartPos = {
-            x: event.clientX,
-            y: event.clientY
-        };
-    }
-    
-    // Helper function to get consistent container dimensions
-    function getContainerDimensions() {
-        return {
-            width: homePoster.offsetWidth,
-            height: homePoster.offsetHeight
-        };
-    }
-
-    /**
-     * Handle resize move
-     * @param {MouseEvent} event - Mouse move event
-     */
-    function handleResizeMove(event) {
-        if (!isResizing || !resizingTile || !resizeHandle) {
-            return;
-        }
-        
-        // Prevent default to avoid text selection
-        event.preventDefault();
-        // Stop propagation to prevent other handlers from triggering
-        event.stopPropagation();
-        
-        // Calculate delta from start position
-        const deltaX = event.clientX - resizeStartPos.x;
-        const deltaY = event.clientY - resizeStartPos.y;
-        
-        // Get current position and handle type from stored values
-        const position = resizeHandle.dataset.position;
-        
-        // Calculate new dimensions based on resize handle position
-        let newX = originalPosition.x;
-        let newY = originalPosition.y;
-        let newWidth = originalSize.width;
-        let newHeight = originalSize.height;
-        let adjustWidthFromLeft = false;
-        let adjustHeightFromTop = false;
-        
-        if (position === 'top-left') {
-            newWidth = Math.max(200, originalSize.width - deltaX);
-            newHeight = Math.max(150, originalSize.height - deltaY);
-            newX = originalPosition.x + originalSize.width - newWidth;
-            newY = originalPosition.y + originalSize.height - newHeight;
-            adjustWidthFromLeft = true;
-            adjustHeightFromTop = true;
-        } else if (position === 'top-right') {
-            newWidth = Math.max(200, originalSize.width + deltaX);
-            newHeight = Math.max(150, originalSize.height - deltaY);
-            newY = originalPosition.y + originalSize.height - newHeight;
-            adjustHeightFromTop = true;
-        } else if (position === 'bottom-left') {
-            newWidth = Math.max(200, originalSize.width - deltaX);
-            newHeight = Math.max(150, originalSize.height + deltaY);
-            newX = originalPosition.x + originalSize.width - newWidth;
-            adjustWidthFromLeft = true;
-        } else if (position === 'bottom-right') {
-            newWidth = Math.max(200, originalSize.width + deltaX);
-            newHeight = Math.max(150, originalSize.height + deltaY);
-        }
-        
-        // Get container dimensions using consistent method
-        const containerRect = getContainerDimensions();
-        
-        // Apply constraints using the shared function
-        const constrained = constrainResizeDimensions({
-            x: newX,
-            y: newY,
-            width: newWidth,
-            height: newHeight,
-            adjustWidthFromLeft,
-            adjustHeightFromTop
-        }, containerRect);
-        
-        // Update tile size and position
-        resizingTile.style.width = `${constrained.width}px`;
-        resizingTile.style.height = `${constrained.height}px`;
-        resizingTile.style.left = `${constrained.x}px`;
-        resizingTile.style.top = `${constrained.y}px`;
-        
-        // Add a data attribute to explicitly mark as being resized
-        // This helps prevent any click events from triggering
-        resizingTile.dataset.resizing = 'true';
-    }
-    
-    /**
-     * Handle resize end
-     * @param {MouseEvent} event - Mouse up event
-     */
-    function handleResizeEnd() {
-        if (!isResizing || !resizingTile) {
-            return;
-        }
-        
-        // Remove resizing class
-        resizingTile.classList.remove('resizing');
-        
-        // Reset z-index
-        resizingTile.style.zIndex = '1';
-        
-        // Remove the resizing data attribute
-        if (resizingTile.dataset.resizing) {
-            delete resizingTile.dataset.resizing;
-        }
-        
-        // Get the concept ID
-        const conceptId = resizingTile.dataset.id;
-        
-        // Find the concept
-        const concept = concepts.find(c => c.id === conceptId);
-        if (!concept) {
-            isResizing = false;
-            resizingTile = null;
-            resizeHandle = null;
-            return;
-        }
-        
-        // Update concept size and position
-        const size = {
-            width: parseInt(resizingTile.style.width, 10),
-            height: parseInt(resizingTile.style.height, 10)
-        };
-        
-        const position = {
-            x: parseInt(resizingTile.style.left, 10),
-            y: parseInt(resizingTile.style.top, 10)
-        };
-        
-        // Update concept and save to storage
-        const updatedConcept = ConceptModel.updateConcept(concept, { size, position });
-        
-        // Update the concept in the array
-        const index = concepts.findIndex(c => c.id === conceptId);
-        if (index !== -1) {
-            concepts[index] = updatedConcept;
-        }
-        
-        // Save to storage immediately
-        StorageManager.saveConcept(updatedConcept);
-        
-        // Set recently resized flag to prevent click events
-        recentlyResized = true;
-        
-        // Clear any existing cooldown timer
-        if (resizeCooldownTimer) {
-            clearTimeout(resizeCooldownTimer);
-        }
-        
-        // Reset the recently resized flag after a short delay
-        resizeCooldownTimer = setTimeout(() => {
-            recentlyResized = false;
-        }, 500); // 500ms cooldown before clicks are registered again (increased for better prevention)
-        
-        // Reset resizing state
-        isResizing = false;
-        resizingTile = null;
-        resizeHandle = null;
-    }
-    
-    /**
-     * Handle touch resize start
-     * @param {TouchEvent} event - Touch start event
-     */
-    function handleTouchResizeStart(event) {
-        // Only proceed if it's a touch on a resize handle
-        if (!event.target.classList.contains('resize-handle')) {
-            return;
-        }
-        
-        // Prevent default to avoid scrolling
-        event.preventDefault();
-        event.stopPropagation();
-        
-        // Get the resize handle and tile
-        resizeHandle = event.target;
-        resizingTile = resizeHandle.closest('.concept-tile');
-        
-        if (!resizingTile) {
-            return;
-        }
-        
-        // Set resizing flag
-        safePushUndoState(); // Save state before resizing starts
-        isResizing = true;
-        
-        // Add resizing class
-        resizingTile.classList.add('resizing');
-        
-        // Set z-index higher for resizing
-        resizingTile.style.zIndex = '100';
-        
-        // Store original size and position
-        originalSize = {
-            width: parseInt(resizingTile.style.width, 10),
-            height: parseInt(resizingTile.style.height, 10)
-        };
-        
-        originalPosition = {
-            x: parseInt(resizingTile.style.left, 10),
-            y: parseInt(resizingTile.style.top, 10)
-        };
-        
-        // Store the start position
-        resizeStartPos = {
-            x: event.touches[0].clientX,
-            y: event.touches[0].clientY
-        };
-    }
-    
-    /**
-     * Handle touch resize move
-     * @param {TouchEvent} event - Touch move event
-     */
-    function handleTouchResizeMove(event) {
-        if (!isResizing || !resizingTile || !resizeHandle) {
-            return;
-        }
-        
-        // Prevent default to avoid scrolling
-        event.preventDefault();
-        // Stop propagation to prevent other handlers from triggering
-        event.stopPropagation();
-        
-        // Calculate delta from start position
-        const deltaX = event.touches[0].clientX - resizeStartPos.x;
-        const deltaY = event.touches[0].clientY - resizeStartPos.y;
-        
-        // Get the handle's position
-        const position = resizeHandle.dataset.position;
-        
-        // Calculate new size and position based on which handle is being dragged
-        let newWidth = originalSize.width;
-        let newHeight = originalSize.height;
-        let newX = originalPosition.x;
-        let newY = originalPosition.y;
-        let adjustWidthFromLeft = false;
-        let adjustHeightFromTop = false;
-        
-        if (position === 'top-left') {
-            newWidth = Math.max(200, originalSize.width - deltaX);
-            newHeight = Math.max(150, originalSize.height - deltaY);
-            newX = originalPosition.x + originalSize.width - newWidth;
-            newY = originalPosition.y + originalSize.height - newHeight;
-            adjustWidthFromLeft = true;
-            adjustHeightFromTop = true;
-        } else if (position === 'top-right') {
-            newWidth = Math.max(200, originalSize.width + deltaX);
-            newHeight = Math.max(150, originalSize.height - deltaY);
-            newY = originalPosition.y + originalSize.height - newHeight;
-            adjustHeightFromTop = true;
-        } else if (position === 'bottom-left') {
-            newWidth = Math.max(200, originalSize.width - deltaX);
-            newHeight = Math.max(150, originalSize.height + deltaY);
-            newX = originalPosition.x + originalSize.width - newWidth;
-            adjustWidthFromLeft = true;
-        } else if (position === 'bottom-right') {
-            newWidth = Math.max(200, originalSize.width + deltaX);
-            newHeight = Math.max(150, originalSize.height + deltaY);
-        }
-        
-        // Get container dimensions using consistent method
-        const containerRect = getContainerDimensions();
-        
-        // Apply constraints using the shared function
-        const constrained = constrainResizeDimensions({
-            x: newX,
-            y: newY,
-            width: newWidth,
-            height: newHeight,
-            adjustWidthFromLeft,
-            adjustHeightFromTop
-        }, containerRect);
-        
-        // Update tile size and position
-        resizingTile.style.width = `${constrained.width}px`;
-        resizingTile.style.height = `${constrained.height}px`;
-        resizingTile.style.left = `${constrained.x}px`;
-        resizingTile.style.top = `${constrained.y}px`;
-        
-        // Add a data attribute to explicitly mark as being resized
-        // This helps prevent any click events from triggering
-        resizingTile.dataset.resizing = 'true';
-    }
-    
-    /**
-     * Handle touch resize end
-     * @param {TouchEvent} event - Touch end event
-     */
-    function handleTouchResizeEnd(event) {
-        safePushUndoState(); // Save state for undo
-        if (!isResizing || !resizingTile) {
-            return;
-        }
-
-        // Remove resizing class
-        resizingTile.classList.remove('resizing');
-
-        // Reset z-index
-        resizingTile.style.zIndex = '1';
-
-        // Remove the resizing data attribute
-        if (resizingTile.dataset.resizing) {
-            delete resizingTile.dataset.resizing;
-        }
-
-        // Get the concept ID
-        const conceptId = resizingTile.dataset.id;
-
-        // Find the concept
-        const concept = concepts.find(c => c.id === conceptId);
-        if (!concept) {
-            isResizing = false;
-            resizingTile = null;
-            resizeHandle = null;
-            return;
-        }
-
-        // Update concept size and position
-        const updatedConcept = ConceptModel.updateConcept(concept, {
-            size: {
-                width: parseInt(resizingTile.style.width, 10),
-                height: parseInt(resizingTile.style.height, 10)
-            },
-            position: {
-                x: parseInt(resizingTile.style.left, 10),
-                y: parseInt(resizingTile.style.top, 10)
-            }
-        });
-
-        // Update the concept in the array
-        const index = concepts.findIndex(c => c.id === conceptId);
-        if (index !== -1) {
-            concepts[index] = updatedConcept;
-        }
-
-        // Save immediately to ensure size/position is preserved
-        StorageManager.saveConcept(updatedConcept);
-
-        // Set recently resized flag to prevent click events
-        recentlyResized = true;
-
-        // Clear any existing cooldown timer
-        if (resizeCooldownTimer) {
-            clearTimeout(resizeCooldownTimer);
-        }
-
-        // Reset the recently resized flag after a short delay
-        resizeCooldownTimer = setTimeout(() => {
-            recentlyResized = false;
-        }, 500);
-
-        // Reset resizing state
-        isResizing = false;
-        resizingTile = null;
-        resizeHandle = null;
     }
     
     /**
@@ -926,7 +519,10 @@ const HomeController = (function() {
     // --- Listen for containerSized event from preferences.js ---
     document.addEventListener('containerSized', function() {
         if (homePoster && concepts.length > 0) {
-            renderTilesOnPoster(homePoster, concepts, { handleResizeStart, handleTouchResizeStart });
+            renderTilesOnPoster(homePoster, concepts, { 
+                handleResizeStart: resizeManager.handleResizeStart, 
+                handleTouchResizeStart: resizeManager.handleTouchResizeStart 
+            });
         }
     });
 
