@@ -190,7 +190,8 @@ const HomeController = (function() {
         }
         renderTilesOnPoster(homePoster, concepts, { 
             handleResizeStart: resizeManager.handleResizeStart, 
-            handleTouchResizeStart: resizeManager.handleTouchResizeStart 
+            handleTouchResizeStart: resizeManager.handleTouchResizeStart,
+            generateThumbnailWithRetry: generateThumbnailWithRetry
         });
     }
     
@@ -243,7 +244,8 @@ const HomeController = (function() {
         homePoster = setupHomePoster();
         renderTilesOnPoster(homePoster, concepts, { 
             handleResizeStart: resizeManager.handleResizeStart, 
-            handleTouchResizeStart: resizeManager.handleTouchResizeStart 
+            handleTouchResizeStart: resizeManager.handleTouchResizeStart,
+            generateThumbnailWithRetry: generateThumbnailWithRetry
         });
     }
     
@@ -536,7 +538,8 @@ const HomeController = (function() {
         if (homePoster && concepts.length > 0) {
             renderTilesOnPoster(homePoster, concepts, { 
                 handleResizeStart: resizeManager.handleResizeStart, 
-                handleTouchResizeStart: resizeManager.handleTouchResizeStart 
+                handleTouchResizeStart: resizeManager.handleTouchResizeStart,
+                generateThumbnailWithRetry: generateThumbnailWithRetry
             });
         }
     });
@@ -575,14 +578,8 @@ const HomeController = (function() {
             document.removeEventListener('touchmove', dragManager.handleTouchMove);
             document.removeEventListener('touchend', dragManager.handleTouchEnd);
             
-            // Remove resize event listeners
-            document.removeEventListener('mousemove', handleResizeMove);
-            document.removeEventListener('mouseup', handleResizeEnd);
-            
-            // Remove touch resize event listeners
-            homePoster.removeEventListener('touchstart', handleTouchResizeStart);
-            document.removeEventListener('touchmove', handleTouchResizeMove);
-            document.removeEventListener('touchend', handleTouchResizeEnd);
+            // Note: Anonymous resize event listeners cannot be removed individually
+            // This is a limitation but doesn't cause memory leaks since the page is refreshing
         }
     };
 })();
