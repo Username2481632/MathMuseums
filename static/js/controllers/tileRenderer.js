@@ -141,6 +141,13 @@ function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, g
                 img.alt = `${concept.displayName} preview`;
                 img.src = imageUrl;
                 img.className = 'preview-image';
+                img.draggable = false;
+                
+                // Prevent default drag behavior
+                img.addEventListener('dragstart', (e) => e.preventDefault());
+                img.addEventListener('drag', (e) => e.preventDefault());
+                img.addEventListener('mousedown', (e) => e.preventDefault());
+                
                 img.onerror = () => {
                     // Fall back to thumbnail generation if image loading fails
                     generateThumbnailWithRetry(concept, preview);
