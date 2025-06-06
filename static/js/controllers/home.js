@@ -23,6 +23,8 @@ const HomeController = (function() {
     let thumbnailQueue = []; // Queue for thumbnail generation to prevent overloading
     let isResizing = false; // Track whether resizing is in progress
     let recentlyResized = false; // Track whether resizing just ended
+    let resizingTile = null; // Track which tile is currently being resized
+    let resizeHandle = null; // Track the resize handle being used
 
     // Undo/Redo manager for layout editing
     const undoRedoManager = createUndoRedoManager({
