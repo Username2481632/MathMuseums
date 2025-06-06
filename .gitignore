@@ -26,6 +26,7 @@ ENV/
 *.tmp
 .DS_Store
 *.~*
+reset_database.sh
 
 # Python
 *.py[cod]
