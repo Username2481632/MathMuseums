@@ -21,6 +21,8 @@ const HomeController = (function() {
     let recentlyDragged = false; // Track whether dragging just ended
     let dragCooldownTimer = null; // Timer for drag cooldown
     let thumbnailQueue = []; // Queue for thumbnail generation to prevent overloading
+    let isResizing = false; // Track whether resizing is in progress
+    let recentlyResized = false; // Track whether resizing just ended
 
     // Undo/Redo manager for layout editing
     const undoRedoManager = createUndoRedoManager({
@@ -95,7 +97,10 @@ const HomeController = (function() {
 
     // Resize manager
     const resizeManager = createResizeManager({
-        onStart: () => {},
+        onStart: () => {
+            isResizing = true;
+            recentlyResized = false;
+        },
         onUpdate: (tile, constrained) => {
             tile.style.width = `${constrained.width}px`;
             tile.style.height = `${constrained.height}px`;
@@ -103,6 +108,14 @@ const HomeController = (function() {
             tile.style.top = `${constrained.y}px`;
         },
         onFinish: (tile) => {
+            isResizing = false;
+            recentlyResized = true;
+            
+            // Clear the recently resized flag after a short delay
+            setTimeout(() => {
+                recentlyResized = false;
+            }, 100);
+            
             const conceptId = tile.dataset.id;
             const concept = concepts.find(c => c.id === conceptId);
             if (!concept) return;
