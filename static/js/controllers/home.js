@@ -20,6 +20,7 @@ const HomeController = (function() {
     let saveTimeout;
     let recentlyDragged = false; // Track whether dragging just ended
     let dragCooldownTimer = null; // Timer for drag cooldown
+    let renderDebounceTimer = null; // Timer for debounced rendering
     let thumbnailQueue = []; // Queue for thumbnail generation to prevent overloading
     let isResizing = false; // Track whether resizing is in progress
     let recentlyResized = false; // Track whether resizing just ended
@@ -151,6 +152,27 @@ const HomeController = (function() {
         constrainDimensions: constrainResizeDimensions
     });
 
+    // Debounced render function to prevent multiple rapid renders
+    function debouncedRenderTiles() {
+        // console.log('=== debouncedRenderTiles called ===');
+        if (renderDebounceTimer) {
+            clearTimeout(renderDebounceTimer);
+            // console.log('Cleared existing render timer');
+        }
+        renderDebounceTimer = setTimeout(() => {
+            // console.log('=== Executing debounced render ===');
+            if (homePoster && concepts.length > 0) {
+                // console.log('Calling renderTilesOnPoster with concepts:', concepts.length);
+                renderTilesOnPoster(homePoster, concepts, { 
+                    handleResizeStart: resizeManager.handleResizeStart, 
+                    handleTouchResizeStart: resizeManager.handleTouchResizeStart,
+                    generateThumbnailWithRetry: generateThumbnailWithRetry
+                });
+            }
+            renderDebounceTimer = null;
+        }, 50); // Wait 50ms before rendering
+    }
+    
     // Helper: Get current layout state (center-based coordinates)
     function getCurrentLayoutState() {
         const state = concepts.map(concept => {
@@ -188,17 +210,16 @@ const HomeController = (function() {
                 StorageManager.saveConcept(updatedConcept);
             }
         }
-        renderTilesOnPoster(homePoster, concepts, { 
-            handleResizeStart: resizeManager.handleResizeStart, 
-            handleTouchResizeStart: resizeManager.handleTouchResizeStart,
-            generateThumbnailWithRetry: generateThumbnailWithRetry
-        });
+        debouncedRenderTiles();
     }
     
     /**
      * Initialize the home controller
      */
     async function init() {
+        // Force cleanup of any corrupted data first
+        await forceCleanupCorruptedData();
+        
         // Restore undo/redo stacks from localStorage
         undoRedoManager.loadStacks();
         
@@ -217,11 +238,36 @@ const HomeController = (function() {
      * @returns {Array} Array of concept objects
      */
     async function loadConcepts() {
+        // console.log('=== loadConcepts called ===');
         let concepts = await StorageManager.getAllConcepts();
+        // console.log('Raw concepts from StorageManager:', concepts);
+        // console.log('Concepts count:', concepts ? concepts.length : 0);
+        if (concepts) {
+            // console.log('Concept details:', concepts.map(c => ({ id: c.id, displayName: c.displayName, type: typeof c.id })));
+            
+            // Log each concept's full structure for debugging - disabled for performance
+            /*
+            concepts.forEach((concept, index) => {
+                console.log(`Concept ${index} full structure:`, {
+                    id: concept.id,
+                    type: concept.type, 
+                    displayName: concept.displayName,
+                    hasCoordinates: !!concept.coordinates,
+                    hasPosition: !!concept.position,
+                    hasX: concept.x !== undefined,
+                    hasY: concept.y !== undefined,
+                    isComplete: concept.isComplete,
+                    fullObject: concept
+                });
+            });
+            */
+        }
         
         // If no concepts found, create defaults
         if (!concepts || concepts.length === 0) {
+            // console.log('No concepts found, creating defaults');
             concepts = ConceptModel.createAllConcepts();
+            // console.log('Created default concepts:', concepts);
             
             // Save default concepts
             for (const concept of concepts) {
@@ -229,130 +275,57 @@ const HomeController = (function() {
             }
         }
         
-        return concepts;
+        // Validate and filter concepts to remove corrupted data
+        const validConcepts = concepts.filter(concept => {
+            const isValid = concept && 
+                           concept.id && 
+                           concept.displayName && 
+                           typeof concept.displayName === 'string' &&
+                           concept.displayName !== 'undefined';
+            
+            if (!isValid) {
+                console.warn('Filtering out invalid concept:', concept);
+            }
+            return isValid;
+        });
+        
+        if (validConcepts.length !== concepts.length) {
+            // console.log(`Filtered out ${concepts.length - validConcepts.length} invalid concepts`);
+            // console.log('Valid concepts:', validConcepts);
+            
+            // Clean up corrupted concepts from storage
+            const corruptedConcepts = concepts.filter(concept => !validConcepts.includes(concept));
+            for (const corruptedConcept of corruptedConcepts) {
+                // console.log('Removing corrupted concept from storage:', corruptedConcept);
+                try {
+                    await StorageManager.deleteConcept(corruptedConcept.id);
+                } catch (error) {
+                    console.error('Error removing corrupted concept:', error);
+                }
+            }
+        }
+        
+        console.log('Final loaded concepts:', validConcepts);
+        return validConcepts;
     }
     
     /**
      * Render the home view (home poster and tiles)
      */
     function render() {
+        // console.log('=== Home render called ===');
         const appContainer = document.getElementById('app-container');
         appContainer.innerHTML = '';
         const template = document.getElementById('home-template');
         const homeView = template.content.cloneNode(true);
         appContainer.appendChild(homeView);
         homePoster = setupHomePoster();
+        // console.log('Home poster set up, calling renderTilesOnPoster');
         renderTilesOnPoster(homePoster, concepts, { 
             handleResizeStart: resizeManager.handleResizeStart, 
             handleTouchResizeStart: resizeManager.handleTouchResizeStart,
             generateThumbnailWithRetry: generateThumbnailWithRetry
         });
-    }
-    
-    /**
-     * Create a concept tile element
-     * @param {Object} concept - Concept data
-     * @returns {HTMLElement} Tile element
-     */
-    function createConceptTile(concept) {
-        // Create the tile element
-        const tile = document.createElement('div');
-        tile.className = 'concept-tile';
-        tile.dataset.id = concept.id;
-        
-        // Apply tile size - check for both formats (width/height and size.width/height)
-        let tileWidth, tileHeight;
-        if (concept.width !== undefined && concept.height !== undefined) {
-            tileWidth = concept.width;
-            tileHeight = concept.height;
-        } else if (concept.size) {
-            tileWidth = concept.size.width;
-            tileHeight = concept.size.height;
-        } else {
-            // Use default size if not set
-            tileWidth = 250;
-            tileHeight = 200;
-            // Update the concept with default size
-            concept.width = tileWidth;
-            concept.height = tileHeight;
-            concept.size = { width: tileWidth, height: tileHeight };
-            StorageManager.saveConcept(concept);
-        }
-        
-        tile.style.width = `${tileWidth}px`;
-        tile.style.height = `${tileHeight}px`;
-        
-        // Create the tile header
-        const header = document.createElement('div');
-        header.className = 'tile-header';
-        header.textContent = concept.displayName;
-        tile.appendChild(header);
-        
-        // Create the tile content
-        const content = document.createElement('div');
-        content.className = 'tile-content';
-        
-        // Create the preview area
-        const preview = document.createElement('div');
-        preview.className = 'tile-preview';
-        
-        // Add a status indicator
-        const status = document.createElement('div');
-        status.className = `tile-status ${concept.isComplete ? 'complete' : 'in-progress'}`;
-        tile.appendChild(status);
-        
-        // If the concept has a Desmos state with an image, show preview
-        if (ConceptModel.hasImage(concept)) {
-            try {
-                // First show loading state
-                preview.innerHTML = '<div class="loading-preview"></div>';
-                
-                // Try to extract direct image URL first (faster approach)
-                const imageUrl = DesmosUtils.extractImageUrl(concept.desmosState);
-                
-                if (imageUrl) {
-                    // Create image with direct URL
-                    const img = document.createElement('img');
-                    img.alt = `${concept.displayName} preview`;
-                    img.src = imageUrl;
-                    img.className = 'preview-image';
-                    img.onerror = () => {
-                        // Fall back to thumbnail generation if image loading fails
-                        generateThumbnailWithRetry(concept, preview);
-                    };
-                    
-                    // Replace loading with image
-                    preview.innerHTML = '';
-                    preview.appendChild(img);
-                } else {
-                    // Generate thumbnail using hidden calculator
-                    generateThumbnailWithRetry(concept, preview);
-                }
-            } catch (error) {
-                console.error('Error creating preview:', error);
-                preview.innerHTML = '<div class="preview-error">Preview unavailable</div>';
-            }
-        } else {
-            // Show placeholder
-            preview.innerHTML = '<div class="no-preview">No image yet</div>';
-        }
-        
-        content.appendChild(preview);
-        tile.appendChild(content);
-        
-        // Add resize handles
-        const positions = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
-        positions.forEach(pos => {
-            const handle = document.createElement('div');
-            handle.className = `resize-handle ${pos}`;
-            handle.dataset.position = pos;
-            // Use resizeManager's handlers
-            handle.addEventListener('mousedown', resizeManager.handleResizeStart);
-            handle.addEventListener('touchstart', resizeManager.handleTouchResizeStart);
-            tile.appendChild(handle);
-        });
-        
-        return tile;
     }
     
     /**
@@ -424,6 +397,11 @@ const HomeController = (function() {
         // Max number of retries
         const MAX_RETRIES = 2;
         
+        // Store the current render generation for this thumbnail
+        const tile = previewElement.closest('.concept-tile');
+        const poster = tile ? tile.closest('.tiles-container') : null;
+        const currentRenderGeneration = poster ? poster.dataset.renderGeneration : null;
+        
         // Add to the queue with a slight delay to prevent overloading
         const queueIndex = thumbnailQueue.length;
         thumbnailQueue.push(concept.id);
@@ -437,43 +415,108 @@ const HomeController = (function() {
                 return;
             }
             
-            DesmosUtils.generateThumbnail(concept.desmosState)
-                .then(dataUrl => {
-                    // Clear from queue
-                    thumbnailQueue[queueIndex] = null;
-                    
-                    // Create image with generated thumbnail
-                    const img = document.createElement('img');
-                    img.alt = `${concept.displayName} preview`;
-                    img.src = dataUrl;
-                    img.className = 'preview-image';
-                    img.draggable = false;
-                    
-                    // Prevent default drag behavior
-                    img.addEventListener('dragstart', (e) => e.preventDefault());
-                    img.addEventListener('drag', (e) => e.preventDefault());
-                    img.addEventListener('mousedown', (e) => e.preventDefault());
-                    
-                    // Replace loading with image
+            // Check if the preview element is still part of the current render generation
+            const tile = previewElement.closest('.concept-tile');
+            const poster = tile ? tile.closest('.tiles-container') : null;
+            if (!poster || !homePoster || poster !== homePoster || poster.dataset.renderGeneration !== currentRenderGeneration) {
+                thumbnailQueue[queueIndex] = null; // Clear from queue
+                return;
+            }
+            
+            // Check for direct image first
+            console.log('generateThumbnailWithRetry: Checking for direct image for concept:', concept.id);
+            const directImageUrl = DesmosUtils.extractImageUrl(concept.desmosState);
+            console.log('generateThumbnailWithRetry: Direct image URL result:', directImageUrl);
+            
+            if (directImageUrl) {
+                // Use the direct image instead of generating a thumbnail
+                console.log('generateThumbnailWithRetry: Using direct image for concept:', concept.id);
+                thumbnailQueue[queueIndex] = null; // Clear from queue
+                
+                const img = document.createElement('img');
+                img.alt = `${concept.displayName} preview`;
+                img.src = directImageUrl;
+                img.className = 'preview-image';
+                img.draggable = false;
+                
+                // Prevent default drag behavior
+                img.addEventListener('dragstart', (e) => e.preventDefault());
+                img.addEventListener('drag', (e) => e.preventDefault());
+                
+                // Handle image load/error
+                img.onload = () => {
                     if (previewElement.isConnected) {
-                        previewElement.innerHTML = '';
-                        previewElement.appendChild(img);
+                        const tile = previewElement.closest('.concept-tile');
+                        const poster = tile ? tile.closest('.tiles-container') : null;
+                        if (poster && homePoster && poster === homePoster && poster.dataset.renderGeneration === currentRenderGeneration) {
+                            previewElement.innerHTML = '';
+                            previewElement.appendChild(img);
+                        }
                     }
-                })
-                .catch(error => {
-                    // Clear from queue
-                    thumbnailQueue[queueIndex] = null;
-                    
-                    console.error('Error generating thumbnail:', error);
-                    
-                    // Retry if under the limit
-                    if (retryCount < MAX_RETRIES && previewElement.isConnected) {
-                        console.log(`Retrying thumbnail generation (${retryCount + 1}/${MAX_RETRIES})`);
-                        generateThumbnailWithRetry(concept, previewElement, retryCount + 1);
-                    } else if (previewElement.isConnected) {
-                        previewElement.innerHTML = '<div class="preview-error">Preview unavailable</div>';
-                    }
-                });
+                };
+                
+                img.onerror = () => {
+                    console.warn('generateThumbnailWithRetry: Direct image failed to load, falling back to thumbnail generation for concept:', concept.id);
+                    // Fall back to thumbnail generation
+                    generateThumbnailFromDesmos();
+                };
+                
+                return; // Exit early, using direct image
+            }
+            
+            // If no direct image, generate thumbnail from Desmos state
+            generateThumbnailFromDesmos();
+            
+            function generateThumbnailFromDesmos() {
+                DesmosUtils.generateThumbnail(concept.desmosState)
+                    .then(dataUrl => {
+                        // Clear from queue
+                        thumbnailQueue[queueIndex] = null;
+                        
+                        // Create image with generated thumbnail
+                        const img = document.createElement('img');
+                        img.alt = `${concept.displayName} preview`;
+                        img.src = dataUrl;
+                        img.className = 'preview-image';
+                        img.draggable = false;
+                        
+                        // Prevent default drag behavior
+                        img.addEventListener('dragstart', (e) => e.preventDefault());
+                        img.addEventListener('drag', (e) => e.preventDefault());
+                        
+                        // Replace loading with image - with additional safety checks
+                        if (previewElement.isConnected) {
+                            const tile = previewElement.closest('.concept-tile');
+                            const poster = tile ? tile.closest('.tiles-container') : null;
+                            if (poster && homePoster && poster === homePoster && poster.dataset.renderGeneration === currentRenderGeneration) {
+                                previewElement.innerHTML = '';
+                                previewElement.appendChild(img);
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        // Clear from queue
+                        thumbnailQueue[queueIndex] = null;
+                        
+                        console.error('Error generating thumbnail:', error);
+                        
+                        // Retry if under the limit
+                        if (retryCount < MAX_RETRIES && previewElement.isConnected) {
+                            const tile = previewElement.closest('.concept-tile');
+                            const poster = tile ? tile.closest('.tiles-container') : null;
+                            if (poster && homePoster && poster === homePoster && poster.dataset.renderGeneration === currentRenderGeneration) {
+                                console.log(`Retrying thumbnail generation (${retryCount + 1}/${MAX_RETRIES})`);
+                                generateThumbnailWithRetry(concept, previewElement, retryCount + 1);
+                            }
+                        } else if (previewElement.isConnected) {
+                            const tile = previewElement.closest('.concept-tile');
+                            const poster = tile ? tile.closest('.tiles-container') : null;
+                            if (poster && homePoster && poster === homePoster && poster.dataset.renderGeneration === currentRenderGeneration) {
+                                previewElement.innerHTML = '<div class="preview-error">Preview unavailable</div>';
+                            }
+                        }
+                    });
+            }
         }, queueIndex * 100); // Stagger by 100ms per item in queue
     }
     
@@ -542,23 +585,64 @@ const HomeController = (function() {
     // --- Listen for containerSized event from preferences.js ---
     document.addEventListener('containerSized', function() {
         if (homePoster && concepts.length > 0) {
-            renderTilesOnPoster(homePoster, concepts, { 
-                handleResizeStart: resizeManager.handleResizeStart, 
-                handleTouchResizeStart: resizeManager.handleTouchResizeStart,
-                generateThumbnailWithRetry: generateThumbnailWithRetry
-            });
+            // Debounce rendering to prevent multiple rapid renders
+            debouncedRenderTiles();
         }
     });
+
+    /**
+     * Force cleanup of all corrupted data from storage
+     */
+    async function forceCleanupCorruptedData() {
+        console.log('=== Force cleanup of corrupted data ===');
+        
+        // Clear localStorage of any concept-related data with numeric IDs
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.includes('concept') && (key.includes('_1') || key.includes('1'))) {
+                keysToRemove.push(key);
+            }
+        }
+        
+        for (const key of keysToRemove) {
+            console.log('Removing corrupted localStorage key:', key);
+            localStorage.removeItem(key);
+        }
+        
+        // Clear IndexedDB of corrupted concepts
+        try {
+            if (window.StorageManager && window.StorageManager.deleteConcept) {
+                await window.StorageManager.deleteConcept('1');
+                await window.StorageManager.deleteConcept(1);
+                console.log('Attempted to delete concept with ID 1 from storage');
+            }
+        } catch (error) {
+            console.log('Error during storage cleanup (expected):', error);
+        }
+        
+        console.log('Force cleanup completed');
+    }
 
     // Public API
     return {
         init,
         render,
+        clearThumbnailQueue: function() {
+            // Clear the thumbnail queue to prevent ghost tiles
+            thumbnailQueue = [];
+        },
         cleanup: function() {
             // Clear any pending operations
             if (dragCooldownTimer) {
                 clearTimeout(dragCooldownTimer);
                 dragCooldownTimer = null;
+            }
+            
+            // Clear render debounce timer
+            if (renderDebounceTimer) {
+                clearTimeout(renderDebounceTimer);
+                renderDebounceTimer = null;
             }
             
             // Clear thumbnail queue

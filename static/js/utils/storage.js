@@ -36,7 +36,7 @@ const StorageManager = (function() {
             request.onsuccess = (event) => {
                 db = event.target.result;
                 isDbAvailable = true;
-                console.log('IndexedDB connection established');
+                // console.log('IndexedDB connection established');
                 resolve(true);
             };
             
@@ -107,6 +107,44 @@ const StorageManager = (function() {
             request.onsuccess = () => resolve(concept);
             request.onerror = (event) => {
                 console.error('Error saving concept:', event.target.error);
+                reject(event.target.error);
+            };
+        });
+    }
+
+    /**
+     * Delete a concept from storage
+     * @param {string} conceptId - The ID of the concept to delete
+     * @returns {Promise<boolean>} True if deleted successfully
+     */
+    async function deleteConcept(conceptId) {
+        // If authenticated, try API first
+        if (isAuthenticated()) {
+            try {
+                await apiRequest(`/api/concepts/${conceptId}/`, 'DELETE');
+            } catch (error) {
+                console.error('Error deleting concept from API:', error);
+                // Continue with local deletion even if API fails
+            }
+        }
+        
+        // Remove from localStorage
+        try {
+            localStorage.removeItem(`${LS_KEY_PREFIX}${conceptId}`);
+        } catch (error) {
+            console.error('Error removing from localStorage:', error);
+        }
+        
+        // Remove from IndexedDB if available
+        if (!isDbAvailable) return true;
+        
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.delete(conceptId);
+            request.onsuccess = () => resolve(true);
+            request.onerror = (event) => {
+                console.error('Error deleting concept:', event.target.error);
                 reject(event.target.error);
             };
         });
@@ -201,12 +239,64 @@ const StorageManager = (function() {
     }
 
     /**
+     * Transform API concept data to frontend format
+     * @param {Object} apiConcept - Concept from API
+     * @returns {Object} Transformed concept for frontend
+     */
+    function transformApiConcept(apiConcept) {
+        // Simple display name mapping
+        const displayNames = {
+            'linear': 'Linear',
+            'quadratic': 'Quadratic', 
+            'cubic': 'Cubic',
+            'square-root': 'Square Root',
+            'cube-root': 'Cube Root',
+            'absolute-value': 'Absolute Value',
+            'rational': 'Rational/Inverse',
+            'exponential': 'Exponential',
+            'logarithmic': 'Logarithmic',
+            'trigonometric': 'Trigonometric',
+            'piecewise': 'Piecewise'
+        };
+
+        return {
+            id: apiConcept.concept_type, // Use concept_type as ID for frontend consistency
+            type: apiConcept.concept_type,
+            displayName: displayNames[apiConcept.concept_type] || 'Unknown',
+            coordinates: {
+                // Convert from API pixel coordinates to percentage coordinates if needed
+                centerX: 50, // Default center - API should ideally provide this
+                centerY: 50,
+                width: 25,
+                height: 20
+            },
+            position: { x: apiConcept.position_x, y: apiConcept.position_y },
+            size: { width: apiConcept.width, height: apiConcept.height },
+            description: apiConcept.description || '',
+            isComplete: apiConcept.is_complete || false,
+            desmosState: JSON.stringify(apiConcept.desmos_state),
+            lastModified: new Date(apiConcept.updated_at).getTime(),
+            _apiId: apiConcept.id // Keep reference to original API ID
+        };
+    }
+
+    /**
      * Get all concepts
      */
     async function getAllConcepts() {
         if (isAuthenticated()) {
             try {
-                return await apiRequest('/api/concepts/');
+                const apiConcepts = await apiRequest('/api/concepts/');
+                // Transform API concepts to frontend format
+                const transformedConcepts = apiConcepts.map(transformApiConcept);
+                
+                // Remove duplicates based on concept type (frontend ID)
+                const conceptMap = new Map();
+                transformedConcepts.forEach(concept => {
+                    conceptMap.set(concept.id, concept);
+                });
+                
+                return Array.from(conceptMap.values());
             } catch (e) {
                 // Fallback to local
             }
@@ -375,6 +465,7 @@ const StorageManager = (function() {
     return {
         init: initDatabase,
         saveConcept,
+        deleteConcept,
         updateConcept,
         getConcept,
         getAllConcepts,

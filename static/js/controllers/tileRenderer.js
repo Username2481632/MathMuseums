@@ -2,8 +2,61 @@
 // Handles rendering and creation of tiles on the home poster for the Math Museums home view.
 
 export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, handleTouchResizeStart, generateThumbnailWithRetry }) {
+    // console.log('=== renderTilesOnPoster called ===');
+    // console.log('Input concepts:', concepts);
+    // console.log('Concepts count:', concepts.length);
+    // console.log('Concepts details:', concepts.map(c => ({ id: c.id, displayName: c.displayName, type: typeof c.id })));
+    
+    // AGGRESSIVE DATA VALIDATION - Filter out any corrupted concepts
+    const validConcepts = concepts.filter(concept => {
+        const isValid = concept && 
+                       concept.id && 
+                       concept.displayName && 
+                       typeof concept.displayName === 'string' &&
+                       concept.displayName !== 'undefined' &&
+                       typeof concept.id === 'string' &&
+                       concept.type;
+        
+        if (!isValid) {
+            console.error('BLOCKING CORRUPTED CONCEPT FROM RENDER:', concept);
+        }
+        return isValid;
+    });
+    
+    if (validConcepts.length !== concepts.length) {
+        console.warn(`Blocked ${concepts.length - validConcepts.length} corrupted concepts from rendering`);
+    }
+    
     // Clear the home poster
     homePoster.innerHTML = '';
+    // console.log('Cleared homePoster innerHTML');
+    
+    // Clear any pending thumbnail generation to prevent ghost tiles
+    if (window.HomeController && window.HomeController.clearThumbnailQueue) {
+        window.HomeController.clearThumbnailQueue();
+        // console.log('Cleared thumbnail queue');
+    }
+    
+    // Add a render generation ID to track this render cycle
+    const renderGeneration = Date.now() + Math.random();
+    homePoster.dataset.renderGeneration = renderGeneration;
+    // console.log('Set render generation:', renderGeneration);
+    
+    // Remove duplicates based on concept ID
+    const uniqueConcepts = [];
+    const seenIds = new Set();
+    for (const concept of validConcepts) {
+        if (!seenIds.has(concept.id)) {
+            seenIds.add(concept.id);
+            uniqueConcepts.push(concept);
+            // console.log('Added unique concept:', concept.id, concept.displayName);
+        } else {
+            // console.log('DUPLICATE DETECTED - Skipping concept:', concept.id, concept.displayName);
+        }
+    }
+    
+    // console.log('Original concepts:', concepts.length, 'Valid concepts:', validConcepts.length, 'Unique concepts:', uniqueConcepts.length);
+    // console.log('Seen IDs:', Array.from(seenIds));
     
     // Get container dimensions - use actual set dimensions if available, otherwise getBoundingClientRect
     let containerWidth, containerHeight;
@@ -11,15 +64,19 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
     containerWidth = homePoster.offsetWidth;
     containerHeight = homePoster.offsetHeight;
     
-    console.log('renderTilesOnPoster using container:', containerWidth, 'x', containerHeight);
+    // console.log('renderTilesOnPoster using container:', containerWidth, 'x', containerHeight);
     
     const defaultTileWidth = 250;
     const defaultTileHeight = 200;
     const padding = 20;
     
-    concepts.forEach((concept, index) => {
+    uniqueConcepts.forEach((concept, index) => {
+        // console.log(`Creating tile ${index + 1}/${uniqueConcepts.length} for concept:`, concept.id, concept.displayName);
         const tile = createConceptTile(concept, handleResizeStart, handleTouchResizeStart, generateThumbnailWithRetry);
+        // console.log('Created tile element:', tile);
+        // console.log('Tile data-id:', tile.dataset.id);
         homePoster.appendChild(tile);
+        // console.log('Appended tile to homePoster');
         tile.style.position = 'absolute';
         
         // Use percentage-based coordinate system if available
@@ -36,7 +93,7 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
                     
                     // Update the concept with the new coordinates
                     const updatedConcept = window.ConceptModel.updateCoordinates(concept, coords);
-                    concepts[index] = updatedConcept;
+                    uniqueConcepts[index] = updatedConcept;
                     window.StorageManager.saveConcept(updatedConcept);
                 }
                 
@@ -77,6 +134,10 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
         tile.style.left = `${tileX}px`;
         tile.style.top = `${tileY}px`;
     });
+    
+    // console.log('=== renderTilesOnPoster completed ===');
+    // console.log('Final homePoster children count:', homePoster.children.length);
+    // console.log('Final tiles:', Array.from(homePoster.children).map(t => ({ id: t.dataset.id, class: t.className })));
 }
 
 function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, generateThumbnailWithRetry) {
@@ -136,6 +197,7 @@ function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, g
             const imageUrl = DesmosUtils.extractImageUrl(concept.desmosState);
             
             if (imageUrl) {
+                console.log('tileRenderer: Using direct image URL for', concept.displayName, imageUrl);
                 // Create image with direct URL
                 const img = document.createElement('img');
                 img.alt = `${concept.displayName} preview`;
@@ -146,17 +208,30 @@ function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, g
                 // Prevent default drag behavior
                 img.addEventListener('dragstart', (e) => e.preventDefault());
                 img.addEventListener('drag', (e) => e.preventDefault());
-                img.addEventListener('mousedown', (e) => e.preventDefault());
+                
+                img.onload = () => {
+                    console.log('tileRenderer: Direct image loaded successfully for', concept.displayName);
+                };
                 
                 img.onerror = () => {
+                    console.warn('tileRenderer: Direct image failed to load for', concept.displayName, 'falling back to thumbnail');
                     // Fall back to thumbnail generation if image loading fails
                     generateThumbnailWithRetry(concept, preview);
                 };
+                
+                // Set a timeout as additional fallback in case the image never loads or errors
+                setTimeout(() => {
+                    if (!img.complete) {
+                        console.warn('tileRenderer: Direct image timed out for', concept.displayName, 'falling back to thumbnail');
+                        generateThumbnailWithRetry(concept, preview);
+                    }
+                }, 5000);
                 
                 // Replace loading with image
                 preview.innerHTML = '';
                 preview.appendChild(img);
             } else {
+                console.log('tileRenderer: No direct image URL, generating thumbnail for', concept.displayName);
                 // Generate thumbnail using hidden calculator
                 generateThumbnailWithRetry(concept, preview);
             }
