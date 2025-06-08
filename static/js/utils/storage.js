@@ -6,7 +6,23 @@
 const StorageManager = (function() {
     const DB_NAME = 'MathMuseums';
     const DB_VERSION = 1;
-    const STORE_NAME = 'concepts';
+    // Public API
+    return {
+        init,
+        initDatabase,
+        saveConcept,
+        getConcept,
+        getAllConcepts,
+        deleteConcept,
+        clearAllConcepts,
+        saveOnboardingPreference,
+        getOnboardingPreference,
+        saveOnboardingSession,
+        getOnboardingSession,
+        clearOnboardingSession,
+        saveImageSkill,
+        getImageSkill
+    };NAME = 'concepts';
     const LS_KEY_PREFIX = 'mm_concept_';
     
     // Private variables
@@ -279,8 +295,17 @@ const StorageManager = (function() {
         return stored === 'true';
     }
     
+    /**
+     * Initialize the storage manager
+     * @returns {Promise} Resolves when storage is ready
+     */
+    async function init() {
+        return await initDatabase();
+    }
+
     // Public API
     return {
+        init,
         initDatabase,
         saveConcept,
         getConcept,
