@@ -461,6 +461,40 @@ const StorageManager = (function() {
         }
     }
     
+    /**
+     * Clear all concepts from storage
+     * @returns {Promise<void>}
+     */
+    async function clearAllConcepts() {
+        if (isDbAvailable && db) {
+            try {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                await new Promise((resolve, reject) => {
+                    const request = store.clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+                console.log('All concepts cleared from IndexedDB');
+            } catch (error) {
+                console.error('Error clearing concepts from IndexedDB:', error);
+                throw error;
+            }
+        } else {
+            // Clear from localStorage
+            const keys = Object.keys(localStorage);
+            for (const key of keys) {
+                if (key.startsWith(LS_KEY_PREFIX)) {
+                    localStorage.removeItem(key);
+                }
+            }
+            console.log('All concepts cleared from localStorage');
+        }
+        
+        // Reset unsynced changes counter
+        unsyncedChanges = 0;
+    }
+
     // Public API
     return {
         init: initDatabase,
@@ -469,6 +503,7 @@ const StorageManager = (function() {
         updateConcept,
         getConcept,
         getAllConcepts,
+        clearAllConcepts,
         saveOnboardingPreference,
         getOnboardingPreference,
         saveOnboardingSession,
@@ -479,7 +514,8 @@ const StorageManager = (function() {
         hasUnsyncedChanges,
         markConceptSynced,
         incrementUnsyncedChanges,
-        decrementUnsyncedChanges
+        decrementUnsyncedChanges,
+        clearAllConcepts
     };
 })();
 

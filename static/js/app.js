@@ -59,15 +59,8 @@ var App = (function() {
                 'detail': DetailController.init
             }, 'home');
             
-            // Set up sync button
-            const syncButton = document.getElementById('sync-button');
-            if (syncButton) {
-                syncButton.addEventListener('click', () => {
-                    if (SyncClient.getSyncStatus() !== 'syncing') {
-                        SyncClient.forceSync();
-                    }
-                });
-            }
+            // Set up file management buttons
+            setupFileManagementButtons();
 
             // Setup Classmates' Work Feature
             setupClassmatesWorkFeature();
@@ -209,6 +202,117 @@ var App = (function() {
             };
             return escape[match];
         });
+    }
+
+    /**
+     * Set up file management buttons functionality
+     */
+    function setupFileManagementButtons() {
+        // Set up save file button
+        const saveFileButton = document.getElementById('save-file-button');
+        if (saveFileButton) {
+            saveFileButton.addEventListener('click', async () => {
+                try {
+                    saveFileButton.disabled = true;
+                    saveFileButton.textContent = '💾 Saving...';
+                    
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                    const filename = `my-math-museum-${timestamp}.json`;
+                    
+                    await FileManager.downloadUserData(filename);
+                    
+                    // Show success message
+                    showNotification('File saved successfully!', 'success');
+                    
+                } catch (error) {
+                    console.error('Error saving file:', error);
+                    showNotification('Failed to save file: ' + error.message, 'error');
+                } finally {
+                    saveFileButton.disabled = false;
+                    saveFileButton.textContent = '💾 Save File';
+                }
+            });
+        }
+        
+        // Set up load file button
+        const loadFileButton = document.getElementById('load-file-button');
+        if (loadFileButton) {
+            const fileInput = FileManager.createFileInput(async (file) => {
+                try {
+                    loadFileButton.disabled = true;
+                    loadFileButton.textContent = '📁 Loading...';
+                    
+                    // Load and validate file
+                    const importData = await FileManager.loadUserDataFromFile(file);
+                    const fileInfo = FileManager.getFileInfo(importData);
+                    
+                    // Show confirmation dialog
+                    const shouldImport = await showImportConfirmation(fileInfo);
+                    if (!shouldImport) {
+                        return;
+                    }
+                    
+                    // Get import options
+                    const options = await FileManager.showImportDialog();
+                    
+                    // Import the data
+                    await FileManager.importUserData(importData, options);
+                    
+                    // Refresh the display
+                    if (window.HomeController && window.HomeController.loadConcepts) {
+                        await window.HomeController.loadConcepts();
+                        if (window.HomeController.render) {
+                            window.HomeController.render();
+                        }
+                    }
+                    
+                    showNotification(`Successfully imported ${fileInfo.totalConcepts} concepts!`, 'success');
+                    
+                } catch (error) {
+                    console.error('Error loading file:', error);
+                    showNotification('Failed to load file: ' + error.message, 'error');
+                } finally {
+                    loadFileButton.disabled = false;
+                    loadFileButton.textContent = '📁 Load File';
+                }
+            });
+            
+            // Append hidden file input to body
+            document.body.appendChild(fileInput);
+            
+            // Trigger file input when button is clicked
+            loadFileButton.addEventListener('click', () => {
+                fileInput.click();
+            });
+        }
+    }
+    
+    /**
+     * Show import confirmation dialog
+     * @param {Object} fileInfo - Information about the file to import
+     * @returns {Promise<boolean>} Whether to proceed with import
+     */
+    async function showImportConfirmation(fileInfo) {
+        const message = `Import museum data from file?
+        
+File contains:
+• ${fileInfo.totalConcepts} concepts (${fileInfo.completedConcepts} completed)
+• Export date: ${new Date(fileInfo.exportDate).toLocaleDateString()}
+• Version: ${fileInfo.version}
+
+This will replace your current museum data. Continue?`;
+        
+        return confirm(message);
+    }
+    
+    /**
+     * Show notification to user
+     * @param {string} message - Notification message
+     * @param {string} type - Notification type ('success', 'error', 'info')
+     */
+    function showNotification(message, type = 'info') {
+        // For now, use alert. TODO: Create a proper notification system
+        alert(message);
     }
 
     // Public API

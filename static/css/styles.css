@@ -174,12 +174,26 @@ main {
 .header-controls .logout-btn:hover {
     background: #c0392b; /* Darker shade of accent */
 }
-.header-controls .sync-btn {
-    background: #4caf50; /* A distinct color for sync */
+
+/* File Management Buttons */
+.file-management {
+    display: inline-flex;
+    gap: 0.5rem;
 }
-.header-controls .sync-btn:hover {
-    background: #3d8b40; /* Darker shade for sync */
+
+.header-controls .file-btn {
+    background: #4caf50; /* Green for file operations */
+    font-size: 0.875rem;
+    padding: 0.5em 0.75em;
 }
+.header-controls .file-btn:hover {
+    background: #3d8b40; /* Darker shade for file buttons */
+}
+.header-controls .file-btn:disabled {
+    background: #666;
+    cursor: not-allowed;
+}
+
 .header-controls .settings-btn {
     background: var(--secondary-color);
     padding: 0.5em 0.75em;
