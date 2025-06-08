@@ -1,6 +1,7 @@
 /**
- * Storage Module
+ * Storage Module - Local File Based
  * Handles data persistence using IndexedDB with localStorage fallback
+ * Server sync functionality removed - data is now stored locally in files
  */
 const StorageManager = (function() {
     const DB_NAME = 'MathMuseums';
@@ -11,7 +12,6 @@ const StorageManager = (function() {
     // Private variables
     let db = null;
     let isDbAvailable = false;
-    let unsyncedChanges = 0;
     
     /**
      * Initialize the IndexedDB database
@@ -36,7 +36,7 @@ const StorageManager = (function() {
             request.onsuccess = (event) => {
                 db = event.target.result;
                 isDbAvailable = true;
-                // console.log('IndexedDB connection established');
+                console.log('IndexedDB connection established for local storage');
                 resolve(true);
             };
             
@@ -45,420 +45,149 @@ const StorageManager = (function() {
                 if (!db.objectStoreNames.contains(STORE_NAME)) {
                     const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
                     store.createIndex('type', 'type', { unique: false });
-                    console.log('Object store created');
+                    console.log('Object store created for local storage');
                 }
             };
         });
     }
     
     /**
-     * Check if user is authenticated (by presence of a session cookie)
-     * @returns {boolean}
-     */
-    function isAuthenticated() {
-        // Simple check for Django sessionid cookie
-        return document.cookie.split(';').some(c => c.trim().startsWith('sessionid='));
-    }
-
-    /**
-     * Helper for API requests
-     */
-    async function apiRequest(url, options = {}) {
-        options.credentials = 'same-origin';
-        const response = await fetch(url, options);
-        if (!response.ok) throw new Error(await response.text());
-        return response.json();
-    }
-
-    /**
-     * Save a concept to storage or API
+     * Save concept to local storage
+     * @param {Object} concept - The concept data to save
+     * @returns {Promise<Object>} The saved concept
      */
     async function saveConcept(concept) {
-        // Increment unsynced changes counter
-        incrementUnsyncedChanges();
+        const processedConcept = {
+            ...concept,
+            lastModified: new Date().toISOString()
+        };
         
-        if (isAuthenticated()) {
-            // If concept has an id, update; else, create
-            const method = concept.id ? 'PUT' : 'POST';
-            const url = concept.id
-                ? `/api/concepts/${concept.id}/`
-                : '/api/concepts/';
+        if (isDbAvailable && db) {
             try {
-                const resp = await apiRequest(url, {
-                    method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(concept)
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.put(processedConcept);
+                
+                await new Promise((resolve, reject) => {
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
                 });
-                // Mark as synced
-                decrementUnsyncedChanges();
-                return resp;
+                
+                console.log('Concept saved to IndexedDB:', processedConcept.id);
+                return processedConcept;
             } catch (error) {
-                console.error('Error saving to API, falling back to local storage', error);
-                // Continue with local storage
+                console.error('Error saving to IndexedDB:', error);
+                // Fall back to localStorage
             }
         }
-        // Fallback: IndexedDB/localStorage
-        saveToLocalStorage(concept);
-        if (!isDbAvailable) return concept;
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.put(concept);
-            request.onsuccess = () => resolve(concept);
-            request.onerror = (event) => {
-                console.error('Error saving concept:', event.target.error);
-                reject(event.target.error);
-            };
-        });
+        
+        // Use localStorage as fallback
+        const key = LS_KEY_PREFIX + processedConcept.id;
+        localStorage.setItem(key, JSON.stringify(processedConcept));
+        console.log('Concept saved to localStorage:', processedConcept.id);
+        return processedConcept;
     }
-
+    
     /**
-     * Delete a concept from storage
-     * @param {string} conceptId - The ID of the concept to delete
-     * @returns {Promise<boolean>} True if deleted successfully
+     * Get concept from local storage
+     * @param {string} conceptId - The concept ID
+     * @returns {Promise<Object|null>} The concept data or null if not found
      */
-    async function deleteConcept(conceptId) {
-        // If authenticated, try API first
-        if (isAuthenticated()) {
+    async function getConcept(conceptId) {
+        if (isDbAvailable && db) {
             try {
-                await apiRequest(`/api/concepts/${conceptId}/`, 'DELETE');
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.get(conceptId);
+                
+                const result = await new Promise((resolve, reject) => {
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+                
+                if (result) {
+                    return result;
+                }
             } catch (error) {
-                console.error('Error deleting concept from API:', error);
-                // Continue with local deletion even if API fails
+                console.error('Error reading from IndexedDB:', error);
+                // Fall back to localStorage
             }
         }
         
-        // Remove from localStorage
-        try {
-            localStorage.removeItem(`${LS_KEY_PREFIX}${conceptId}`);
-        } catch (error) {
-            console.error('Error removing from localStorage:', error);
-        }
-        
-        // Remove from IndexedDB if available
-        if (!isDbAvailable) return true;
-        
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.delete(conceptId);
-            request.onsuccess = () => resolve(true);
-            request.onerror = (event) => {
-                console.error('Error deleting concept:', event.target.error);
-                reject(event.target.error);
-            };
-        });
-    }
-
-    /**
-     * Update a concept in storage
-     * @param {Object} concept - The concept to update
-     * @returns {Promise<Object>} The updated concept
-     */
-    async function updateConcept(concept) {
-        // Update timestamp
-        concept.lastSynced = new Date().toISOString();
-        
-        // Save to local storage
-        saveToLocalStorage(concept);
-        
-        if (!isDbAvailable) return concept;
-        
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction([STORE_NAME], 'readwrite');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.put(concept);
-            request.onsuccess = () => resolve(concept);
-            request.onerror = (event) => {
-                console.error('Error updating concept:', event.target.error);
-                reject(event.target.error);
-            };
-        });
+        // Use localStorage as fallback
+        const key = LS_KEY_PREFIX + conceptId;
+        const stored = localStorage.getItem(key);
+        return stored ? JSON.parse(stored) : null;
     }
     
     /**
-     * Check if there are unsynced changes
-     * @returns {boolean}
-     */
-    function hasUnsyncedChanges() {
-        return unsyncedChanges > 0;
-    }
-    
-    /**
-     * Mark a concept as synced
-     * @param {string} conceptId - ID of the concept
-     */
-    function markConceptSynced(conceptId) {
-        if (unsyncedChanges > 0) {
-            unsyncedChanges--;
-        }
-    }
-    
-    /**
-     * Increment unsynced changes counter
-     */
-    function incrementUnsyncedChanges() {
-        unsyncedChanges++;
-    }
-    
-    /**
-     * Decrement unsynced changes counter
-     */
-    function decrementUnsyncedChanges() {
-        if (unsyncedChanges > 0) {
-            unsyncedChanges--;
-        }
-    }
-    
-    /**
-     * Get a concept by ID
-     */
-    async function getConcept(id) {
-        if (isAuthenticated()) {
-            try {
-                return await apiRequest(`/api/concepts/${id}/`);
-            } catch (e) {
-                // Fallback to local
-            }
-        }
-        if (!isDbAvailable) return getFromLocalStorage(id);
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction([STORE_NAME], 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.get(id);
-            request.onsuccess = () => {
-                const result = request.result;
-                if (!result) resolve(getFromLocalStorage(id));
-                else resolve(result);
-            };
-            request.onerror = (event) => {
-                console.error('Error getting concept:', event.target.error);
-                resolve(getFromLocalStorage(id));
-            };
-        });
-    }
-
-    /**
-     * Transform API concept data to frontend format
-     * @param {Object} apiConcept - Concept from API
-     * @returns {Object} Transformed concept for frontend
-     */
-    function transformApiConcept(apiConcept) {
-        // Simple display name mapping
-        const displayNames = {
-            'linear': 'Linear',
-            'quadratic': 'Quadratic', 
-            'cubic': 'Cubic',
-            'square-root': 'Square Root',
-            'cube-root': 'Cube Root',
-            'absolute-value': 'Absolute Value',
-            'rational': 'Rational/Inverse',
-            'exponential': 'Exponential',
-            'logarithmic': 'Logarithmic',
-            'trigonometric': 'Trigonometric',
-            'piecewise': 'Piecewise'
-        };
-
-        return {
-            id: apiConcept.concept_type, // Use concept_type as ID for frontend consistency
-            type: apiConcept.concept_type,
-            displayName: displayNames[apiConcept.concept_type] || 'Unknown',
-            coordinates: {
-                // Convert from API pixel coordinates to percentage coordinates if needed
-                centerX: 50, // Default center - API should ideally provide this
-                centerY: 50,
-                width: 25,
-                height: 20
-            },
-            position: { x: apiConcept.position_x, y: apiConcept.position_y },
-            size: { width: apiConcept.width, height: apiConcept.height },
-            description: apiConcept.description || '',
-            isComplete: apiConcept.is_complete || false,
-            desmosState: JSON.stringify(apiConcept.desmos_state),
-            lastModified: new Date(apiConcept.updated_at).getTime(),
-            _apiId: apiConcept.id // Keep reference to original API ID
-        };
-    }
-
-    /**
-     * Get all concepts
+     * Get all concepts from local storage
+     * @returns {Promise<Array>} Array of all concepts
      */
     async function getAllConcepts() {
-        if (isAuthenticated()) {
+        if (isDbAvailable && db) {
             try {
-                const apiConcepts = await apiRequest('/api/concepts/');
-                // Transform API concepts to frontend format
-                const transformedConcepts = apiConcepts.map(transformApiConcept);
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
                 
-                // Remove duplicates based on concept type (frontend ID)
-                const conceptMap = new Map();
-                transformedConcepts.forEach(concept => {
-                    conceptMap.set(concept.id, concept);
+                const results = await new Promise((resolve, reject) => {
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
                 });
                 
-                return Array.from(conceptMap.values());
-            } catch (e) {
-                // Fallback to local
+                return results || [];
+            } catch (error) {
+                console.error('Error reading all from IndexedDB:', error);
+                // Fall back to localStorage
             }
         }
-        if (!isDbAvailable) return getAllFromLocalStorage();
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction([STORE_NAME], 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.getAll();
-            request.onsuccess = () => {
-                const result = request.result;
-                if (!result || result.length === 0) resolve(getAllFromLocalStorage());
-                else resolve(result);
-            };
-            request.onerror = (event) => {
-                console.error('Error getting all concepts:', event.target.error);
-                resolve(getAllFromLocalStorage());
-            };
-        });
-    }
-    
-    /**
-     * Save a concept to localStorage
-     * @param {Object} concept - The concept object to save
-     */
-    function saveToLocalStorage(concept) {
-        try {
-            localStorage.setItem(`${LS_KEY_PREFIX}${concept.id}`, JSON.stringify(concept));
-        } catch (error) {
-            console.error('Error saving to localStorage:', error);
-        }
-    }
-    
-    /**
-     * Get a concept from localStorage
-     * @param {string} id - Concept ID
-     * @returns {Object|null} The concept or null if not found
-     */
-    function getFromLocalStorage(id) {
-        try {
-            const data = localStorage.getItem(`${LS_KEY_PREFIX}${id}`);
-            return data ? JSON.parse(data) : null;
-        } catch (error) {
-            console.error('Error reading from localStorage:', error);
-            return null;
-        }
-    }
-    
-    /**
-     * Get all concepts from localStorage
-     * @returns {Array} Array of concepts
-     */
-    function getAllFromLocalStorage() {
+        
+        // Use localStorage as fallback
         const concepts = [];
-        try {
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith(LS_KEY_PREFIX)) {
-                    const data = localStorage.getItem(key);
-                    if (data) {
-                        concepts.push(JSON.parse(data));
-                    }
+        const keys = Object.keys(localStorage);
+        for (const key of keys) {
+            if (key.startsWith(LS_KEY_PREFIX)) {
+                try {
+                    const concept = JSON.parse(localStorage.getItem(key));
+                    concepts.push(concept);
+                } catch (error) {
+                    console.error('Error parsing concept from localStorage:', error);
                 }
             }
-        } catch (error) {
-            console.error('Error reading all from localStorage:', error);
         }
         return concepts;
     }
     
     /**
-     * Save onboarding preference
-     * @param {boolean} disabled - Whether onboarding should be disabled
+     * Delete concept from local storage
+     * @param {string} conceptId - The concept ID to delete
+     * @returns {Promise<boolean>} Success status
      */
-    function saveOnboardingPreference(disabled) {
-        try {
-            localStorage.setItem('mm_onboarding_disabled', JSON.stringify(disabled));
-        } catch (error) {
-            console.error('Error saving onboarding preference:', error);
+    async function deleteConcept(conceptId) {
+        if (isDbAvailable && db) {
+            try {
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.delete(conceptId);
+                
+                await new Promise((resolve, reject) => {
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+                
+                console.log('Concept deleted from IndexedDB:', conceptId);
+            } catch (error) {
+                console.error('Error deleting from IndexedDB:', error);
+                // Fall back to localStorage
+            }
         }
-    }
-    
-    /**
-     * Save onboarding session state
-     * @param {boolean} shown - Whether onboarding has been shown in this session
-     */
-    function saveOnboardingSession(shown) {
-        try {
-            sessionStorage.setItem('mm_onboarding_shown', JSON.stringify(shown));
-            console.log(`Onboarding session status updated: ${shown ? 'shown' : 'not shown'}`);
-        } catch (error) {
-            console.error('Error saving onboarding session state:', error);
-        }
-    }
-    
-    /**
-     * Clear onboarding session state
-     * This can be used to force onboarding to show again in the current session
-     */
-    function clearOnboardingSession() {
-        try {
-            sessionStorage.removeItem('mm_onboarding_shown');
-            console.log('Onboarding session status cleared');
-        } catch (error) {
-            console.error('Error clearing onboarding session state:', error);
-        }
-    }
-    
-    /**
-     * Get onboarding session state
-     * @returns {boolean} Whether onboarding has been shown in this session
-     */
-    function getOnboardingSession() {
-        try {
-            const data = sessionStorage.getItem('mm_onboarding_shown');
-            const result = data ? JSON.parse(data) : false;
-            console.log(`Checking onboarding session status: ${result ? 'shown' : 'not shown'}`);
-            return result;
-        } catch (error) {
-            console.error('Error reading onboarding session state:', error);
-            return false;
-        }
-    }
-    
-    /**
-     * Get onboarding preference
-     * @returns {boolean} Whether onboarding is disabled
-     */
-    function getOnboardingPreference() {
-        try {
-            const data = localStorage.getItem('mm_onboarding_disabled');
-            return data ? JSON.parse(data) : false;
-        } catch (error) {
-            console.error('Error reading onboarding preference:', error);
-            return false;
-        }
-    }
-    
-    /**
-     * Save user's image skill flag
-     * @param {boolean} hasSkill - Whether user has demonstrated image skill
-     */
-    function saveImageSkill(hasSkill) {
-        try {
-            localStorage.setItem('mm_image_skill', JSON.stringify(hasSkill));
-        } catch (error) {
-            console.error('Error saving image skill flag:', error);
-        }
-    }
-    
-    /**
-     * Get user's image skill flag
-     * @returns {boolean} Whether user has demonstrated image skill
-     */
-    function getImageSkill() {
-        try {
-            const data = localStorage.getItem('mm_image_skill');
-            return data ? JSON.parse(data) : false;
-        } catch (error) {
-            console.error('Error reading image skill flag:', error);
-            return false;
-        }
+        
+        // Use localStorage as fallback
+        const key = LS_KEY_PREFIX + conceptId;
+        localStorage.removeItem(key);
+        console.log('Concept deleted from localStorage:', conceptId);
+        return true;
     }
     
     /**
@@ -490,19 +219,73 @@ const StorageManager = (function() {
             }
             console.log('All concepts cleared from localStorage');
         }
-        
-        // Reset unsynced changes counter
-        unsyncedChanges = 0;
     }
-
+    
+    /**
+     * Save onboarding preference
+     * @param {boolean} disabled - Whether onboarding is disabled
+     */
+    function saveOnboardingPreference(disabled) {
+        localStorage.setItem('mm_onboarding_disabled', disabled.toString());
+    }
+    
+    /**
+     * Get onboarding preference
+     * @returns {boolean} Whether onboarding is disabled
+     */
+    function getOnboardingPreference() {
+        const stored = localStorage.getItem('mm_onboarding_disabled');
+        return stored === 'true';
+    }
+    
+    /**
+     * Save onboarding session state
+     * @param {boolean} shown - Whether onboarding was shown in this session
+     */
+    function saveOnboardingSession(shown) {
+        sessionStorage.setItem('mm_onboarding_shown', shown.toString());
+    }
+    
+    /**
+     * Get onboarding session state
+     * @returns {boolean} Whether onboarding was shown in this session
+     */
+    function getOnboardingSession() {
+        const stored = sessionStorage.getItem('mm_onboarding_shown');
+        return stored === 'true';
+    }
+    
+    /**
+     * Clear onboarding session state
+     */
+    function clearOnboardingSession() {
+        sessionStorage.removeItem('mm_onboarding_shown');
+    }
+    
+    /**
+     * Save image skill state
+     * @param {boolean} skillShown - Whether image skill explanation was shown
+     */
+    function saveImageSkill(skillShown) {
+        localStorage.setItem('mm_image_skill_shown', skillShown.toString());
+    }
+    
+    /**
+     * Get image skill state
+     * @returns {boolean} Whether image skill explanation was shown
+     */
+    function getImageSkill() {
+        const stored = localStorage.getItem('mm_image_skill_shown');
+        return stored === 'true';
+    }
+    
     // Public API
     return {
-        init: initDatabase,
+        initDatabase,
         saveConcept,
-        deleteConcept,
-        updateConcept,
         getConcept,
         getAllConcepts,
+        deleteConcept,
         clearAllConcepts,
         saveOnboardingPreference,
         getOnboardingPreference,
@@ -510,12 +293,7 @@ const StorageManager = (function() {
         getOnboardingSession,
         clearOnboardingSession,
         saveImageSkill,
-        getImageSkill,
-        hasUnsyncedChanges,
-        markConceptSynced,
-        incrementUnsyncedChanges,
-        decrementUnsyncedChanges,
-        clearAllConcepts
+        getImageSkill
     };
 })();
 

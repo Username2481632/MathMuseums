@@ -46,8 +46,7 @@ var App = (function() {
             
             // console.log('✅ Core modules initialized successfully');
             
-            // Initialize sync client (after storage and auth)
-            SyncClient.init();
+            // Sync client removed - using local file storage instead
             
             // Reset onboarding session flag on new app start
             // This allows onboarding to show on new page visits, but not within the same session
