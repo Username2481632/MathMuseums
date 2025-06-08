@@ -105,13 +105,6 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
         concept.coordinates.centerY = tileYPercent + (defaultTileHeightPercent / 2);
         concept.coordinates.width = defaultTileWidthPercent;
         concept.coordinates.height = defaultTileHeightPercent;
-        
-        // Legacy pixel coordinates for backwards compatibility (will be converted to %)
-        concept.x = (tileXPercent / 100) * containerWidth;
-        concept.y = (tileYPercent / 100) * containerHeight;
-        concept.width = (defaultTileWidthPercent / 100) * containerWidth;
-        concept.height = (defaultTileHeightPercent / 100) * containerHeight;
-        concept.position = { x: concept.x, y: concept.y };
         StorageManager.saveConcept(concept);
     });
     
