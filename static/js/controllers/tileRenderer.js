@@ -60,79 +60,45 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
     
     // Get container dimensions - use actual set dimensions if available, otherwise getBoundingClientRect
     let containerWidth, containerHeight;
-    // Always use offsetWidth/offsetHeight for consistent dimensions
     containerWidth = homePoster.offsetWidth;
     containerHeight = homePoster.offsetHeight;
-    
-    // console.log('renderTilesOnPoster using container:', containerWidth, 'x', containerHeight);
-    
+
     const defaultTileWidth = 250;
     const defaultTileHeight = 200;
     const padding = 20;
-    
+
+    // --- DYNAMIC GRID LAYOUT ---
+    // Calculate max columns that fit in the container
+    const maxColumns = Math.max(1, Math.floor((containerWidth + padding) / (defaultTileWidth + padding)));
+    const columns = Math.min(maxColumns, uniqueConcepts.length);
+    const rows = Math.ceil(uniqueConcepts.length / columns);
+    // Center grid horizontally and vertically
+    const totalGridWidth = columns * defaultTileWidth + (columns - 1) * padding;
+    const totalGridHeight = rows * defaultTileHeight + (rows - 1) * padding;
+    const gridOffsetX = Math.max(0, Math.floor((containerWidth - totalGridWidth) / 2));
+    const gridOffsetY = Math.max(0, Math.floor((containerHeight - totalGridHeight) / 2));
+
     uniqueConcepts.forEach((concept, index) => {
-        // console.log(`Creating tile ${index + 1}/${uniqueConcepts.length} for concept:`, concept.id, concept.displayName);
         const tile = createConceptTile(concept, handleResizeStart, handleTouchResizeStart, generateThumbnailWithRetry);
-        // console.log('Created tile element:', tile);
-        // console.log('Tile data-id:', tile.dataset.id);
         homePoster.appendChild(tile);
-        // console.log('Appended tile to homePoster');
         tile.style.position = 'absolute';
-        
-        // Use percentage-based coordinate system if available
-        if (concept.coordinates && window.CoordinateUtils) {
-            try {
-                const coords = window.ConceptModel.getCoordinates(concept);
-                
-                // If coordinates are default center (50, 50) and we have an index, generate grid position
-                if (coords.centerX === 50 && coords.centerY === 50 && index > 0) {
-                    const col = index % 3;
-                    const row = Math.floor(index / 3);
-                    coords.centerX = 20 + (col * 30); // 20%, 50%, 80%
-                    coords.centerY = 20 + (row * 30); // 20%, 50%, 80%
-                    
-                    // Update the concept with the new coordinates
-                    const updatedConcept = window.ConceptModel.updateCoordinates(concept, coords);
-                    uniqueConcepts[index] = updatedConcept;
-                    window.StorageManager.saveConcept(updatedConcept);
-                }
-                
-                const pixelCoords = window.CoordinateUtils.percentageToPixels(
-                    coords.centerX, coords.centerY, coords.width, coords.height,
-                    containerWidth, containerHeight
-                );
-                
-                tile.style.left = `${pixelCoords.x}px`;
-                tile.style.top = `${pixelCoords.y}px`;
-                tile.style.width = `${pixelCoords.width}px`;
-                tile.style.height = `${pixelCoords.height}px`;
-                return;
-            } catch (error) {
-                console.error('Error converting percentage coordinates:', error);
-                // Fall back to pixel coordinates below
-            }
-        }
-        
-        // Fallback to legacy pixel coordinates
-        let tileX, tileY;
-        if (concept.x !== undefined && concept.y !== undefined) {
-            tileX = concept.x;
-            tileY = concept.y;
-        } else if (concept.position && (concept.position.x !== 0 || concept.position.y !== 0)) {
-            tileX = concept.position.x;
-            tileY = concept.position.y;
-        } else {
-            const col = index % 3;
-            const row = Math.floor(index / 3);
-            tileX = padding + col * (defaultTileWidth + padding);
-            tileY = padding + row * (defaultTileHeight + padding);
-            concept.x = tileX;
-            concept.y = tileY;
-            concept.position = { x: tileX, y: tileY };
-            StorageManager.saveConcept(concept);
-        }
+
+        // Always use grid layout for default/fallback
+        const col = index % columns;
+        const row = Math.floor(index / columns);
+        const tileX = gridOffsetX + col * (defaultTileWidth + padding);
+        const tileY = gridOffsetY + row * (defaultTileHeight + padding);
         tile.style.left = `${tileX}px`;
         tile.style.top = `${tileY}px`;
+        tile.style.width = `${defaultTileWidth}px`;
+        tile.style.height = `${defaultTileHeight}px`;
+        // Optionally update concept position for persistence
+        concept.x = tileX;
+        concept.y = tileY;
+        concept.width = defaultTileWidth;
+        concept.height = defaultTileHeight;
+        concept.position = { x: tileX, y: tileY };
+        StorageManager.saveConcept(concept);
     });
     
     // console.log('=== renderTilesOnPoster completed ===');
@@ -261,4 +227,4 @@ function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, g
     });
     
     return tile;
-} 
+}
