@@ -58,10 +58,15 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
     // console.log('Original concepts:', concepts.length, 'Valid concepts:', validConcepts.length, 'Unique concepts:', uniqueConcepts.length);
     // console.log('Seen IDs:', Array.from(seenIds));
     
-    // Get container dimensions - use actual set dimensions if available, otherwise getBoundingClientRect
-    let containerWidth, containerHeight;
-    containerWidth = homePoster.offsetWidth;
-    containerHeight = homePoster.offsetHeight;
+    // Get the actual aspect-ratio container if present
+    let container = homePoster;
+    if (homePoster.closest('.aspect-ratio-content')) {
+        container = homePoster.closest('.aspect-ratio-content');
+    } else if (homePoster.closest('.aspect-ratio-container')) {
+        container = homePoster.closest('.aspect-ratio-container');
+    }
+    let containerWidth = container.offsetWidth;
+    let containerHeight = container.offsetHeight;
 
     // --- PERCENTAGE-BASED DYNAMIC GRID LAYOUT ---
     // Default tile size as percentage of container (responsive)
