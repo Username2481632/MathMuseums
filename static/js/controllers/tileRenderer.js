@@ -63,41 +63,55 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
     containerWidth = homePoster.offsetWidth;
     containerHeight = homePoster.offsetHeight;
 
-    const defaultTileWidth = 250;
-    const defaultTileHeight = 200;
-    const padding = 20;
+    // --- PERCENTAGE-BASED DYNAMIC GRID LAYOUT ---
+    // Default tile size as percentage of container (responsive)
+    const defaultTileWidthPercent = 20;  // 20% of container width
+    const defaultTileHeightPercent = 22; // 22% of container height  
+    const paddingPercent = 2; // 2% padding
 
-    // --- DYNAMIC GRID LAYOUT ---
-    // Calculate max columns that fit in the container
-    const maxColumns = Math.max(1, Math.floor((containerWidth + padding) / (defaultTileWidth + padding)));
+    // Calculate max columns that fit with percentage-based sizing
+    const maxColumns = Math.max(1, Math.floor(100 / (defaultTileWidthPercent + paddingPercent)));
     const columns = Math.min(maxColumns, uniqueConcepts.length);
     const rows = Math.ceil(uniqueConcepts.length / columns);
-    // Center grid horizontally and vertically
-    const totalGridWidth = columns * defaultTileWidth + (columns - 1) * padding;
-    const totalGridHeight = rows * defaultTileHeight + (rows - 1) * padding;
-    const gridOffsetX = Math.max(0, Math.floor((containerWidth - totalGridWidth) / 2));
-    const gridOffsetY = Math.max(0, Math.floor((containerHeight - totalGridHeight) / 2));
+    
+    // Center grid horizontally and vertically using percentages
+    const totalGridWidthPercent = columns * defaultTileWidthPercent + (columns - 1) * paddingPercent;
+    const totalGridHeightPercent = rows * defaultTileHeightPercent + (rows - 1) * paddingPercent;
+    const gridOffsetXPercent = Math.max(0, (100 - totalGridWidthPercent) / 2);
+    const gridOffsetYPercent = Math.max(0, (100 - totalGridHeightPercent) / 2);
 
     uniqueConcepts.forEach((concept, index) => {
         const tile = createConceptTile(concept, handleResizeStart, handleTouchResizeStart, generateThumbnailWithRetry);
         homePoster.appendChild(tile);
         tile.style.position = 'absolute';
 
-        // Always use grid layout for default/fallback
+        // Use percentage-based grid layout
         const col = index % columns;
         const row = Math.floor(index / columns);
-        const tileX = gridOffsetX + col * (defaultTileWidth + padding);
-        const tileY = gridOffsetY + row * (defaultTileHeight + padding);
-        tile.style.left = `${tileX}px`;
-        tile.style.top = `${tileY}px`;
-        tile.style.width = `${defaultTileWidth}px`;
-        tile.style.height = `${defaultTileHeight}px`;
-        // Optionally update concept position for persistence
-        concept.x = tileX;
-        concept.y = tileY;
-        concept.width = defaultTileWidth;
-        concept.height = defaultTileHeight;
-        concept.position = { x: tileX, y: tileY };
+        
+        // Calculate percentage positions
+        const tileXPercent = gridOffsetXPercent + col * (defaultTileWidthPercent + paddingPercent);
+        const tileYPercent = gridOffsetYPercent + row * (defaultTileHeightPercent + paddingPercent);
+        
+        // Apply percentage-based positioning and sizing
+        tile.style.left = `${tileXPercent}%`;
+        tile.style.top = `${tileYPercent}%`;
+        tile.style.width = `${defaultTileWidthPercent}%`;
+        tile.style.height = `${defaultTileHeightPercent}%`;
+        
+        // Store percentage coordinates in concept for persistence
+        concept.coordinates = concept.coordinates || {};
+        concept.coordinates.centerX = tileXPercent + (defaultTileWidthPercent / 2);
+        concept.coordinates.centerY = tileYPercent + (defaultTileHeightPercent / 2);
+        concept.coordinates.width = defaultTileWidthPercent;
+        concept.coordinates.height = defaultTileHeightPercent;
+        
+        // Legacy pixel coordinates for backwards compatibility (will be converted to %)
+        concept.x = (tileXPercent / 100) * containerWidth;
+        concept.y = (tileYPercent / 100) * containerHeight;
+        concept.width = (defaultTileWidthPercent / 100) * containerWidth;
+        concept.height = (defaultTileHeightPercent / 100) * containerHeight;
+        concept.position = { x: concept.x, y: concept.y };
         StorageManager.saveConcept(concept);
     });
     
@@ -112,27 +126,8 @@ function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, g
     tile.className = 'concept-tile';
     tile.dataset.id = concept.id;
     
-    // Apply tile size - check for both formats (width/height and size.width/height)
-    let tileWidth, tileHeight;
-    if (concept.width !== undefined && concept.height !== undefined) {
-        tileWidth = concept.width;
-        tileHeight = concept.height;
-    } else if (concept.size) {
-        tileWidth = concept.size.width;
-        tileHeight = concept.size.height;
-    } else {
-        // Use default size if not set
-        tileWidth = 250;
-        tileHeight = 200;
-        // Update the concept with default size
-        concept.width = tileWidth;
-        concept.height = tileHeight;
-        concept.size = { width: tileWidth, height: tileHeight };
-        StorageManager.saveConcept(concept);
-    }
-    
-    tile.style.width = `${tileWidth}px`;
-    tile.style.height = `${tileHeight}px`;
+    // Tiles will be sized using CSS percentages set by the grid layout
+    // No need to set width/height here as it's handled in the grid positioning above
     
     // Create the tile header
     const header = document.createElement('div');
