@@ -295,7 +295,7 @@ var App = (function() {
         const message = `Import museum data from file?
         
 File contains:
-• ${fileInfo.totalConcepts} concepts (${fileInfo.completedConcepts} completed)
+• ${fileInfo.totalConcepts} concepts
 • Export date: ${new Date(fileInfo.exportDate).toLocaleDateString()}
 • Version: ${fileInfo.version}
 

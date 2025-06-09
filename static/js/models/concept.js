@@ -76,7 +76,6 @@ const ConceptModel = (function() {
             position: { x: 0, y: 0 },
             size: { width: 250, height: 200 },
             description: '',
-            isComplete: false,
             desmosState: null,
             lastModified: Date.now()
         };

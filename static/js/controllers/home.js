@@ -256,7 +256,6 @@ const HomeController = (function() {
                     hasPosition: !!concept.position,
                     hasX: concept.x !== undefined,
                     hasY: concept.y !== undefined,
-                    isComplete: concept.isComplete,
                     fullObject: concept
                 });
             });

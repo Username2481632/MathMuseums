@@ -183,11 +183,6 @@ function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, g
     const preview = document.createElement('div');
     preview.className = 'tile-preview';
     
-    // Add a status indicator
-    const status = document.createElement('div');
-    status.className = `tile-status ${concept.isComplete ? 'complete' : 'in-progress'}`;
-    tile.appendChild(status);
-    
     // If the concept has a Desmos state with an image, show preview
     if (ConceptModel.hasImage(concept)) {
         try {

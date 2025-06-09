@@ -9,7 +9,6 @@ const DetailController = (function() {
     let idleTimer = null;
     let isOnboardingDisabled = false;
     let conceptDescription;
-    let completionToggle;
     
     /**
      * Initialize the detail controller
@@ -63,25 +62,12 @@ const DetailController = (function() {
         // Set the concept title
         detailView.querySelector('#concept-title').textContent = currentConcept.displayName;
         
-        // Set completion toggle text and class
-        const completionToggleBtn = detailView.querySelector('#completion-toggle');
-        if (currentConcept.isComplete) {
-            completionToggleBtn.textContent = 'Mark as In Progress';
-            completionToggleBtn.classList.add('complete');
-        } else {
-            completionToggleBtn.textContent = 'Mark as Complete';
-            completionToggleBtn.classList.add('in-progress');
-        }
-        
         // Append the detail view to the container
         appContainer.appendChild(detailView);
         
         // Set description text
         conceptDescription = document.getElementById('concept-description');
         conceptDescription.value = currentConcept.description || '';
-        
-        // Store reference to completion toggle
-        completionToggle = document.getElementById('completion-toggle');
     }
     
     /**
@@ -164,9 +150,6 @@ const DetailController = (function() {
             Router.navigate('home');
         });
         
-        // Completion toggle
-        completionToggle.addEventListener('click', toggleCompletion);
-        
         // Description input
         conceptDescription.addEventListener('input', resetIdleTimer);
         conceptDescription.addEventListener('blur', saveDescription);
@@ -176,30 +159,6 @@ const DetailController = (function() {
         window.addEventListener('keydown', resetIdleTimer);
         window.addEventListener('click', resetIdleTimer);
         window.addEventListener('touchstart', resetIdleTimer);
-    }
-    
-    /**
-     * Toggle completion status
-     */
-    function toggleCompletion() {
-        const isComplete = !currentConcept.isComplete;
-        
-        // Update the concept
-        currentConcept = ConceptModel.updateConcept(currentConcept, { isComplete });
-        
-        // Update the UI
-        if (isComplete) {
-            completionToggle.textContent = 'Mark as In Progress';
-            completionToggle.classList.remove('in-progress');
-            completionToggle.classList.add('complete');
-        } else {
-            completionToggle.textContent = 'Mark as Complete';
-            completionToggle.classList.remove('complete');
-            completionToggle.classList.add('in-progress');
-        }
-        
-        // Save the changes
-        saveChanges();
     }
     
     /**
@@ -472,11 +431,6 @@ const DetailController = (function() {
             const backButton = document.getElementById('back-button');
             if (backButton) {
                 backButton.removeEventListener('click', handleBackClick);
-            }
-            
-            const completionToggle = document.getElementById('completion-toggle');
-            if (completionToggle) {
-                completionToggle.removeEventListener('click', handleCompletionToggle);
             }
             
             // Reset other variables

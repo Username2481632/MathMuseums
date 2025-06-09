@@ -34,8 +34,7 @@ const FileManager = (function() {
                 concepts: concepts || [],
                 layoutState: parsedLayoutState,
                 metadata: {
-                    totalConcepts: (concepts || []).length,
-                    completedConcepts: (concepts || []).filter(c => c.isComplete).length
+                    totalConcepts: (concepts || []).length
                 }
             };
             
@@ -233,7 +232,6 @@ const FileManager = (function() {
             version: data.version,
             exportDate: data.exportDate,
             totalConcepts: data.metadata?.totalConcepts || data.concepts?.length || 0,
-            completedConcepts: data.metadata?.completedConcepts || 0,
             hasLayoutData: !!data.layoutState
         };
     }
