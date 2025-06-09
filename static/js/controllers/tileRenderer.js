@@ -108,6 +108,15 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
         tile.style.top = `${tileYPercent}%`;
         tile.style.width = `${defaultTileWidthPercent}%`;
         tile.style.height = `${defaultTileHeightPercent}%`;
+
+        // Dynamically scale font size based on tile width
+        // Wait for layout to apply, then set font size
+        setTimeout(() => {
+            const tileWidth = tile.offsetWidth;
+            // Set font size to 7% of tile width, clamp between 4px and 32px
+            const fontSize = Math.max(4, Math.min(32, tileWidth * 0.07));
+            tile.style.fontSize = fontSize + 'px';
+        }, 0);
         
         // Store percentage coordinates in concept for persistence
         concept.coordinates = concept.coordinates || {};
@@ -116,6 +125,34 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
         concept.coordinates.width = defaultTileWidthPercent;
         concept.coordinates.height = defaultTileHeightPercent;
         StorageManager.saveConcept(concept);
+    });
+    
+    // After rendering all tiles, set a uniform font size for all tile headers so none wrap
+    requestAnimationFrame(() => {
+        const tiles = homePoster.querySelectorAll('.concept-tile');
+        const headers = [];
+        tiles.forEach(tile => {
+            const header = tile.querySelector('.tile-header');
+            if (header) headers.push(header);
+        });
+        if (headers.length === 0) return;
+        // Binary search for max font size that fits all headers in one line
+        let low = 4, high = 64, best = 4;
+        while (low <= high) {
+            const mid = Math.floor((low + high) / 2);
+            headers.forEach(header => { header.style.fontSize = mid + 'px'; });
+            // Force reflow
+            void headers[0].offsetWidth;
+            // Check if any header wraps
+            const anyWraps = headers.some(header => header.scrollWidth > header.clientWidth);
+            if (!anyWraps) {
+                best = mid;
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+        headers.forEach(header => { header.style.fontSize = best + 'px'; });
     });
     
     // console.log('=== renderTilesOnPoster completed ===');
