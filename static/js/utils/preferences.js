@@ -229,10 +229,10 @@ const PreferencesClient = (function() {
         // Apply screen fit/fill mode for display scaling only
         if (preferences.screenFit === 'fit') {
             homeView.classList.add('screen-fit-mode');
-            setTimeout(() => applyFitModeDisplayScaling(), 100);
+            applyFitModeDisplayScaling();
         } else if (preferences.screenFit === 'fill') {
             homeView.classList.add('screen-fill-mode');
-            setTimeout(() => applyFillModeDisplayScaling(), 100);
+            applyFillModeDisplayScaling();
         }
     }
     
@@ -281,18 +281,10 @@ const PreferencesClient = (function() {
         homeView.style.justifyContent = 'center';
         
         // Re-render tiles now that container has proper dimensions
-        function waitForRenderTilesOnPoster(callback) {
-            if (window.renderTilesOnPoster) {
-                callback();
-            } else {
-                setTimeout(() => waitForRenderTilesOnPoster(callback), 50);
-            }
-        }
-
-        waitForRenderTilesOnPoster(() => {
+        if (window.renderTilesOnPoster) {
             console.log('Container sizing complete - dispatching containerSized event');
             document.dispatchEvent(new CustomEvent('containerSized'));
-        });
+        }
     }
     
     /**
@@ -361,18 +353,10 @@ const PreferencesClient = (function() {
         homeView.style.justifyContent = containerWidth <= availableWidth ? 'center' : 'flex-start';
         
         // Re-render tiles now that container has proper dimensions
-        function waitForRenderTilesOnPoster(callback) {
-            if (window.renderTilesOnPoster) {
-                callback();
-            } else {
-                setTimeout(() => waitForRenderTilesOnPoster(callback), 50);
-            }
-        }
-
-        waitForRenderTilesOnPoster(() => {
+        if (window.renderTilesOnPoster) {
             console.log('Fill mode container sizing complete - dispatching containerSized event');
             document.dispatchEvent(new CustomEvent('containerSized'));
-        });
+        }
     }
 
     // Scale tiles for aspect ratio change using center-based proportional scaling

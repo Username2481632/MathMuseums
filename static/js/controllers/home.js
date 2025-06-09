@@ -109,6 +109,11 @@ const HomeController = (function() {
             tile.style.height = `${constrained.height}px`;
             tile.style.left = `${constrained.x}px`;
             tile.style.top = `${constrained.y}px`;
+            
+            // Trigger immediate font size adjustment during resize for real-time feedback
+            if (window.FontSizer) {
+                window.FontSizer.forceAdjustment();
+            }
         },
         onFinish: (tile) => {
             isResizing = false;
@@ -118,6 +123,16 @@ const HomeController = (function() {
             setTimeout(() => {
                 recentlyResized = false;
             }, 100);
+            
+            // Trigger immediate font size adjustment after resize
+            if (window.FontSizer) {
+                window.FontSizer.forceAdjustment();
+            }
+            
+            // Trigger font size adjustment after resize
+            if (window.FontSizer) {
+                window.FontSizer.forceAdjustment();
+            }
             
             const conceptId = tile.dataset.id;
             const concept = concepts.find(c => c.id === conceptId);
@@ -171,6 +186,17 @@ const HomeController = (function() {
             }
             renderDebounceTimer = null;
         }, 50); // Wait 50ms before rendering
+    }
+    
+    // Immediate render function for window resize events
+    function immediateRenderTiles() {
+        if (homePoster && concepts.length > 0) {
+            renderTilesOnPoster(homePoster, concepts, { 
+                handleResizeStart: resizeManager.handleResizeStart, 
+                handleTouchResizeStart: resizeManager.handleTouchResizeStart,
+                generateThumbnailWithRetry: generateThumbnailWithRetry
+            });
+        }
     }
     
     // Helper: Get current layout state (center-based coordinates)
@@ -231,6 +257,11 @@ const HomeController = (function() {
         
         // Setup event listeners
         setupEventListeners();
+        
+        // Initialize FontSizer for real-time font resizing
+        if (window.FontSizer) {
+            window.FontSizer.init();
+        }
     }
     
     /**
@@ -561,10 +592,9 @@ const HomeController = (function() {
     const origRender = render;
     render = function() {
         origRender.apply(this, arguments);
-        setTimeout(() => {
-            applyScreenFitMode(getSavedScreenFitMode());
-            setupScreenFitListeners();
-        }, 0);
+        // Apply screen fit mode immediately without delay
+        applyScreenFitMode(getSavedScreenFitMode());
+        setupScreenFitListeners();
     };
 
     // --- Keyboard Undo/Redo Shortcuts ---
@@ -584,8 +614,8 @@ const HomeController = (function() {
     // --- Listen for containerSized event from preferences.js ---
     document.addEventListener('containerSized', function() {
         if (homePoster && concepts.length > 0) {
-            // Debounce rendering to prevent multiple rapid renders
-            debouncedRenderTiles();
+            // Use immediate rendering for container size changes to enable real-time font resizing
+            immediateRenderTiles();
         }
     });
 
@@ -649,6 +679,11 @@ const HomeController = (function() {
             
             // Clean up Desmos calculator resources
             DesmosUtils.cleanup();
+            
+            // Clean up FontSizer
+            if (window.FontSizer) {
+                window.FontSizer.cleanup();
+            }
             
             // Reset resize state
             isResizing = false;

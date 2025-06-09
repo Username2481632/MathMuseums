@@ -1,0 +1,5 @@
+[33mdcaec46[m[33m ([m[1;36mHEAD[m[33m)[m Remove all completion status and mark as complete functionality
+[33m4f86b91[m Reduce minimum tile title font size to 4px to prevent text wrapping on longer titles like 'Absolute Value'
+[33m4c4a661[m Fix responsive tile sizing: remove pixel min/max constraints and force percentage-based sizing for tiles on home poster
+[33m9098b7b[m Fix pillarboxing bottom bar.
+[33mbbb3574[m fix: ensure grid layout fills and centers within aspect-ratio container
