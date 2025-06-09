@@ -603,6 +603,11 @@ const PreferencesClient = (function() {
                 applyFillModeDisplayScaling();
             }
         });
+        
+        // Ensure display settings are reapplied on window resize for responsive tiles
+        window.addEventListener('resize', () => {
+            applyDisplaySettings();
+        });
     }
     
     /**

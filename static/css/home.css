@@ -31,10 +31,6 @@
     cursor: pointer;
     position: absolute; /* Always use absolute positioning */
     transition: box-shadow 0.2s;
-    min-width: 200px; /* Minimum width */
-    min-height: 150px; /* Minimum height */
-    max-width: 500px; /* Maximum width */
-    max-height: 400px; /* Maximum height */
     user-select: none;
 }
 

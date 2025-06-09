@@ -98,6 +98,11 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
         const tileXPercent = gridOffsetXPercent + col * (defaultTileWidthPercent + paddingPercent);
         const tileYPercent = gridOffsetYPercent + row * (defaultTileHeightPercent + paddingPercent);
         
+        // Always use percentage-based sizing for tiles
+        tile.style.width = '';
+        tile.style.height = '';
+        tile.style.left = '';
+        tile.style.top = '';
         // Apply percentage-based positioning and sizing
         tile.style.left = `${tileXPercent}%`;
         tile.style.top = `${tileYPercent}%`;
