@@ -77,11 +77,14 @@
 
 /* Content inside aspect ratio container */
 .aspect-ratio-content {
-    position: absolute;
-    top: 0;
-    left: 0;
+    /* Remove position: absolute; top: 0; left: 0; */
     width: 100%;
     height: 100%;
+    display: flex;
+    flex-direction: column;
+    /* Center content if needed */
+    align-items: center;
+    justify-content: center;
 }
 
 /* Fit Mode (scale down to fit viewport with no scrolling) */
