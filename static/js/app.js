@@ -64,6 +64,9 @@ var App = (function() {
             // Set up keyboard shortcuts for file operations
             setupKeyboardShortcuts();
 
+            // Set up museum name input
+            setupMuseumNameInput();
+
             // Remove loading state
             const loading = document.getElementById('loading');
             if (loading) {
@@ -226,6 +229,59 @@ This will replace your current museum data. Continue?`;
                 }
             }
         });
+    }
+    
+    /**
+     * Set up museum name input functionality
+     */
+    function setupMuseumNameInput() {
+        const museumNameInput = document.getElementById('museum-name-input');
+        if (!museumNameInput) return;
+        
+        // Load saved museum name
+        const savedName = localStorage.getItem('mm_museum_name');
+        if (savedName) {
+            museumNameInput.value = savedName;
+        }
+        
+        // Add faint styling when focused on empty input (showing placeholder)
+        museumNameInput.addEventListener('focus', () => {
+            if (!museumNameInput.value.trim()) {
+                museumNameInput.classList.add('placeholder-focused');
+            }
+        });
+        
+        // Toggle faint styling based on input content
+        museumNameInput.addEventListener('input', () => {
+            if (!museumNameInput.value.trim() && document.activeElement === museumNameInput) {
+                museumNameInput.classList.add('placeholder-focused');
+            } else {
+                museumNameInput.classList.remove('placeholder-focused');
+            }
+            saveMuseumName();
+        });
+        
+        // Remove faint styling on blur and save
+        museumNameInput.addEventListener('blur', () => {
+            museumNameInput.classList.remove('placeholder-focused');
+            saveMuseumName();
+        });
+        
+        // Save on Enter key
+        museumNameInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                museumNameInput.blur();
+            }
+        });
+        
+        function saveMuseumName() {
+            const name = museumNameInput.value.trim();
+            if (name) {
+                localStorage.setItem('mm_museum_name', name);
+            } else {
+                localStorage.removeItem('mm_museum_name');
+            }
+        }
     }
     
     // Public API

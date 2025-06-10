@@ -54,6 +54,70 @@ header {
     width: 100%;
     z-index: 1000; /* Increased z-index to ensure it stays on top */
     height: 70px; /* Fixed height for consistency */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Header Title Section */
+.header-title {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.museum-name-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--font-size-xxl);
+    font-weight: bold;
+}
+
+.museum-name-input {
+    background: rgba(76, 175, 80, 0.3); /* Green background */
+    border: 2px solid rgba(76, 175, 80, 0.5);
+    color: white;
+    font-size: var(--font-size-xxl);
+    font-weight: bold;
+    font-family: inherit;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    text-align: center;
+    min-width: 200px;
+    transition: all 0.2s ease;
+}
+
+.museum-name-input:hover {
+    background: rgba(76, 175, 80, 0.4);
+    border-color: rgba(76, 175, 80, 0.7);
+}
+
+.museum-name-input::placeholder {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.museum-name-input:focus {
+    outline: none;
+    background: rgba(76, 175, 80, 0.5);
+    border-color: rgba(76, 175, 80, 0.8);
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+}
+
+/* Faint placeholder when focused but no text entered */
+.museum-name-input.placeholder-focused::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.museum-name-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.museum-title-suffix {
+    color: white;
+    font-size: var(--font-size-xxl);
+    font-weight: bold;
 }
 
 h1 {
