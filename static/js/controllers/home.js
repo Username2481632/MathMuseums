@@ -350,12 +350,21 @@ const HomeController = (function() {
         const homeView = template.content.cloneNode(true);
         appContainer.appendChild(homeView);
         homePoster = setupHomePoster();
-        // console.log('Home poster set up, calling renderTilesOnPoster');
-        renderTilesOnPoster(homePoster, concepts, { 
-            handleResizeStart: resizeManager.handleResizeStart, 
-            handleTouchResizeStart: resizeManager.handleTouchResizeStart,
-            generateThumbnailWithRetry: generateThumbnailWithRetry
-        });
+        
+        // Apply display settings now that the DOM elements exist, then render tiles
+        setTimeout(() => {
+            if (window.PreferencesClient && window.PreferencesClient.applyDisplaySettings) {
+                window.PreferencesClient.applyDisplaySettings();
+            }
+            
+            // Render tiles after aspect ratio is applied
+            // console.log('Home poster set up, calling renderTilesOnPoster');
+            renderTilesOnPoster(homePoster, concepts, { 
+                handleResizeStart: resizeManager.handleResizeStart, 
+                handleTouchResizeStart: resizeManager.handleTouchResizeStart,
+                generateThumbnailWithRetry: generateThumbnailWithRetry
+            });
+        }, 0);
     }
     
     /**
