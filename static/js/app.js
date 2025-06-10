@@ -244,34 +244,80 @@ This will replace your current museum data. Continue?`;
             museumNameInput.value = savedName;
         }
         
+        // Initial resize
+        resizeInputToContent();
+        
+        // Function to dynamically resize input to fit content
+        function resizeInputToContent() {
+            const text = museumNameInput.value || museumNameInput.placeholder;
+            
+            // Create a temporary measuring element each time for accuracy
+            const measurer = document.createElement('span');
+            measurer.style.visibility = 'hidden';
+            measurer.style.position = 'absolute';
+            measurer.style.whiteSpace = 'nowrap';
+            measurer.style.pointerEvents = 'none';
+            
+            // Copy all relevant font properties from the input
+            const inputStyles = window.getComputedStyle(museumNameInput);
+            measurer.style.fontFamily = inputStyles.fontFamily;
+            measurer.style.fontSize = inputStyles.fontSize;
+            measurer.style.fontWeight = inputStyles.fontWeight;
+            measurer.style.fontStyle = inputStyles.fontStyle;
+            measurer.style.letterSpacing = inputStyles.letterSpacing;
+            
+            measurer.textContent = text;
+            document.body.appendChild(measurer);
+            
+            const textWidth = measurer.offsetWidth;
+            document.body.removeChild(measurer);
+            
+            // Add padding for borders and spacing (24px should be enough)
+            const totalWidth = textWidth + 24;
+            const maxWidth = window.innerWidth * 0.4; // Allow up to 40% of viewport
+            
+            const finalWidth = Math.min(totalWidth, maxWidth);
+            museumNameInput.style.width = `${finalWidth}px`;
+        }
+        
         // Add faint styling when focused on empty input (showing placeholder)
         museumNameInput.addEventListener('focus', () => {
             if (!museumNameInput.value.trim()) {
                 museumNameInput.classList.add('placeholder-focused');
             }
+            resizeInputToContent();
         });
         
-        // Toggle faint styling based on input content
+        // Toggle faint styling based on input content and resize
         museumNameInput.addEventListener('input', () => {
             if (!museumNameInput.value.trim() && document.activeElement === museumNameInput) {
                 museumNameInput.classList.add('placeholder-focused');
             } else {
                 museumNameInput.classList.remove('placeholder-focused');
             }
+            resizeInputToContent();
             saveMuseumName();
+        });
+        
+        // Handle Enter key and resize on other keys
+        museumNameInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                museumNameInput.blur();
+                return;
+            }
+            // Resize after key is processed
+            setTimeout(resizeInputToContent, 0);
+        });
+        
+        // Resize on paste
+        museumNameInput.addEventListener('paste', () => {
+            setTimeout(resizeInputToContent, 10);
         });
         
         // Remove faint styling on blur and save
         museumNameInput.addEventListener('blur', () => {
             museumNameInput.classList.remove('placeholder-focused');
             saveMuseumName();
-        });
-        
-        // Save on Enter key
-        museumNameInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                museumNameInput.blur();
-            }
         });
         
         function saveMuseumName() {

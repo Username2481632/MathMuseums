@@ -85,8 +85,8 @@ header {
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     text-align: center;
-    min-width: 200px;
-    transition: all 0.2s ease;
+    width: auto;
+    transition: all 0.05s ease;
 }
 
 .museum-name-input:hover {
