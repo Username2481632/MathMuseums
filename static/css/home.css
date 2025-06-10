@@ -174,5 +174,6 @@
     color: var(--text-color);
     font-weight: 500;
     user-select: none;
+    text-align: center; /* Ensure text is centered when wrapping */
     /* Font size will be set dynamically by FontSizer */
 }

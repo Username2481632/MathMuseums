@@ -22,6 +22,7 @@ const FontSizer = (function() {
     }
      /**
      * Adjust font sizes for all tile headers and no-preview elements to prevent wrapping
+     * (Exception: no-preview elements allow wrapping when text doesn't fit at minimum size)
      * Called immediately without debouncing for real-time response
      */
     function adjustTileFontSizes() {
@@ -156,7 +157,29 @@ const FontSizer = (function() {
         // Apply final font size
         elements.forEach(element => {
             element.style.fontSize = best + 'px';
-            element.style.whiteSpace = 'nowrap';
+            
+            // For no-preview elements, check if text fits at minimum size
+            // If not, allow wrapping for better readability on small tiles
+            if (elementType === 'no-preview' && best <= 8) {
+                // Check if text still doesn't fit at minimum size
+                element.style.whiteSpace = 'nowrap';
+                // Force layout update
+                void element.offsetWidth;
+                
+                if (element.scrollWidth > element.clientWidth) {
+                    // Text doesn't fit even at minimum size, allow wrapping and reduce padding
+                    element.style.whiteSpace = 'normal';
+                    element.style.lineHeight = '1.1';
+                    element.style.wordBreak = 'break-word';
+                    element.style.padding = '2px'; // Minimal padding for very small tiles
+                } else {
+                    // Text fits, keep nowrap and original padding
+                    element.style.whiteSpace = 'nowrap';
+                }
+            } else {
+                // For headers and larger no-preview elements, always prevent wrapping
+                element.style.whiteSpace = 'nowrap';
+            }
         });
         
         if (debugElement) {
@@ -167,13 +190,16 @@ const FontSizer = (function() {
             console.log(`[FontSizer][${elementType.toUpperCase()}][FINAL][DEBUG] fontSize: ${best}px, text: '${text}', textLen: ${textLen}, clientWidth: ${debugElement.clientWidth}, scrollWidth: ${debugElement.scrollWidth}, clientHeight: ${debugElement.clientHeight}, scrollHeight: ${debugElement.scrollHeight}, boundingRect:`, rect, 'computedStyle:', style);
         }
 
-        // Restore original styling (except font size which we want to keep)
+        // Restore original styling (except font size and optimized wrapping/padding)
         elements.forEach((element, i) => {
             if (elementType === 'header') {
                 element.style.paddingLeft = originalStyling[i].paddingLeft;
             }
-            // Keep the computed font size and whiteSpace: nowrap
-            // but restore other properties if needed
+            // For no-preview elements, restore original padding if wrapping isn't enabled
+            if (elementType === 'no-preview' && element.style.whiteSpace === 'nowrap') {
+                element.style.padding = '8px'; // Restore original padding for larger tiles
+            }
+            // Keep the computed font size and whiteSpace settings
         });
     }
     
