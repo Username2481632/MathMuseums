@@ -249,7 +249,10 @@ This will replace your current museum data. Continue?`;
         
         // Function to dynamically resize input to fit content
         function resizeInputToContent() {
-            const text = museumNameInput.value || museumNameInput.placeholder;
+            let text = museumNameInput.value || museumNameInput.placeholder;
+            
+            // Handle spaces properly - replace with non-breaking spaces for measurement
+            const measureText = text.replace(/ /g, '\u00A0');
             
             // Create a temporary measuring element each time for accuracy
             const measurer = document.createElement('span');
@@ -257,6 +260,7 @@ This will replace your current museum data. Continue?`;
             measurer.style.position = 'absolute';
             measurer.style.whiteSpace = 'nowrap';
             measurer.style.pointerEvents = 'none';
+            measurer.style.top = '-9999px'; // Move further offscreen
             
             // Copy all relevant font properties from the input
             const inputStyles = window.getComputedStyle(museumNameInput);
@@ -265,15 +269,17 @@ This will replace your current museum data. Continue?`;
             measurer.style.fontWeight = inputStyles.fontWeight;
             measurer.style.fontStyle = inputStyles.fontStyle;
             measurer.style.letterSpacing = inputStyles.letterSpacing;
+            measurer.style.wordSpacing = inputStyles.wordSpacing;
             
-            measurer.textContent = text;
+            measurer.textContent = measureText;
             document.body.appendChild(measurer);
             
             const textWidth = measurer.offsetWidth;
             document.body.removeChild(measurer);
             
-            // Add padding for borders and spacing (24px should be enough)
-            const totalWidth = textWidth + 24;
+            // Make box wider than needed - extra space acts as visual padding
+            const extraSpace = 48; // 24px on each side as visual padding
+            const totalWidth = textWidth + extraSpace;
             const maxWidth = window.innerWidth * 0.4; // Allow up to 40% of viewport
             
             const finalWidth = Math.min(totalWidth, maxWidth);

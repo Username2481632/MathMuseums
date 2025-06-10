@@ -82,11 +82,11 @@ header {
     font-size: var(--font-size-xxl);
     font-weight: bold;
     font-family: inherit;
-    padding: 0.25rem 0.5rem;
+    padding: 0.125rem 0; /* Remove horizontal padding */
     border-radius: 4px;
     text-align: center;
     width: auto;
-    transition: all 0.05s ease;
+    transition: width 0.15s ease;
 }
 
 .museum-name-input:hover {
