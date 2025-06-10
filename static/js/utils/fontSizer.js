@@ -20,88 +20,131 @@ const FontSizer = (function() {
         isInitialized = true;
         console.log('FontSizer initialized with real-time resizing');
     }
-    
-    /**
-     * Adjust font sizes for all tile headers to prevent wrapping
+     /**
+     * Adjust font sizes for all tile headers and no-preview elements to prevent wrapping
      * Called immediately without debouncing for real-time response
      */
     function adjustTileFontSizes() {
         const homePoster = document.querySelector('.tiles-container');
         if (!homePoster) return;
-        
+
         const tiles = homePoster.querySelectorAll('.concept-tile');
         if (!tiles.length) return;
-        
+
         const headers = [];
+        const noPreviewElements = [];
+        
         tiles.forEach(tile => {
             const header = tile.querySelector('.tile-header');
             if (header) {
                 headers.push(header);
             }
+            
+            const noPreview = tile.querySelector('.no-preview');
+            if (noPreview) {
+                noPreviewElements.push(noPreview);
+            }
         });
+
+        // Calculate optimal font size for headers
+        if (headers.length > 0) {
+            calculateOptimalFontSize(headers, 'header');
+        }
         
-        if (headers.length === 0) return;
-        
-        // Calculate optimal font size immediately - no requestAnimationFrame delay
-        calculateOptimalFontSize(headers);
+        // Calculate optimal font size for no-preview elements
+        if (noPreviewElements.length > 0) {
+            calculateOptimalFontSize(noPreviewElements, 'no-preview');
+        }
     }
     
     /**
      * Calculate and apply optimal font size using binary search
-     * @param {HTMLElement[]} headers - Array of tile header elements
+     * @param {HTMLElement[]} elements - Array of elements to resize
+     * @param {string} elementType - Type of elements ('header' or 'no-preview')
      */
-    function calculateOptimalFontSize(headers) {
-        if (!headers.length) return;
+    function calculateOptimalFontSize(elements, elementType = 'header') {
+        if (!elements.length) return;
 
-        // Store original left padding for each header
-        const originalLeftPaddings = headers.map(header => {
-            const style = window.getComputedStyle(header);
-            return style.paddingLeft;
+        // Store original styling for each element
+        const originalStyling = elements.map(element => {
+            const style = window.getComputedStyle(element);
+            return {
+                paddingLeft: style.paddingLeft,
+                fontSize: style.fontSize,
+                whiteSpace: style.whiteSpace
+            };
         });
 
-        // Double the left padding before search
-        headers.forEach((header, i) => {
-            const orig = originalLeftPaddings[i];
-            // If value is in px, double it; otherwise, fallback to computed value
-            let px = parseFloat(orig);
-            if (!isNaN(px)) {
-                header.style.paddingLeft = (2 * px) + 'px';
-            }
-        });
+        // Apply specific styling based on element type
+        if (elementType === 'header') {
+            // Double the left padding for headers before search
+            elements.forEach((element, i) => {
+                const orig = originalStyling[i].paddingLeft;
+                let px = parseFloat(orig);
+                if (!isNaN(px)) {
+                    element.style.paddingLeft = (2 * px) + 'px';
+                }
+            });
+        } else if (elementType === 'no-preview') {
+            // For no-preview elements, ensure they have some padding and center alignment
+            elements.forEach(element => {
+                element.style.padding = '8px';
+                element.style.textAlign = 'center';
+            });
+        }
 
         // Reset font size to a reasonable value before starting
-        headers.forEach(header => {
-            header.style.fontSize = '16px';
+        elements.forEach(element => {
+            element.style.fontSize = '16px';
+            element.style.whiteSpace = 'nowrap';
         });
-        headers.forEach(header => {
-            header.style.whiteSpace = 'nowrap';
-        });
-        let absHeader = null;
-        for (const header of headers) {
-            if (header.textContent && header.textContent.trim().toLowerCase() === 'absolute value') {
-                absHeader = header;
-                break;
+
+        // Debug logging for specific elements if needed
+        let debugElement = null;
+        if (elementType === 'header') {
+            for (const element of elements) {
+                if (element.textContent && element.textContent.trim().toLowerCase() === 'absolute value') {
+                    debugElement = element;
+                    break;
+                }
             }
+        } else if (elementType === 'no-preview') {
+            // Debug the first no-preview element
+            debugElement = elements[0];
         }
-        let low = 4;
-        let high = 64;
-        let best = 4;
+
+        // Use different size ranges based on element type
+        let low, high;
+        if (elementType === 'no-preview') {
+            // Smaller range for no-preview elements since they're in a preview area
+            low = 8;
+            high = 32;
+        } else {
+            // Original range for headers
+            low = 4;
+            high = 64;
+        }
+        
+        let best = low;
         while (low <= high) {
             const mid = Math.floor((low + high) / 2);
-            headers.forEach(header => {
-                header.style.fontSize = mid + 'px';
+            elements.forEach(element => {
+                element.style.fontSize = mid + 'px';
             });
-            void headers[0].offsetWidth;
-            const anyWraps = headers.some(header => {
-                return header.scrollWidth > header.clientWidth;
+            void elements[0].offsetWidth;
+            
+            const anyWraps = elements.some(element => {
+                return element.scrollWidth > element.clientWidth;
             });
-            if (absHeader) {
-                const style = window.getComputedStyle(absHeader);
-                const absRect = absHeader.getBoundingClientRect();
-                const text = absHeader.textContent;
+            
+            if (debugElement) {
+                const style = window.getComputedStyle(debugElement);
+                const rect = debugElement.getBoundingClientRect();
+                const text = debugElement.textContent;
                 const textLen = text ? text.length : 0;
-                console.log(`[FontSizer][ABS][DEBUG] fontSize: ${mid}px, text: '${text}', textLen: ${textLen}, clientWidth: ${absHeader.clientWidth}, scrollWidth: ${absHeader.scrollWidth}, clientHeight: ${absHeader.clientHeight}, scrollHeight: ${absHeader.scrollHeight}, boundingRect:`, absRect, 'computedStyle:', style);
+                console.log(`[FontSizer][${elementType.toUpperCase()}][DEBUG] fontSize: ${mid}px, text: '${text}', textLen: ${textLen}, clientWidth: ${debugElement.clientWidth}, scrollWidth: ${debugElement.scrollWidth}, clientHeight: ${debugElement.clientHeight}, scrollHeight: ${debugElement.scrollHeight}, boundingRect:`, rect, 'computedStyle:', style);
             }
+            
             if (!anyWraps) {
                 best = mid;
                 low = mid + 1;
@@ -109,21 +152,28 @@ const FontSizer = (function() {
                 high = mid - 1;
             }
         }
-        headers.forEach(header => {
-            header.style.fontSize = best + 'px';
-            header.style.whiteSpace = 'nowrap';
+        
+        // Apply final font size
+        elements.forEach(element => {
+            element.style.fontSize = best + 'px';
+            element.style.whiteSpace = 'nowrap';
         });
-        if (absHeader) {
-            const style = window.getComputedStyle(absHeader);
-            const absRect = absHeader.getBoundingClientRect();
-            const text = absHeader.textContent;
+        
+        if (debugElement) {
+            const style = window.getComputedStyle(debugElement);
+            const rect = debugElement.getBoundingClientRect();
+            const text = debugElement.textContent;
             const textLen = text ? text.length : 0;
-            console.log(`[FontSizer][ABS][FINAL][DEBUG] fontSize: ${best}px, text: '${text}', textLen: ${textLen}, clientWidth: ${absHeader.clientWidth}, scrollWidth: ${absHeader.scrollWidth}, clientHeight: ${absHeader.clientHeight}, scrollHeight: ${absHeader.scrollHeight}, boundingRect:`, absRect, 'computedStyle:', style);
+            console.log(`[FontSizer][${elementType.toUpperCase()}][FINAL][DEBUG] fontSize: ${best}px, text: '${text}', textLen: ${textLen}, clientWidth: ${debugElement.clientWidth}, scrollWidth: ${debugElement.scrollWidth}, clientHeight: ${debugElement.clientHeight}, scrollHeight: ${debugElement.scrollHeight}, boundingRect:`, rect, 'computedStyle:', style);
         }
 
-        // Restore original left padding
-        headers.forEach((header, i) => {
-            header.style.paddingLeft = originalLeftPaddings[i];
+        // Restore original styling (except font size which we want to keep)
+        elements.forEach((element, i) => {
+            if (elementType === 'header') {
+                element.style.paddingLeft = originalStyling[i].paddingLeft;
+            }
+            // Keep the computed font size and whiteSpace: nowrap
+            // but restore other properties if needed
         });
     }
     

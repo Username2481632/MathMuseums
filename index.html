@@ -1,39 +1,28 @@
-{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Math Museums</title>
-    <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-    <link rel="stylesheet" href="{% static 'css/home.css' %}">
-    <link rel="stylesheet" href="{% static 'css/detail.css' %}">
-    <link rel="stylesheet" href="{% static 'css/onboarding.css' %}">
-    <link rel="stylesheet" href="{% static 'css/sync.css' %}">
-    <link rel="stylesheet" href="{% static 'css/display-settings.css' %}">
+    <link rel="icon" href="static/img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="static/css/styles.css">
+    <link rel="stylesheet" href="static/css/home.css">
+    <link rel="stylesheet" href="static/css/detail.css">
+    <link rel="stylesheet" href="static/css/onboarding.css">
+    <link rel="stylesheet" href="static/css/sync.css">
+    <link rel="stylesheet" href="static/css/display-settings.css">
     <script src="https://www.desmos.com/api/v1.10/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
 </head>
 <body>
     <header>
         <h1>Math Museums</h1>
-        {% if user.is_authenticated %}
         <div class="header-controls">
-            <button id="classmates-work-button" class="btn">Classmates' Work</button>
-            <label for="share-toggle">
-                <input type="checkbox" id="share-toggle"> Share with Classmates
-            </label>
             <div class="file-management">
                 <button id="save-file-button" class="file-btn btn">💾 Save File</button>
                 <button id="load-file-button" class="file-btn btn">📁 Load File</button>
             </div>
             <button id="settings-button" class="settings-btn btn"><i class="gear-icon">⚙</i></button>
-            <form method="post" action="/auth/logout/" style="margin:0;">
-                {% csrf_token %}
-                <button type="submit" class="logout-btn btn">Logout</button>
-            </form>
         </div>
-        {% endif %}
     </header>
 
     <main id="app-container">
@@ -85,18 +74,6 @@
         </div>
     </template>
 
-    <!-- Classmates' Work Modal -->
-    <div id="classmates-work-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" id="close-classmates-modal">&times;</span>
-            <h2>Classmates' Work</h2>
-            <div id="classmates-tiles-container">
-                <!-- Classmates' tiles will be inserted here -->
-                <!-- Or fallback message -->
-            </div>
-        </div>
-    </div>
-
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal">
         <div class="modal-content">
@@ -130,20 +107,20 @@
     </div>
 
     <!-- Core scripts -->
-    <script src="{% static 'js/utils/auth.js' %}"></script>
-    <script src="{% static 'js/utils/storage.js' %}"></script>
-    <script src="{% static 'js/utils/fileManager.js' %}"></script>
-    <script src="{% static 'js/utils/coordinates.js' %}"></script>
-    <script src="{% static 'js/utils/fontSizer.js' %}"></script>
-    <script type="module" src="{% static 'js/controllers/home.js' %}"></script>
-    <script src="{% static 'js/utils/preferences.js' %}"></script>
-    <script src="{% static 'js/utils/router.js' %}"></script>
-    <script src="{% static 'js/utils/desmos.js' %}"></script>
-    <script src="{% static 'js/models/concept.js' %}"></script>
-    <script src="{% static 'js/controllers/detail.js' %}"></script>
-    <script src="{% static 'js/controllers/onboarding.js' %}"></script>
-    <script src="{% static 'js/controllers/settings.js' %}"></script>
-    <script src="{% static 'js/test-coordinates.js' %}"></script>
-    <script src="{% static 'js/app.js' %}"></script>
+    <script src="static/js/utils/auth.js"></script>
+    <script src="static/js/utils/storage.js"></script>
+    <script src="static/js/utils/fileManager.js"></script>
+    <script src="static/js/utils/coordinates.js"></script>
+    <script src="static/js/utils/fontSizer.js"></script>
+    <script type="module" src="static/js/controllers/home.js"></script>
+    <script src="static/js/utils/preferences.js"></script>
+    <script src="static/js/utils/router.js"></script>
+    <script src="static/js/utils/desmos.js"></script>
+    <script src="static/js/models/concept.js"></script>
+    <script src="static/js/controllers/detail.js"></script>
+    <script src="static/js/controllers/onboarding.js"></script>
+    <script src="static/js/controllers/settings.js"></script>
+    <script src="static/js/test-coordinates.js"></script>
+    <script src="static/js/app.js"></script>
 </body>
 </html>

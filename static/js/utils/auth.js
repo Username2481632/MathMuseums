@@ -1,65 +1,36 @@
 /**
- * Authentication Client
- * Handles login status and authentication operations
+ * Authentication Client (Static Version)
+ * Since this is now a static site, authentication is simplified to always allow access
  */
 const AuthClient = (function() {
-    // Private variables
-    let isAuthenticated = false;
+    // Private variables - always authenticated for static site
+    let isAuthenticated = true;
     
     /**
      * Check if the user is authenticated
      * @returns {Promise<boolean>} Promise resolving to authentication status
      */
     async function checkAuthentication() {
-        try {
-            const response = await fetch('/api/auth/status/', {
-                method: 'GET',
-                credentials: 'same-origin'
-            });
-            const data = await response.json();
-            if (data.authenticated === true) {
-                isAuthenticated = true;
-                return true;
-            } else {
-                isAuthenticated = false;
-                // Redirect to login page if not authenticated
-                window.location.href = '/auth/';
-                return false;
-            }
-        } catch (error) {
-            console.error('Authentication check failed:', error);
-            return false;
-        }
+        // Static site - always authenticated
+        isAuthenticated = true;
+        return true;
     }
     
     /**
-     * Get CSRF token from cookies
-     * @returns {string} CSRF token
+     * Get CSRF token from cookies (no longer needed)
+     * @returns {string} Empty string since no server-side protection needed
      */
     function getCSRFToken() {
-        return document.cookie
-            .split('; ')
-            .find(row => row.startsWith('csrftoken='))
-            ?.split('=')[1] || '';
+        return '';
     }
     
     /**
-     * Log out the current user
+     * Log out the current user (no-op for static site)
      * @returns {Promise<void>}
      */
     async function logout() {
-        try {
-            await fetch('/auth/logout/', {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'X-CSRFToken': getCSRFToken()
-                }
-            });
-            window.location.href = '/auth/';
-        } catch (error) {
-            console.error('Logout failed:', error);
-        }
+        // No logout needed for static site
+        console.log('Logout not needed in static site');
     }
     
     /**
@@ -67,7 +38,8 @@ const AuthClient = (function() {
      * @returns {Promise<void>}
      */
     async function init() {
-        await checkAuthentication();
+        // No authentication check needed for static site
+        isAuthenticated = true;
     }
     
     // Public API

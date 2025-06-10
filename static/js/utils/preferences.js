@@ -7,7 +7,6 @@ const PreferencesClient = (function() {
     let preferences = {
         onboardingDisabled: false,
         theme: 'light',
-        share_with_classmates: true, // Default to true
         aspectRatioWidth: 1, // Default aspect ratio 1:1
         aspectRatioHeight: 1,
         screenFit: 'fit' // Default screen fit mode (fit or fill) - stored in localStorage only
@@ -16,48 +15,15 @@ const PreferencesClient = (function() {
     let originalContentBounds = null; // Store original content bounds for consistent scaling
     
     /**
-     * Load preferences from storage or server
+     * Load preferences from local storage only (static site version)
      */
     async function loadPreferences() {
         try {
-            // First try to load from local storage
+            // Load from local storage only
             const localPrefs = getPreferencesFromLocalStorage();
             if (localPrefs) {
                 // Merge with defaults to ensure all keys are present
                 preferences = { ...preferences, ...localPrefs };
-            }
-            
-            // Then try to load from server if authenticated
-            if (AuthClient.isAuthenticated()) {
-                try {
-                    const response = await fetch('/api/preferences/', {
-                        method: 'GET',
-                        credentials: 'same-origin'
-                    });
-                    
-                    if (response.ok) {
-                        const serverPrefs = await response.json();
-                        
-                        // Get screen fit from localStorage (not stored on server)
-                        const localScreenFit = localStorage.getItem('screenFit') || 'fit';
-                        
-                        preferences = {
-                            onboardingDisabled: serverPrefs.onboarding_disabled,
-                            theme: serverPrefs.theme,
-                            share_with_classmates: serverPrefs.share_with_classmates,
-                            aspectRatioWidth: serverPrefs.aspect_ratio_width || 1,
-                            aspectRatioHeight: serverPrefs.aspect_ratio_height || 1,
-                            screenFit: localScreenFit
-                        };
-                        
-                        // Update local storage (but screen fit is handled separately)
-                        savePreferencesToLocalStorage(preferences);
-                    } else {
-                        console.warn('Failed to load preferences from server, using local/default.');
-                    }
-                } catch (error) {
-                    console.error('Error loading preferences from server:', error);
-                }
             }
             
             loaded = true;
@@ -68,7 +34,7 @@ const PreferencesClient = (function() {
     }
     
     /**
-     * Save preferences to storage and server
+     * Save preferences to local storage only (static site version)
      * @param {Object} newPrefs - New preferences
      */
     async function savePreferences(newPrefs) {
@@ -84,35 +50,13 @@ const PreferencesClient = (function() {
             // Update local preferences
             preferences = { ...preferences, ...newPrefs };
             
-            // Save screen fit to localStorage only
+            // Save screen fit to localStorage
             if (newPrefs.screenFit) {
                 localStorage.setItem('screenFit', newPrefs.screenFit);
             }
             
-            // Save to local storage
+            // Save to local storage only (no server in static site)
             savePreferencesToLocalStorage(preferences);
-            
-            // Save to server if authenticated (excluding screenFit which is localStorage only)
-            if (AuthClient.isAuthenticated()) {
-                const payload = {
-                    onboarding_disabled: preferences.onboardingDisabled,
-                    theme: preferences.theme,
-                    share_with_classmates: preferences.share_with_classmates,
-                    aspect_ratio_width: preferences.aspectRatioWidth,
-                    aspect_ratio_height: preferences.aspectRatioHeight,
-                    screen_fit: preferences.screenFit // Still include for now, but will be localStorage only
-                };
-                console.log('Saving preferences to server:', payload); // Debug log
-                await fetch('/api/preferences/', {
-                    method: 'PUT',
-                    credentials: 'same-origin',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': AuthClient.getCSRFToken()
-                    },
-                    body: JSON.stringify(payload)
-                });
-            }
             
             applyPreferences();
         } catch (error) {
@@ -528,13 +472,12 @@ const PreferencesClient = (function() {
     function getPreferencesFromLocalStorage() {
         try {
             const data = localStorage.getItem('mm_preferences');
-            // Ensure share_with_classmates has a default if not present
             const parsed = data ? JSON.parse(data) : {};
             return {
                 onboardingDisabled: parsed.onboardingDisabled || false,
                 theme: parsed.theme || 'light',
-                share_with_classmates: typeof parsed.share_with_classmates === 'boolean' ? parsed.share_with_classmates : true,
-                aspectRatio: parsed.aspectRatio || '16:9',
+                aspectRatioWidth: parsed.aspectRatioWidth || 1,
+                aspectRatioHeight: parsed.aspectRatioHeight || 1,
                 screenFit: parsed.screenFit || 'fit'
             };
         } catch (error) {
@@ -542,8 +485,8 @@ const PreferencesClient = (function() {
             return { 
                 onboardingDisabled: false, 
                 theme: 'light', 
-                share_with_classmates: true,
-                aspectRatio: '16:9',
+                aspectRatioWidth: 1,
+                aspectRatioHeight: 1,
                 screenFit: 'fit'
             }; // Return defaults on error
         }
