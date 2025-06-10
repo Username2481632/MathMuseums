@@ -4,31 +4,30 @@
 export function constrainResizeDimensions(dimensions, posterRect) {
     const padding = getHomePosterPadding();
     let result = { ...dimensions };
-    result.width = Math.max(200, result.width);
-    result.height = Math.max(150, result.height);
-    result.width = Math.min(500, result.width);
-    result.height = Math.min(400, result.height);
+    result.width = Math.max(50, result.width);
+    result.height = Math.max(50, result.height);
+    // Remove maximum size constraints to allow tiles to be very large
     if (result.x < padding.left) {
         const overflow = padding.left - result.x;
         result.x = padding.left;
         if (result.adjustWidthFromLeft) {
-            result.width = Math.max(200, result.width - overflow);
+            result.width = Math.max(50, result.width - overflow);
         }
     }
     if (result.y < padding.top) {
         const overflow = padding.top - result.y;
         result.y = padding.top;
         if (result.adjustHeightFromTop) {
-            result.height = Math.max(150, result.height - overflow);
+            result.height = Math.max(50, result.height - overflow);
         }
     }
     const rightEdge = posterRect.width - padding.right;
     if (result.x + result.width > rightEdge) {
         const overflow = (result.x + result.width) - rightEdge;
         if (!result.adjustWidthFromLeft) {
-            result.width = Math.max(200, result.width - overflow);
+            result.width = Math.max(50, result.width - overflow);
         } else {
-            result.width = Math.max(200, result.width);
+            result.width = Math.max(50, result.width);
             result.x = Math.min(result.x, rightEdge - result.width);
         }
     }
@@ -36,9 +35,9 @@ export function constrainResizeDimensions(dimensions, posterRect) {
     if (result.y + result.height > bottomEdge) {
         const overflow = (result.y + result.height) - bottomEdge;
         if (!result.adjustHeightFromTop) {
-            result.height = Math.max(150, result.height - overflow);
+            result.height = Math.max(50, result.height - overflow);
         } else {
-            result.height = Math.max(150, result.height);
+            result.height = Math.max(50, result.height);
             result.y = Math.min(result.y, bottomEdge - result.height);
         }
     }

@@ -21,13 +21,19 @@ export function createResizeManager({ onStart, onUpdate, onFinish, getTileById, 
         isResizing = true;
         resizingTile.classList.add('resizing');
         resizingTile.style.zIndex = '100';
+        
+        // Get the actual rendered size and position from bounding rect, not CSS styles
+        const rect = resizingTile.getBoundingClientRect();
+        const container = resizingTile.closest('.tiles-container');
+        const containerRect = container ? container.getBoundingClientRect() : { left: 0, top: 0 };
+        
         originalSize = {
-            width: parseInt(resizingTile.style.width, 10),
-            height: parseInt(resizingTile.style.height, 10)
+            width: rect.width,
+            height: rect.height
         };
         originalPosition = {
-            x: parseInt(resizingTile.style.left, 10),
-            y: parseInt(resizingTile.style.top, 10)
+            x: rect.left - containerRect.left,
+            y: rect.top - containerRect.top
         };
         resizeStartPos = {
             x: event.clientX,
@@ -50,25 +56,25 @@ export function createResizeManager({ onStart, onUpdate, onFinish, getTileById, 
         let adjustWidthFromLeft = false;
         let adjustHeightFromTop = false;
         if (position === 'top-left') {
-            newWidth = Math.max(200, originalSize.width - deltaX);
-            newHeight = Math.max(150, originalSize.height - deltaY);
+            newWidth = Math.max(50, originalSize.width - deltaX);
+            newHeight = Math.max(50, originalSize.height - deltaY);
             newX = originalPosition.x + originalSize.width - newWidth;
             newY = originalPosition.y + originalSize.height - newHeight;
             adjustWidthFromLeft = true;
             adjustHeightFromTop = true;
         } else if (position === 'top-right') {
-            newWidth = Math.max(200, originalSize.width + deltaX);
-            newHeight = Math.max(150, originalSize.height - deltaY);
+            newWidth = Math.max(50, originalSize.width + deltaX);
+            newHeight = Math.max(50, originalSize.height - deltaY);
             newY = originalPosition.y + originalSize.height - newHeight;
             adjustHeightFromTop = true;
         } else if (position === 'bottom-left') {
-            newWidth = Math.max(200, originalSize.width - deltaX);
-            newHeight = Math.max(150, originalSize.height + deltaY);
+            newWidth = Math.max(50, originalSize.width - deltaX);
+            newHeight = Math.max(50, originalSize.height + deltaY);
             newX = originalPosition.x + originalSize.width - newWidth;
             adjustWidthFromLeft = true;
         } else if (position === 'bottom-right') {
-            newWidth = Math.max(200, originalSize.width + deltaX);
-            newHeight = Math.max(150, originalSize.height + deltaY);
+            newWidth = Math.max(50, originalSize.width + deltaX);
+            newHeight = Math.max(50, originalSize.height + deltaY);
         }
         const constrained = constrainDimensions({
             x: newX,
@@ -107,13 +113,19 @@ export function createResizeManager({ onStart, onUpdate, onFinish, getTileById, 
         isResizing = true;
         resizingTile.classList.add('resizing');
         resizingTile.style.zIndex = '100';
+        
+        // Get the actual rendered size and position from bounding rect, not CSS styles
+        const rect = resizingTile.getBoundingClientRect();
+        const container = resizingTile.closest('.tiles-container');
+        const containerRect = container ? container.getBoundingClientRect() : { left: 0, top: 0 };
+        
         originalSize = {
-            width: parseInt(resizingTile.style.width, 10),
-            height: parseInt(resizingTile.style.height, 10)
+            width: rect.width,
+            height: rect.height
         };
         originalPosition = {
-            x: parseInt(resizingTile.style.left, 10),
-            y: parseInt(resizingTile.style.top, 10)
+            x: rect.left - containerRect.left,
+            y: rect.top - containerRect.top
         };
         resizeStartPos = {
             x: event.touches[0].clientX,
@@ -136,25 +148,25 @@ export function createResizeManager({ onStart, onUpdate, onFinish, getTileById, 
         let adjustWidthFromLeft = false;
         let adjustHeightFromTop = false;
         if (position === 'top-left') {
-            newWidth = Math.max(200, originalSize.width - deltaX);
-            newHeight = Math.max(150, originalSize.height - deltaY);
+            newWidth = Math.max(50, originalSize.width - deltaX);
+            newHeight = Math.max(50, originalSize.height - deltaY);
             newX = originalPosition.x + originalSize.width - newWidth;
             newY = originalPosition.y + originalSize.height - newHeight;
             adjustWidthFromLeft = true;
             adjustHeightFromTop = true;
         } else if (position === 'top-right') {
-            newWidth = Math.max(200, originalSize.width + deltaX);
-            newHeight = Math.max(150, originalSize.height - deltaY);
+            newWidth = Math.max(50, originalSize.width + deltaX);
+            newHeight = Math.max(50, originalSize.height - deltaY);
             newY = originalPosition.y + originalSize.height - newHeight;
             adjustHeightFromTop = true;
         } else if (position === 'bottom-left') {
-            newWidth = Math.max(200, originalSize.width - deltaX);
-            newHeight = Math.max(150, originalSize.height + deltaY);
+            newWidth = Math.max(50, originalSize.width - deltaX);
+            newHeight = Math.max(50, originalSize.height + deltaY);
             newX = originalPosition.x + originalSize.width - newWidth;
             adjustWidthFromLeft = true;
         } else if (position === 'bottom-right') {
-            newWidth = Math.max(200, originalSize.width + deltaX);
-            newHeight = Math.max(150, originalSize.height + deltaY);
+            newWidth = Math.max(50, originalSize.width + deltaX);
+            newHeight = Math.max(50, originalSize.height + deltaY);
         }
         const constrained = constrainDimensions({
             x: newX,

@@ -50,8 +50,11 @@ const HomeController = (function() {
             
             const x = clientX - containerRect.left - dragOffset.x;
             const y = clientY - containerRect.top - dragOffset.y;
-            const tileWidth = parseInt(tile.style.width, 10) || 250;
-            const tileHeight = parseInt(tile.style.height, 10) || 200;
+            
+            // Get actual tile size from bounding rect, not CSS styles (which may be percentages)
+            const tileRect = tile.getBoundingClientRect();
+            const tileWidth = tileRect.width;
+            const tileHeight = tileRect.height;
             
             // Simple boundary constraints - keep tile fully within container
             const minX = 0;
@@ -70,11 +73,14 @@ const HomeController = (function() {
             const concept = concepts.find(c => c.id === conceptId);
             if (!concept) return;
             
-            // Get current pixel position and size
-            const pixelX = parseInt(tile.style.left, 10);
-            const pixelY = parseInt(tile.style.top, 10);
-            const pixelWidth = parseInt(tile.style.width, 10);
-            const pixelHeight = parseInt(tile.style.height, 10);
+            // Get current pixel position and size from actual rendered position
+            const tileRect = tile.getBoundingClientRect();
+            const containerRect = homePoster.getBoundingClientRect();
+            
+            const pixelX = tileRect.left - containerRect.left;
+            const pixelY = tileRect.top - containerRect.top;
+            const pixelWidth = tileRect.width;
+            const pixelHeight = tileRect.height;
             
             // Convert to simple center-based coordinates
             const containerWidth = homePoster.offsetWidth;
@@ -95,7 +101,8 @@ const HomeController = (function() {
             StorageManager.saveConcept(updatedConcept);
         },
         getTileById: id => concepts.find(c => c.id === id),
-        pushUndoState: safePushUndoState
+        pushUndoState: safePushUndoState,
+        getContainer: () => homePoster
     });
 
     // Resize manager
@@ -138,11 +145,14 @@ const HomeController = (function() {
             const concept = concepts.find(c => c.id === conceptId);
             if (!concept) return;
             
-            // Get current pixel position and size
-            const pixelX = parseInt(tile.style.left, 10);
-            const pixelY = parseInt(tile.style.top, 10);
-            const pixelWidth = parseInt(tile.style.width, 10);
-            const pixelHeight = parseInt(tile.style.height, 10);
+            // Get current pixel position and size from actual rendered position
+            const tileRect = tile.getBoundingClientRect();
+            const containerRect = homePoster.getBoundingClientRect();
+            
+            const pixelX = tileRect.left - containerRect.left;
+            const pixelY = tileRect.top - containerRect.top;
+            const pixelWidth = tileRect.width;
+            const pixelHeight = tileRect.height;
             
             // Convert to simple center-based coordinates
             const containerWidth = homePoster.offsetWidth;

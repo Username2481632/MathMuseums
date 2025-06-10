@@ -1,7 +1,7 @@
 // dragManager.js
 // Encapsulates drag-and-drop logic for concept tiles
 
-export function createDragManager({ onStart, onUpdate, onFinish, getTileById, pushUndoState }) {
+export function createDragManager({ onStart, onUpdate, onFinish, getTileById, pushUndoState, getContainer }) {
     let isDragging = false;
     let draggedTile = null;
     let dragOffset = { x: 0, y: 0 };
@@ -39,9 +39,21 @@ export function createDragManager({ onStart, onUpdate, onFinish, getTileById, pu
         isDragging = true;
         draggedTile = tile;
         draggedTile.classList.add('dragging');
+        
+        // Get both tile and container rects for proper coordinate calculation
         const tileRect = draggedTile.getBoundingClientRect();
-        dragOffset.x = clientX - tileRect.left;
-        dragOffset.y = clientY - tileRect.top;
+        const container = getContainer && getContainer();
+        const containerRect = container ? container.getBoundingClientRect() : { left: 0, top: 0 };
+        
+        // Calculate drag offset relative to container coordinates, not viewport
+        const tileContainerX = tileRect.left - containerRect.left;
+        const tileContainerY = tileRect.top - containerRect.top;
+        const mouseContainerX = clientX - containerRect.left;
+        const mouseContainerY = clientY - containerRect.top;
+        
+        dragOffset.x = mouseContainerX - tileContainerX;
+        dragOffset.y = mouseContainerY - tileContainerY;
+        
         draggedTile.style.zIndex = '100';
         onStart && onStart(tile, clientX, clientY);
         updateTilePosition(clientX, clientY);
