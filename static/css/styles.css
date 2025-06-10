@@ -65,6 +65,14 @@ header {
     display: flex;
     justify-content: center;
     align-items: center;
+    opacity: 0; /* Hidden initially to prevent centering jump */
+    pointer-events: none; /* Disable interaction while hidden */
+}
+
+.header-title.ready {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.2s ease;
 }
 
 .museum-name-container {

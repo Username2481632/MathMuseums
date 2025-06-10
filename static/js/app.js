@@ -244,8 +244,16 @@ This will replace your current museum data. Continue?`;
             museumNameInput.value = savedName;
         }
         
-        // Initial resize
+        // Initial resize and show the input
         resizeInputToContent();
+        
+        // Show the entire title section after proper sizing to prevent centering jump
+        const headerTitle = document.querySelector('.header-title');
+        setTimeout(() => {
+            if (headerTitle) {
+                headerTitle.classList.add('ready');
+            }
+        }, 10);
         
         // Function to dynamically resize input to fit content
         function resizeInputToContent() {
