@@ -140,15 +140,28 @@ main {
 /* Header Controls (Moved from inline styles in index.html) */
 .header-controls {
     position: absolute;
-    top: 1rem;
-    right: 1rem;
+    top: 50%;
+    left: 1rem;
+    transform: translateY(-50%);
     display: flex;
     align-items: center;
     gap: 1rem;
     z-index: 1001; /* Ensure it's above other header content if any overlap */
 }
+
+.header-right {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    z-index: 1001;
+}
 .header-controls .btn, 
-.header-controls label { /* Apply button-like styling to the label */
+.header-controls label,
+.header-right .btn,
+.header-right label { /* Apply button-like styling to the label */
     background: var(--secondary-color); /* Use theme color */
     color: #fff;
     border: none;
@@ -159,19 +172,24 @@ main {
     transition: background-color 0.2s;
 }
 .header-controls .btn:hover,
-.header-controls label:hover {
+.header-controls label:hover,
+.header-right .btn:hover,
+.header-right label:hover {
     background: #2980b9; /* Darker shade of secondary color */
 }
-.header-controls input[type="checkbox"] {
+.header-controls input[type="checkbox"],
+.header-right input[type="checkbox"] {
     margin-right: 0.5em;
     vertical-align: middle; /* Align checkbox better with text */
 }
 
 /* Specific button styling within header-controls if needed */
-.header-controls .logout-btn {
+.header-controls .logout-btn,
+.header-right .logout-btn {
     background: var(--accent-color); /* Use accent color for logout */
 }
-.header-controls .logout-btn:hover {
+.header-controls .logout-btn:hover,
+.header-right .logout-btn:hover {
     background: #c0392b; /* Darker shade of accent */
 }
 
@@ -182,23 +200,44 @@ main {
 }
 
 .header-controls .file-btn {
-    background: #4caf50; /* Green for file operations */
-    font-size: 0.875rem;
-    padding: 0.5em 0.75em;
+    background: transparent;
+    color: white;
+    border: none;
+    font-size: 1.2rem;
+    padding: 0.25rem;
+    width: 63px;
+    height: 63px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
+.header-controls .file-btn .icon {
+    width: 2.5rem;
+    height: 2.5rem;
+}
+
 .header-controls .file-btn:hover {
-    background: #3d8b40; /* Darker shade for file buttons */
+    background: rgba(255, 255, 255, 0.1);
 }
+
 .header-controls .file-btn:disabled {
-    background: #666;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.5);
     cursor: not-allowed;
 }
 
-.header-controls .settings-btn {
+.header-controls .file-btn:disabled .icon {
+    opacity: 0.5;
+}
+
+.header-controls .settings-btn,
+.header-right .settings-btn {
     background: var(--secondary-color);
     padding: 0.5em 0.75em;
 }
-.header-controls .settings-btn:hover {
+.header-controls .settings-btn:hover,
+.header-right .settings-btn:hover {
     background: #2980b9;
 }
 .gear-icon {

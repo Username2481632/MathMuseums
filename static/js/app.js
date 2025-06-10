@@ -82,13 +82,15 @@ var App = (function() {
      * Set up file management buttons functionality
      */
     function setupFileManagementButtons() {
-        // Set up save file button
-        const saveFileButton = document.getElementById('save-file-button');
-        if (saveFileButton) {
-            saveFileButton.addEventListener('click', async () => {
+        // Set up export file button
+        const exportFileButton = document.getElementById('export-file-button');
+        if (exportFileButton) {
+            exportFileButton.addEventListener('click', async () => {
                 try {
-                    saveFileButton.disabled = true;
-                    saveFileButton.textContent = '💾 Saving...';
+                    exportFileButton.disabled = true;
+                    const icon = exportFileButton.querySelector('.icon');
+                    const originalSrc = icon.src;
+                    // You could create a loading SVG or just disable the button
                     
                     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
                     const filename = `my-math-museum-${timestamp}.json`;
@@ -96,25 +98,27 @@ var App = (function() {
                     await FileManager.downloadUserData(filename);
                     
                     // Show success message
-                    showNotification('File saved successfully!', 'success');
+                    showNotification('File exported successfully!', 'success');
                     
                 } catch (error) {
-                    console.error('Error saving file:', error);
-                    showNotification('Failed to save file: ' + error.message, 'error');
+                    console.error('Error exporting file:', error);
+                    showNotification('Failed to export file: ' + error.message, 'error');
                 } finally {
-                    saveFileButton.disabled = false;
-                    saveFileButton.textContent = '💾 Save File';
+                    exportFileButton.disabled = false;
+                    // Icon returns to normal when button is re-enabled
                 }
             });
         }
         
-        // Set up load file button
-        const loadFileButton = document.getElementById('load-file-button');
-        if (loadFileButton) {
+        // Set up import file button
+        const importFileButton = document.getElementById('import-file-button');
+        if (importFileButton) {
             const fileInput = FileManager.createFileInput(async (file) => {
                 try {
-                    loadFileButton.disabled = true;
-                    loadFileButton.textContent = '📁 Loading...';
+                    importFileButton.disabled = true;
+                    const icon = importFileButton.querySelector('.icon');
+                    const originalSrc = icon.src;
+                    // You could create a loading SVG or just disable the button
                     
                     // Load and validate file
                     const importData = await FileManager.loadUserDataFromFile(file);
@@ -143,11 +147,11 @@ var App = (function() {
                     showNotification(`Successfully imported ${fileInfo.totalConcepts} concepts!`, 'success');
                     
                 } catch (error) {
-                    console.error('Error loading file:', error);
-                    showNotification('Failed to load file: ' + error.message, 'error');
+                    console.error('Error importing file:', error);
+                    showNotification('Failed to import file: ' + error.message, 'error');
                 } finally {
-                    loadFileButton.disabled = false;
-                    loadFileButton.textContent = '📁 Load File';
+                    importFileButton.disabled = false;
+                    // Icon returns to normal when button is re-enabled
                 }
             });
             
@@ -155,7 +159,7 @@ var App = (function() {
             document.body.appendChild(fileInput);
             
             // Trigger file input when button is clicked
-            loadFileButton.addEventListener('click', () => {
+            importFileButton.addEventListener('click', () => {
                 fileInput.click();
             });
         }
