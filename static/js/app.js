@@ -61,6 +61,9 @@ var App = (function() {
             // Set up file management buttons
             setupFileManagementButtons();
 
+            // Set up keyboard shortcuts for file operations
+            setupKeyboardShortcuts();
+
             // Remove loading state
             const loading = document.getElementById('loading');
             if (loading) {
@@ -193,6 +196,38 @@ This will replace your current museum data. Continue?`;
         alert(message);
     }
 
+    /**
+     * Set up keyboard shortcuts for file operations
+     */
+    function setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (event) => {
+            // Check if Ctrl key is pressed (or Cmd on Mac)
+            if (event.ctrlKey || event.metaKey) {
+                switch (event.key.toLowerCase()) {
+                    case 'e':
+                    case 's':
+                        // Export/Save shortcuts (Ctrl+E or Ctrl+S)
+                        event.preventDefault();
+                        const exportButton = document.getElementById('export-file-button');
+                        if (exportButton && !exportButton.disabled) {
+                            exportButton.click();
+                        }
+                        break;
+                    
+                    case 'o':
+                    case 'i':
+                        // Import/Open shortcuts (Ctrl+O or Ctrl+I)
+                        event.preventDefault();
+                        const importButton = document.getElementById('import-file-button');
+                        if (importButton && !importButton.disabled) {
+                            importButton.click();
+                        }
+                        break;
+                }
+            }
+        });
+    }
+    
     // Public API
     return {
         init
