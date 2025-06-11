@@ -366,14 +366,18 @@ const HomeController = (function() {
             if (window.PreferencesClient && window.PreferencesClient.applyDisplaySettings) {
                 window.PreferencesClient.applyDisplaySettings();
             }
-            
             // Render tiles after aspect ratio is applied
-            // console.log('Home poster set up, calling renderTilesOnPoster');
             renderTilesOnPoster(homePoster, concepts, { 
                 handleResizeStart: resizeManager.handleResizeStart, 
                 handleTouchResizeStart: resizeManager.handleTouchResizeStart,
                 generateThumbnailWithRetry: generateThumbnailWithRetry
             });
+            // Wait for tiles to be visible, then adjust fonts
+            if (window.FontSizer) {
+                setTimeout(() => {
+                    window.FontSizer.forceAdjustment();
+                }, 250); // Delay to allow for animation and DOM layout
+            }
         }, 0);
     }
     
