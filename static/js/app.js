@@ -237,9 +237,8 @@ This will replace your current museum data. Continue?`;
      */
     function setupMuseumNameInput() {
         const museumNameText = document.getElementById('museum-name-text');
-        const museumNameBox = document.getElementById('museum-name-box');
         
-        if (!museumNameText || !museumNameBox) return;
+        if (!museumNameText) return;
         
         // Load saved museum name
         const savedName = localStorage.getItem('mm_museum_name');
@@ -247,130 +246,7 @@ This will replace your current museum data. Continue?`;
             museumNameText.textContent = savedName;
         }
         
-        // Initial setup - delay to ensure elements are fully rendered
-        setTimeout(() => {
-            updateDisplay();
-            updateContentVisibility();
-        }, 50);
-        
-        // Show the entire title section after proper sizing
-        const headerTitle = document.querySelector('.header-title');
-        setTimeout(() => {
-            if (headerTitle) {
-                headerTitle.classList.add('ready');
-            }
-        }, 10);
-        
-        // Function to manage content visibility
-        function updateContentVisibility() {
-            const hasContent = museumNameText.textContent.trim().length > 0;
-            const isFocused = document.activeElement === museumNameText;
-            
-            if (hasContent && !isFocused) {
-                museumNameBox.classList.add('content-hidden');
-            } else {
-                museumNameBox.classList.remove('content-hidden');
-            }
-        }
-        
-        // Function to update display and sizing
-        function updateDisplay() {
-            const value = museumNameText.textContent.trim();
-            const displayValue = value || museumNameText.getAttribute('data-placeholder');
-            const isEmpty = !value;
-            
-            // Measure both the name text and the suffix to get total width
-            const measurer = document.createElement('span');
-            measurer.style.visibility = 'hidden';
-            measurer.style.position = 'absolute';
-            measurer.style.whiteSpace = 'pre';
-            measurer.style.pointerEvents = 'none';
-            measurer.style.top = '-9999px';
-            
-            // Copy font properties
-            const textStyles = window.getComputedStyle(museumNameText);
-            measurer.style.fontFamily = textStyles.fontFamily;
-            measurer.style.fontSize = textStyles.fontSize;
-            measurer.style.fontWeight = textStyles.fontWeight;
-            measurer.style.fontStyle = textStyles.fontStyle;
-            measurer.style.letterSpacing = textStyles.letterSpacing;
-            measurer.style.wordSpacing = textStyles.wordSpacing;
-            
-            // Measure the name text width (use actual value or placeholder)
-            measurer.textContent = displayValue;
-            document.body.appendChild(measurer);
-            const nameWidth = measurer.offsetWidth;
-            
-            // Measure the suffix width
-            measurer.textContent = "'s Math Museum";
-            const suffixWidth = measurer.offsetWidth;
-            
-            document.body.removeChild(measurer);
-            
-            // Calculate total title width (name + suffix)
-            const totalTitleWidth = nameWidth + suffixWidth;
-            
-            // Calculate container position to center the entire title
-            const headerTitle = document.querySelector('.header-title');
-            const headerTitleWidth = headerTitle.offsetWidth;
-            const headerControls = document.querySelector('.header-controls');
-            const headerRight = document.querySelector('.header-right');
-            
-            // Calculate available space (excluding controls)
-            const controlsWidth = headerControls ? headerControls.offsetWidth + 32 : 0; // 32px for margins
-            const rightWidth = headerRight ? headerRight.offsetWidth + 32 : 0;
-            const availableWidth = headerTitleWidth - controlsWidth - rightWidth;
-            
-            // Calculate center position within available space
-            const centerOfAvailableSpace = controlsWidth + (availableWidth / 2);
-            
-            // Calculate left position: center minus half of total title width
-            // This positions the left edge such that the entire title appears centered
-            const leftPosition = centerOfAvailableSpace - (totalTitleWidth / 2);
-            
-            // Apply the calculated position
-            const container = document.querySelector('.museum-name-container');
-            container.style.left = `${leftPosition}px`;
-            container.style.transform = 'none'; // Remove the initial centering transform
-            
-            // Always calculate and position the box, regardless of visibility
-            const boxPadding = 16;
-            const boxWidth = Math.max(nameWidth + boxPadding, 40); // Box only around the name
-            const maxWidth = availableWidth * 0.8; // Limit to 80% of available space
-            const finalWidth = Math.min(boxWidth, maxWidth);
-            
-            // Position and size the box under the text
-            const textRect = museumNameText.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-            
-            // Set box dimensions
-            museumNameBox.style.width = `${finalWidth}px`;
-            museumNameBox.style.height = `${textRect.height}px`;
-            
-            // Position box to align with text
-            const leftOffset = textRect.left - containerRect.left - (boxPadding / 2);
-            museumNameBox.style.left = `${leftOffset}px`;
-            museumNameBox.style.top = '0px';
-        }
-        
         // Event listeners
-        museumNameText.addEventListener('focus', () => {
-            updateContentVisibility();
-        });
-        
-        museumNameText.addEventListener('input', () => {
-            // Clean up the content - remove any non-text nodes or empty spaces
-            const textContent = museumNameText.textContent.trim();
-            if (!textContent) {
-                // If empty, clear everything to ensure CSS :empty pseudo-element works
-                museumNameText.innerHTML = '';
-            }
-            
-            updateDisplay();
-            updateContentVisibility();
-            saveMuseumName();
-        });
-        
         museumNameText.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -386,10 +262,8 @@ This will replace your current museum data. Continue?`;
                         // If empty after deletion, clear everything
                         museumNameText.innerHTML = '';
                     }
-                    updateDisplay();
+                    updateHeaderSize();
                 }, 0);
-            } else {
-                setTimeout(updateDisplay, 0);
             }
         });
         
@@ -397,21 +271,18 @@ This will replace your current museum data. Continue?`;
             // Allow paste but prevent HTML formatting
             event.preventDefault();
             const text = (event.clipboardData || window.clipboardData).getData('text/plain');
-            const maxLength = 30;
-            const truncatedText = text.substring(0, maxLength);
             
             // Insert plain text at cursor position
             const selection = window.getSelection();
             if (selection.rangeCount > 0) {
                 const range = selection.getRangeAt(0);
                 range.deleteContents();
-                range.insertNode(document.createTextNode(truncatedText));
+                range.insertNode(document.createTextNode(text));
                 range.collapse(false);
             }
             
             setTimeout(() => {
-                updateDisplay();
-                updateContentVisibility();
+                updateHeaderSize();
                 saveMuseumName();
             }, 10);
         });
@@ -423,25 +294,102 @@ This will replace your current museum data. Continue?`;
                 // If empty, clear everything to ensure CSS :empty pseudo-element works
                 museumNameText.innerHTML = '';
             }
-            
-            updateContentVisibility();
+            updateHeaderSize();
             saveMuseumName();
         });
         
-        // Limit text length to 30 characters
-        museumNameText.addEventListener('beforeinput', (event) => {
-            if (event.inputType === 'insertText' || event.inputType === 'insertCompositionText') {
-                const currentLength = museumNameText.textContent.length;
-                const newTextLength = event.data ? event.data.length : 0;
-                
-                if (currentLength + newTextLength > 30) {
-                    event.preventDefault();
-                }
+        museumNameText.addEventListener('input', () => {
+            // Clean up the content - remove any non-text nodes or empty spaces
+            const textContent = museumNameText.textContent.trim();
+            if (!textContent) {
+                // If empty, clear everything to ensure CSS :empty pseudo-element works
+                museumNameText.innerHTML = '';
             }
+            updateHeaderSize();
+            saveMuseumName();
         });
         
-        // Handle window resize
-        window.addEventListener('resize', updateDisplay);
+        function updateHeaderSize() {
+            const header = document.querySelector('header');
+            const museumNameDisplay = document.querySelector('.museum-name-display');
+            const headerTitle = document.querySelector('.header-title');
+            const headerControls = document.querySelector('.header-controls');
+            const headerRight = document.querySelector('.header-right');
+            
+            if (!header || !museumNameDisplay || !headerTitle) return;
+            
+            // Always reset transform first to get natural measurements
+            museumNameDisplay.style.transform = '';
+            if (headerControls) headerControls.style.transform = 'translateY(-50%)';
+            if (headerRight) headerRight.style.transform = 'translateY(-50%)';
+            
+            // Force a reflow to ensure the reset takes effect
+            museumNameDisplay.offsetWidth;
+            
+            // Get the viewport width and calculate truly available space
+            const viewportWidth = window.innerWidth;
+            const buttonSpaceLeft = 200; // Space for left buttons
+            const buttonSpaceRight = 100; // Space for right buttons  
+            const padding = 40; // Additional padding for safety
+            const maxTitleWidth = viewportWidth - buttonSpaceLeft - buttonSpaceRight - padding;
+            
+            // Get the natural width of the title
+            const naturalTitleWidth = museumNameDisplay.scrollWidth;
+            
+            console.log('Debug:', {
+                viewportWidth,
+                maxTitleWidth,
+                naturalTitleWidth,
+                needsScaling: naturalTitleWidth > maxTitleWidth
+            });
+            
+            if (naturalTitleWidth > maxTitleWidth && maxTitleWidth > 100) {
+                // Calculate scale factor (always less than 1)
+                const scaleFactor = Math.min(0.99, maxTitleWidth / naturalTitleWidth);
+                
+                // Apply scaling to title
+                museumNameDisplay.style.transform = `scale(${scaleFactor})`;
+                museumNameDisplay.style.transformOrigin = 'center';
+                
+                // Apply scaling to buttons
+                if (headerControls) {
+                    headerControls.style.transform = `translateY(-50%) scale(${scaleFactor})`;
+                    headerControls.style.transformOrigin = 'left center';
+                }
+                if (headerRight) {
+                    headerRight.style.transform = `translateY(-50%) scale(${scaleFactor})`;
+                    headerRight.style.transformOrigin = 'right center';
+                }
+                
+                // Scale header height proportionally (never more than 70px)
+                const newHeight = Math.min(70, 70 * scaleFactor);
+                header.style.height = `${newHeight}px`;
+                document.body.style.paddingTop = `${newHeight}px`;
+                
+                // Update CSS custom property for tiles container
+                document.documentElement.style.setProperty('--header-height', `${newHeight}px`);
+                
+                console.log('Applied scaling:', { scaleFactor, newHeight });
+            } else {
+                // Reset to normal size
+                museumNameDisplay.style.transform = '';
+                if (headerControls) headerControls.style.transform = 'translateY(-50%)';
+                if (headerRight) headerRight.style.transform = 'translateY(-50%)';
+                header.style.height = '70px';
+                document.body.style.paddingTop = '70px';
+                
+                // Reset CSS custom property for tiles container
+                document.documentElement.style.setProperty('--header-height', '70px');
+                
+                console.log('Reset to normal size');
+            }
+        }
+        
+        // Update header size on window resize
+        window.addEventListener('resize', updateHeaderSize);
+        
+        // Initial header size update
+        setTimeout(updateHeaderSize, 100);
         
         function saveMuseumName() {
             const name = museumNameText.textContent.trim();

@@ -39,6 +39,7 @@ body {
     min-height: 100vh;
     padding-top: 70px; /* Only account for the fixed header */
     margin: 0;
+    transition: padding-top 0.3s ease; /* Smooth padding transition */
 }
 
 /* Header */
@@ -57,30 +58,29 @@ header {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: height 0.3s ease; /* Smooth height transitions */
 }
 
 /* Header Title Section */
 .header-title {
     flex: 1;
     display: flex;
-    justify-content: flex-start; /* Keep flex-start for container */
+    justify-content: center;
     align-items: center;
-    opacity: 1; /* Ensure the title is visible */
-    transition: opacity 0.3s ease; /* Smooth transition for opacity */
+    opacity: 1;
+    transition: opacity 0.3s ease;
     pointer-events: auto;
-    position: relative; /* For absolute positioning of children */
+    position: relative;
 }
 
 .museum-name-container {
-    position: absolute; /* Position absolutely within header-title */
     display: flex;
     align-items: baseline;
-    justify-content: flex-start; /* Use flex-start since we'll calculate position */
+    justify-content: center;
     font-size: var(--font-size-xxl);
     font-weight: bold;
-    transition: left 0.3s ease; /* Smooth transition for left position changes */
-    left: 50%; /* Start at center, will be adjusted by JavaScript */
-    transform: translateX(-50%); /* Center the element initially */
+    transition: all 0.3s ease;
+    position: relative;
 }
 
 .museum-name-display {
@@ -88,70 +88,65 @@ header {
     align-items: baseline;
     gap: 0;
     position: relative;
-    z-index: 2;
+    transition: transform 0.3s ease;
+    white-space: nowrap;
+    overflow: visible;
 }
 
 .museum-name-text {
     color: white;
     font-size: var(--font-size-xxl);
     font-weight: bold;
-    min-width: 0; /* Allow shrinking */
-    white-space: pre; /* Preserve spaces and whitespace */
-    outline: none; /* Remove default focus outline */
+    min-width: 0;
+    white-space: pre;
+    outline: none;
     border: none;
     background: transparent;
-    caret-color: white; /* Show cursor in white */
+    caret-color: white;
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin: -4px -8px;
+    transition: all 0.2s ease;
+    position: relative;
 }
 
 .museum-name-text:empty::before {
     content: attr(data-placeholder);
     color: rgba(255, 255, 255, 0.7);
-    pointer-events: none; /* Ensure it doesn't interfere with clicking */
+    font-weight: 900;
+    text-shadow: 0 0 1px rgba(255, 255, 255, 0.8);
+    pointer-events: none;
 }
 
 .museum-name-text:focus:empty::before {
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.3);
 }
 
-.museum-name-box {
-    position: absolute;
-    top: 0;
-    left: 0;
-    background: rgba(76, 175, 80, 0.1); /* Light green background */
-    border: 2px solid rgba(76, 175, 80, 0.8); /* Green border */
-    border-radius: 4px;
-    pointer-events: none;
-    transition: all 0.3s ease, left 0.3s ease, width 0.3s ease; /* Smooth transitions for position and size */
-    z-index: 1;
+.museum-name-text:hover {
+    background: rgba(255, 255, 255, 0.1);
 }
 
-/* Hide green box when has content and not focused */
-.museum-name-box.content-hidden {
-    background: transparent;
-    border: 2px solid transparent;
+.museum-name-text:focus {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 
+        0 0 0 2px rgba(255, 255, 255, 0.3),
+        0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.museum-name-container:hover .museum-name-box {
-    background: transparent; /* Keep empty on hover */
-    border-color: transparent; /* Keep empty on hover */
+.museum-name-text:focus:empty::before {
+    animation: pulse 2s infinite;
 }
 
-/* Show green box on hover even when content is hidden */
-.museum-name-container:hover .museum-name-box.content-hidden {
-    background: transparent; /* Keep empty */
-    border-color: transparent; /* Keep empty */
-}
-
-.museum-name-container:focus-within .museum-name-box {
-    background: rgba(76, 175, 80, 0.5);
-    border-color: rgba(76, 175, 80, 0.8);
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3);
+@keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.6; }
 }
 
 .museum-title-suffix {
     color: white;
     font-size: var(--font-size-xxl);
     font-weight: bold;
+    transition: all 0.2s ease;
 }
 
 h1 {
@@ -245,16 +240,19 @@ main {
     align-items: center;
     gap: 1rem;
     z-index: 1001; /* Ensure it's above other header content if any overlap */
+    transition: transform 0.3s ease; /* Smooth scaling transitions */
 }
 
 .header-right {
     position: absolute;
-    top: 1rem;
+    top: 50%;
     right: 1rem;
+    transform: translateY(-50%);
     display: flex;
     align-items: center;
     gap: 1rem;
     z-index: 1001;
+    transition: transform 0.3s ease; /* Smooth scaling transitions */
 }
 .header-controls .btn, 
 .header-controls label,
@@ -331,16 +329,27 @@ main {
 
 .header-controls .settings-btn,
 .header-right .settings-btn {
-    background: var(--secondary-color);
-    padding: 0.5em 0.75em;
+    background: transparent;
+    color: white;
+    border: none;
+    font-size: 1.2rem;
+    padding: 0.25rem;
+    width: 63px;
+    height: 63px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
+
+.header-controls .settings-btn .icon,
+.header-right .settings-btn .icon {
+    width: 2.5rem;
+    height: 2.5rem;
+}
+
 .header-controls .settings-btn:hover,
 .header-right .settings-btn:hover {
-    background: #2980b9;
-}
-.gear-icon {
-    font-size: 1.3em;
-    font-style: normal;
+    background: rgba(255, 255, 255, 0.1);
 }
 
 
