@@ -179,6 +179,16 @@ var App = (function() {
         }
     });
 
+    // Warn user about unsaved changes when leaving the page
+    window.addEventListener('beforeunload', function(e) {
+        if (dirtySinceFileSave) {
+            // Modern browsers ignore custom messages and show their own standard dialog
+            // We just need to return any non-empty string to trigger the dialog
+            e.returnValue = true; // For older browsers
+            return true; // For modern browsers - triggers standard "unsaved changes" dialog
+        }
+    });
+
     async function handleSaveShortcut() {
         if (!window.FileManager) {
             console.error('FileManager not available');
