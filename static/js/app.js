@@ -888,11 +888,25 @@ This will replace your current museum data. Continue?`;
                 collapsedTitle.style.cssText = `
                     cursor: pointer;
                     color: white;
-                    font-size: 1.2rem;
-                    padding: 0.5rem;
+                    font-size: 2.5rem;
+                    width: 63px;
+                    height: 63px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                     user-select: none;
-                    transition: transform 0.2s ease;
+                    transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+                    border-radius: 4px;
+                    border: 2px solid rgba(255, 255, 255, 0.8);
                 `;
+                
+                // Add hover effect
+                collapsedTitle.addEventListener('mouseenter', () => {
+                    collapsedTitle.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                });
+                collapsedTitle.addEventListener('mouseleave', () => {
+                    collapsedTitle.style.borderColor = 'rgba(255, 255, 255, 0.8)';
+                });
                 
                 // Create the dropdown overlay
                 const titleDropdown = document.createElement('div');

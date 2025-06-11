@@ -657,27 +657,6 @@ main {
 }
 
 /* Collapsed Title Styles */
-.title-caret-btn {
-    background: transparent;
-    border: none;
-    color: white;
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.title-caret-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.title-caret-btn.active {
-    background: rgba(255, 255, 255, 0.2);
-}
-
 .collapsed-title-overlay {
     position: fixed;
     top: var(--header-height, 70px);
