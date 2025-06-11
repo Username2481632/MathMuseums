@@ -585,11 +585,11 @@ This will replace your current museum data. Continue?`;
                 // If empty, clear everything to ensure CSS :empty pseudo-element works
                 museumNameText.innerHTML = '';
             }
-            updateHeaderSize();
+            updateHeaderSize(false); // Don't allow dropdown transitions while typing
             saveMuseumName();
         });
         
-        function updateHeaderSize() {
+        function updateHeaderSize(allowDropdownTransition = true) {
             const header = document.querySelector('header');
             const museumNameDisplay = document.querySelector('.museum-name-display');
             const headerTitle = document.querySelector('.header-title');
@@ -634,9 +634,9 @@ This will replace your current museum data. Continue?`;
             // Scale header height proportionally (1.0 = 70px, smaller scale = smaller height)
             const newHeight = Math.min(70, 70 * scaleFactor);
             
-            // Check if we need to show the collapsed title (when header becomes too small)
-            if (newHeight < 25) {
-                // Header is too small - show dropdown caret instead
+            // Check if we need to show the collapsed title (when title needs significant scaling)
+            if (allowDropdownTransition && scaleFactor < 0.75) {
+                // Title needs significant scaling - show dropdown caret instead
                 showCollapsedTitle();
             } else {
                 // Show normal or scaled title
@@ -683,7 +683,7 @@ This will replace your current museum data. Continue?`;
                     naturalTitleWidth, 
                     maxTitleWidth,
                     needsScaling: scaleFactor < 1.0,
-                    shouldShowDropdown: newHeight < 35
+                    shouldShowDropdown: scaleFactor < 0.75
                 });
             }
         }
