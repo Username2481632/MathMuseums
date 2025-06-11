@@ -206,8 +206,8 @@ This will replace your current museum data. Continue?`;
      */
     function setupKeyboardShortcuts() {
         document.addEventListener('keydown', (event) => {
-            // Check if Ctrl key is pressed (or Cmd on Mac)
-            if (event.ctrlKey || event.metaKey) {
+            // Check if Ctrl key is pressed (or Cmd on Mac) but not Shift
+            if ((event.ctrlKey || event.metaKey) && !event.shiftKey) {
                 switch (event.key.toLowerCase()) {
                     case 'e':
                     case 's':
@@ -219,9 +219,8 @@ This will replace your current museum data. Continue?`;
                         }
                         break;
                     
-                    case 'o':
                     case 'i':
-                        // Import/Open shortcuts (Ctrl+O or Ctrl+I)
+                        // Import shortcut (Ctrl+I only, not Ctrl+Shift+I)
                         event.preventDefault();
                         const importButton = document.getElementById('import-file-button');
                         if (importButton && !importButton.disabled) {
