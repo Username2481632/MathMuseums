@@ -667,9 +667,9 @@ This will replace your current museum data. Continue?`;
         function applyDropdownInputStyling(input) {
             input.style.cssText = `
                 background: rgba(255, 255, 255, 0.08);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                border-radius: 6px;
-                padding: 0.5rem 0.8rem;
+                border: none;
+                padding: 2px 4px;
+                margin: -2px -4px;
                 color: white;
                 font-size: var(--font-size-xl);
                 font-weight: 600;
@@ -684,6 +684,8 @@ This will replace your current museum data. Continue?`;
                 white-space: nowrap;
                 overflow: visible;
                 cursor: text;
+                caret-color: white;
+                border-radius: 8px;
             `;
         }
         
@@ -696,7 +698,6 @@ This will replace your current museum data. Continue?`;
                 letter-spacing: -0.01em;
                 text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
                 opacity: 0.8;
-                margin-left: 0.3rem;
             `;
         }
         
