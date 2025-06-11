@@ -83,6 +83,90 @@ var App = (function() {
     window.addEventListener('scroll', handleActivity, true);
     window.addEventListener('touchstart', handleActivity, true);
 
+    // Keyboard shortcuts for save operations
+    window.addEventListener('keydown', function(e) {
+        // Ctrl+S or Cmd+S - Save to last file or show Save As if no previous file
+        if ((e.ctrlKey || e.metaKey) && e.key === 's' && !e.shiftKey) {
+            e.preventDefault();
+            handleSaveShortcut();
+        }
+        // Ctrl+Shift+S or Cmd+Shift+S - Always show Save As dialog
+        else if ((e.ctrlKey || e.metaKey) && e.key === 'S' && e.shiftKey) {
+            e.preventDefault();
+            handleSaveAsShortcut();
+        }
+    });
+
+    async function handleSaveShortcut() {
+        if (!window.FileManager) {
+            console.error('FileManager not available');
+            return;
+        }
+
+        try {
+            setSyncStatus('saving');
+            
+            // Try autosave first (saves to last file without dialog)
+            const autosaveResult = await window.FileManager.autosaveUserData();
+            
+            if (autosaveResult) {
+                // Successfully saved to existing file
+                dirtySinceFileSave = false;
+                setSyncStatus('saved');
+                localStorage.setItem('mm_has_saved_file', 'true');
+            } else {
+                // No previous save location, show Save As dialog
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+                const filename = `my-math-museum-${timestamp}.mathmuseums`;
+                const saveAsResult = await window.FileManager.downloadUserData(filename);
+                
+                if (saveAsResult) {
+                    dirtySinceFileSave = false;
+                    setSyncStatus('saved');
+                    localStorage.setItem('mm_has_saved_file', 'true');
+                } else {
+                    // User cancelled Save As dialog
+                    if (dirtySinceFileSave) {
+                        setSyncStatus('unsaved');
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Save failed:', error);
+            setSyncStatus('unsaved');
+        }
+    }
+
+    async function handleSaveAsShortcut() {
+        if (!window.FileManager) {
+            console.error('FileManager not available');
+            return;
+        }
+
+        try {
+            setSyncStatus('saving');
+            
+            // Always show Save As dialog
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `my-math-museum-${timestamp}.mathmuseums`;
+            const result = await window.FileManager.downloadUserData(filename);
+            
+            if (result) {
+                dirtySinceFileSave = false;
+                setSyncStatus('saved');
+                localStorage.setItem('mm_has_saved_file', 'true');
+            } else {
+                // User cancelled Save As dialog
+                if (dirtySinceFileSave) {
+                    setSyncStatus('unsaved');
+                }
+            }
+        } catch (error) {
+            console.error('Save As failed:', error);
+            setSyncStatus('unsaved');
+        }
+    }
+
     // Mark as unsaved on any input/change, undo/redo, or local save
     let autosaveTimeout = null;
     
@@ -415,16 +499,6 @@ This will replace your current museum data. Continue?`;
             // Check if Ctrl key is pressed (or Cmd on Mac) but not Shift
             if ((event.ctrlKey || event.metaKey) && !event.shiftKey) {
                 switch (event.key.toLowerCase()) {
-                    case 'e':
-                    case 's':
-                        // Export/Save shortcuts (Ctrl+E or Ctrl+S)
-                        event.preventDefault();
-                        const exportButton = document.getElementById('export-file-button');
-                        if (exportButton && !exportButton.disabled) {
-                            exportButton.click();
-                        }
-                        break;
-                    
                     case 'i':
                         // Import shortcut (Ctrl+I only, not Ctrl+Shift+I)
                         event.preventDefault();
