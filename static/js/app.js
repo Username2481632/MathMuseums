@@ -7,7 +7,7 @@ var App = (function() {
     let syncStatus = 'saved'; // 'saving', 'saved', 'unsaved'
     let dirtySinceFileSave = false;
     let syncNotificationTimeout = null;
-    let inactivityTimeout = null;
+    let autosaveTimeout = null;
     const syncStatusEl = document.getElementById('sync-notification');
     
     // Smart positioning for notifications
@@ -133,10 +133,6 @@ var App = (function() {
             clearTimeout(syncNotificationTimeout);
             syncNotificationTimeout = null;
         }
-        if (inactivityTimeout) {
-            clearTimeout(inactivityTimeout);
-            inactivityTimeout = null;
-        }
         
         // Remove all status classes (but keep position classes)
         syncStatusEl.classList.remove('saving', 'saved', 'unsaved', 'show');
@@ -155,51 +151,19 @@ var App = (function() {
             syncStatusEl.classList.add('unsaved');
             // Show notification for unsaved changes
             syncStatusEl.classList.add('show');
-            // Hide after 3 seconds of inactivity
-            resetInactivityTimer();
+            // No autohide: notification stays visible until next status change
         } else {
             syncStatusEl.textContent = 'Changes saved';
             syncStatusEl.classList.add('saved');
-            // Show briefly for saved confirmation
+            // Show notification for saved confirmation
             syncStatusEl.classList.add('show');
             console.log('Showing saved notification'); // Debug logging
-            // Auto-hide after 2.5 seconds (slightly shorter for less intrusiveness)
-            syncNotificationTimeout = setTimeout(() => {
-                syncStatusEl.classList.remove('show');
-                syncNotificationTimeout = null;
-                console.log('Hiding saved notification'); // Debug logging
-            }, 2500);
+            // No autohide: notification stays visible until next status change
         }
         
         // Update notification position after status change
         updateNotificationPosition();
     }
-
-    function resetInactivityTimer() {
-        if (inactivityTimeout) {
-            clearTimeout(inactivityTimeout);
-        }
-        // Hide notification after 3 seconds of inactivity
-        inactivityTimeout = setTimeout(() => {
-            if (syncStatus === 'unsaved') {
-                syncStatusEl.classList.remove('show');
-            }
-            inactivityTimeout = null;
-        }, 3000);
-    }
-
-    function handleActivity() {
-        if (syncStatus === 'unsaved' && syncStatusEl.classList.contains('show')) {
-            resetInactivityTimer();
-        }
-    }
-
-    // Listen for user activity to reset inactivity timer
-    window.addEventListener('mousemove', handleActivity, true);
-    window.addEventListener('keydown', handleActivity, true);
-    window.addEventListener('click', handleActivity, true);
-    window.addEventListener('scroll', handleActivity, true);
-    window.addEventListener('touchstart', handleActivity, true);
 
     // Keyboard shortcuts for save operations
     window.addEventListener('keydown', function(e) {
@@ -286,7 +250,6 @@ var App = (function() {
     }
 
     // Mark as unsaved on any input/change, undo/redo, or local save
-    let autosaveTimeout = null;
     
     function markDirty() {
         dirtySinceFileSave = true;
