@@ -9,6 +9,118 @@ var App = (function() {
     let syncNotificationTimeout = null;
     let inactivityTimeout = null;
     const syncStatusEl = document.getElementById('sync-notification');
+    
+    // Smart positioning for notifications
+    let lastInteractionPosition = { x: 0, y: 0 };
+    let currentNotificationPosition = 'bottom-right'; // Default position
+
+    // Track user interactions for smart positioning
+    function trackInteraction(event) {
+        if (event.clientX !== undefined && event.clientY !== undefined) {
+            lastInteractionPosition.x = event.clientX;
+            lastInteractionPosition.y = event.clientY;
+        }
+    }
+
+    // Calculate the farthest corner from the last interaction
+    function calculateFarthestCorner() {
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Get dynamic header height from CSS custom property
+        const headerHeightProperty = getComputedStyle(document.documentElement).getPropertyValue('--header-height');
+        const headerHeight = parseInt(headerHeightProperty) || 70; // Fallback to 70px if not set
+        
+        const x = lastInteractionPosition.x;
+        const y = lastInteractionPosition.y;
+
+        // Adjust for header - if interaction is in header area, consider it as below header
+        const adjustedY = y < headerHeight ? headerHeight + 10 : y; // Use smaller margin
+
+        // Calculate distances to each corner, accounting for header
+        const distances = {
+            'top-left': Math.sqrt(x * x + (adjustedY - headerHeight - 10) * (adjustedY - headerHeight - 10)),
+            'top-right': Math.sqrt((viewportWidth - x) * (viewportWidth - x) + (adjustedY - headerHeight - 10) * (adjustedY - headerHeight - 10)),
+            'bottom-left': Math.sqrt(x * x + (viewportHeight - adjustedY) * (viewportHeight - adjustedY)),
+            'bottom-right': Math.sqrt((viewportWidth - x) * (viewportWidth - x) + (viewportHeight - adjustedY) * (viewportHeight - adjustedY))
+        };
+
+        // Find the corner with maximum distance
+        let farthestCorner = 'bottom-right';
+        let maxDistance = 0;
+        
+        for (const [corner, distance] of Object.entries(distances)) {
+            if (distance > maxDistance) {
+                maxDistance = distance;
+                farthestCorner = corner;
+            }
+        }
+
+        return farthestCorner;
+    }
+
+    // Update notification position
+    function updateNotificationPosition() {
+        if (!syncStatusEl) return;
+        
+        const newPosition = calculateFarthestCorner();
+        
+        // Only update if position changed
+        if (newPosition !== currentNotificationPosition) {
+            const wasVisible = syncStatusEl.classList.contains('show');
+            
+            // If notification is currently visible, hide it first
+            if (wasVisible) {
+                syncStatusEl.classList.remove('show');
+            }
+            
+            // Remove old position class and add new one
+            syncStatusEl.classList.remove(`position-${currentNotificationPosition}`);
+            syncStatusEl.classList.add(`position-${newPosition}`);
+            
+            currentNotificationPosition = newPosition;
+            console.log('Updated notification position to:', newPosition);
+            
+            // If it was visible, show it again in the new position after a brief delay
+            if (wasVisible) {
+                setTimeout(() => {
+                    syncStatusEl.classList.add('show');
+                }, 100);
+            }
+        }
+    }
+
+    // Initialize interaction tracking
+    function initializeInteractionTracking() {
+        // Track mouse movements and clicks
+        document.addEventListener('mousemove', trackInteraction, { passive: true });
+        document.addEventListener('click', trackInteraction, { passive: true });
+        document.addEventListener('mousedown', trackInteraction, { passive: true });
+        
+        // Track touch events for mobile
+        document.addEventListener('touchstart', (event) => {
+            if (event.touches && event.touches[0]) {
+                trackInteraction({
+                    clientX: event.touches[0].clientX,
+                    clientY: event.touches[0].clientY
+                });
+            }
+        }, { passive: true });
+        
+        document.addEventListener('touchmove', (event) => {
+            if (event.touches && event.touches[0]) {
+                trackInteraction({
+                    clientX: event.touches[0].clientX,
+                    clientY: event.touches[0].clientY
+                });
+            }
+        }, { passive: true });
+
+        // Set initial position class
+        if (syncStatusEl) {
+            syncStatusEl.classList.add(`position-${currentNotificationPosition}`);
+        }
+    }
 
     function setSyncStatus(status) {
         syncStatus = status;
@@ -26,11 +138,14 @@ var App = (function() {
             inactivityTimeout = null;
         }
         
-        // Remove all status classes
+        // Remove all status classes (but keep position classes)
         syncStatusEl.classList.remove('saving', 'saved', 'unsaved', 'show');
         
+        // Update position based on last interaction before showing
+        updateNotificationPosition();
+        
         if (status === 'saving') {
-            syncStatusEl.textContent = 'Saving...';
+            syncStatusEl.textContent = 'Saving changes...';
             syncStatusEl.classList.add('saving');
             // Show notification for saving
             syncStatusEl.classList.add('show');
@@ -43,18 +158,21 @@ var App = (function() {
             // Hide after 3 seconds of inactivity
             resetInactivityTimer();
         } else {
-            syncStatusEl.textContent = 'All changes saved';
+            syncStatusEl.textContent = 'Changes saved';
             syncStatusEl.classList.add('saved');
             // Show briefly for saved confirmation
             syncStatusEl.classList.add('show');
             console.log('Showing saved notification'); // Debug logging
-            // Auto-hide after 3 seconds (longer for autosave visibility)
+            // Auto-hide after 2.5 seconds (slightly shorter for less intrusiveness)
             syncNotificationTimeout = setTimeout(() => {
                 syncStatusEl.classList.remove('show');
                 syncNotificationTimeout = null;
                 console.log('Hiding saved notification'); // Debug logging
-            }, 3000);
+            }, 2500);
         }
+        
+        // Update notification position after status change
+        updateNotificationPosition();
     }
 
     function resetInactivityTimer() {
@@ -353,6 +471,9 @@ var App = (function() {
 
             // Set up museum name input
             setupMuseumNameInput();
+            
+            // Initialize smart notification positioning
+            initializeInteractionTracking();
 
             // Remove loading state
             const loading = document.getElementById('loading');
@@ -487,7 +608,6 @@ This will replace your current museum data. Continue?`;
      * @param {string} type - Notification type ('success', 'error', 'info')
      */
     function showNotification(message, type = 'info') {
-        // For now, use alert. TODO: Create a proper notification system
         alert(message);
     }
 
