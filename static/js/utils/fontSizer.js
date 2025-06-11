@@ -1,24 +1,25 @@
 /**
  * Font Sizer Utility
- * Handles real-time font size adjustment for tile titles based on window resizing
+ * Handles font size adjustment for tile titles on every tile render.
+ * Window resize triggers tile re-rendering, which calls this utility.
  */
 const FontSizer = (function() {
     let isInitialized = false;
     
     /**
-     * Initialize the font sizer with window resize listener
+     * Initialize the font sizer (no event listeners needed)
+     * Font sizing now happens exclusively on tile renders for consistency
      */
     function init() {
         if (isInitialized) return;
         
-        // Listen for window resize events - no debouncing for real-time response
-        window.addEventListener('resize', adjustTileFontSizes);
-        
-        // Listen for container size changes (for aspect ratio changes)
-        document.addEventListener('containerSized', adjustTileFontSizes);
+        // No event listeners needed - all font sizing triggered by tile renders:
+        // - Window resize → tile re-render → FontSizer.forceAdjustment()
+        // - Container size changes → tile re-render → FontSizer.forceAdjustment()
+        // - Manual tile resize → FontSizer.forceAdjustment() (during resize)
         
         isInitialized = true;
-        console.log('FontSizer initialized with real-time resizing');
+        console.log('FontSizer initialized - font sizing on tile renders only');
     }
      /**
      * Adjust font sizes for all tile headers and no-preview elements to prevent wrapping
@@ -211,11 +212,10 @@ const FontSizer = (function() {
     }
     
     /**
-     * Cleanup - remove event listeners
+     * Cleanup - no event listeners to remove
      */
     function cleanup() {
-        window.removeEventListener('resize', adjustTileFontSizes);
-        document.removeEventListener('containerSized', adjustTileFontSizes);
+        // No event listeners to remove since all font sizing is triggered by tile renders
         
         isInitialized = false;
         console.log('FontSizer cleaned up');

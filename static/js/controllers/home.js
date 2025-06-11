@@ -136,11 +136,6 @@ const HomeController = (function() {
                 window.FontSizer.forceAdjustment();
             }
             
-            // Trigger font size adjustment after resize
-            if (window.FontSizer) {
-                window.FontSizer.forceAdjustment();
-            }
-            
             const conceptId = tile.dataset.id;
             const concept = concepts.find(c => c.id === conceptId);
             if (!concept) return;
