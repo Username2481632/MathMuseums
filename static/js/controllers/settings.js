@@ -10,7 +10,7 @@ const SettingsController = (function() {
     let saveSettingsBtn;
     let aspectWidthInput;
     let aspectHeightInput;
-    let screenFitInputs;
+    let screenFitControl;
     
     /**
      * Initialize the settings controller
@@ -23,7 +23,7 @@ const SettingsController = (function() {
         saveSettingsBtn = document.getElementById('save-settings');
         aspectWidthInput = document.getElementById('aspect-width');
         aspectHeightInput = document.getElementById('aspect-height');
-        screenFitInputs = document.querySelectorAll('input[name="screen-fit"]');
+        screenFitControl = document.getElementById('screen-fit-control');
         
         // Add event listeners
         if (settingsButton) {
@@ -36,6 +36,16 @@ const SettingsController = (function() {
         
         if (saveSettingsBtn) {
             saveSettingsBtn.addEventListener('click', saveSettings);
+        }
+
+        if (screenFitControl) {
+            screenFitControl.addEventListener('click', function(event) {
+                if (event.target.classList.contains('segmented-control-button')) {
+                    const buttons = screenFitControl.querySelectorAll('.segmented-control-button');
+                    buttons.forEach(btn => btn.classList.remove('active'));
+                    event.target.classList.add('active');
+                }
+            });
         }
         
         // Add digit-only input validation for aspect ratio inputs
@@ -116,10 +126,12 @@ const SettingsController = (function() {
                 autosaveRow.id = 'autosave-toggle-row';
                 autosaveRow.innerHTML = `
                     <h3>Autosave</h3>
-                    <label style="display: flex; align-items: center; gap: 0.5em;">
-                        <input type="checkbox" id="autosave-toggle">
-                        Enable Autosave (automatically save after changes)
-                    </label>
+                    <div class="settings-options" style="display: flex; justify-content: flex-end;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="autosave-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
                 `;
                 settingsModal.querySelector('.settings-container').appendChild(autosaveRow);
                 // Set initial state from preferences
@@ -156,10 +168,11 @@ const SettingsController = (function() {
         }
         
         // Set screen fit
-        if (screenFitInputs && preferences.screenFit) {
-            for (const input of screenFitInputs) {
-                input.checked = input.value === preferences.screenFit;
-            }
+        if (screenFitControl && preferences.screenFit) {
+            const buttons = screenFitControl.querySelectorAll('.segmented-control-button');
+            buttons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.value === preferences.screenFit);
+            });
         }
     }
     
@@ -178,10 +191,10 @@ const SettingsController = (function() {
         }
         
         // Get selected screen fit
-        for (const input of screenFitInputs) {
-            if (input.checked) {
-                screenFit = input.value;
-                break;
+        if (screenFitControl) {
+            const activeButton = screenFitControl.querySelector('.segmented-control-button.active');
+            if (activeButton) {
+                screenFit = activeButton.dataset.value;
             }
         }
         

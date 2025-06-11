@@ -108,12 +108,10 @@
                 <div class="settings-group">
                     <h3>Screen Fit</h3>
                     <div class="settings-options">
-                        <label>
-                            <input type="radio" name="screen-fit" id="screen-fit-radio-fit" value="fit" checked> Fit (add black bars)
-                        </label>
-                        <label>
-                            <input type="radio" name="screen-fit" id="screen-fit-radio-fill" value="fill"> Fill (add scrolling)
-                        </label>
+                        <div class="segmented-control" id="screen-fit-control">
+                            <button class="segmented-control-button" data-value="fit">Fit</button>
+                            <button class="segmented-control-button" data-value="fill">Fill</button>
+                        </div>
                     </div>
                 </div>
             </div>
