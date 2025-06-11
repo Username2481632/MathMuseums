@@ -648,7 +648,7 @@ This will replace your current museum data. Continue?`;
         
         // Helper function to create museum name input with consistent styling
         function createMuseumNameInput(className = 'museum-name-text') {
-            const input = document.createElement('div');
+            const input = document.createElement('span');
             input.className = className;
             input.contentEditable = true;
             input.setAttribute('data-placeholder', museumNameConfig.placeholder);
@@ -682,8 +682,7 @@ This will replace your current museum data. Continue?`;
                 -moz-osx-font-smoothing: grayscale;
                 min-width: 4ch;
                 white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
+                overflow: visible;
                 cursor: text;
             `;
         }
@@ -770,6 +769,59 @@ This will replace your current museum data. Continue?`;
             saveMuseumName();
         });
         
+        // DRY function to calculate and apply text scaling
+        function calculateAndApplyTextScaling(element, maxWidth, options = {}) {
+            const {
+                minScaleFactor = 0.3, // More aggressive scaling for dropdowns
+                scaleThreshold = 0.99,
+                resetTransform = () => {},
+                applyTransform = (scaleFactor) => {},
+                debugLabel = 'Element'
+            } = options;
+            
+            // Store original styles that might interfere with measurement
+            const originalTransform = element.style.transform || '';
+            const originalOverflow = element.style.overflow || '';
+            const originalTextOverflow = element.style.textOverflow || '';
+            const originalWhiteSpace = element.style.whiteSpace || '';
+            
+            // Temporarily reset styles for accurate measurement
+            element.style.transform = '';
+            element.style.overflow = 'visible';
+            element.style.textOverflow = 'unset';
+            element.style.whiteSpace = 'nowrap';
+            
+            // Force reflow and measure
+            element.offsetWidth;
+            const naturalWidth = element.scrollWidth;
+            
+            // Restore original styles except transform (which we'll set based on scaling)
+            element.style.overflow = originalOverflow;
+            element.style.textOverflow = originalTextOverflow;
+            element.style.whiteSpace = originalWhiteSpace;
+            
+            // Calculate scale factor
+            const scaleFactor = naturalWidth > maxWidth && maxWidth > 100 
+                ? Math.max(minScaleFactor, Math.min(scaleThreshold, maxWidth / naturalWidth))
+                : 1.0;
+            
+            console.log(`${debugLabel} Scaling Debug:`, {
+                naturalWidth,
+                maxWidth,
+                scaleFactor,
+                needsScaling: scaleFactor < 1.0
+            });
+            
+            // Apply scaling
+            if (scaleFactor < 1.0) {
+                applyTransform(scaleFactor);
+            } else {
+                resetTransform();
+            }
+            
+            return scaleFactor;
+        }
+
         function updateHeaderSize(allowDropdownTransition = true) {
             const header = document.querySelector('header');
             const museumNameDisplay = document.querySelector('.museum-name-display');
@@ -781,8 +833,8 @@ This will replace your current museum data. Continue?`;
             
             // Always reset transform first to get natural measurements
             museumNameDisplay.style.transform = '';
-            if (headerControls) headerControls.style.transform = 'translateY(-50%)';
-            if (headerRight) headerRight.style.transform = 'translateY(-50%)';
+            if (headerControls) { headerControls.style.transform = 'translateY(-50%)'; }
+            if (headerRight) { headerRight.style.transform = 'translateY(-50%)'; }
             
             // Force a reflow to ensure the reset takes effect
             museumNameDisplay.offsetWidth;
@@ -796,21 +848,19 @@ This will replace your current museum data. Continue?`;
             const padding = 40; // Additional padding for safety
             const maxTitleWidth = viewportWidth - buttonSpaceLeft - buttonSpaceRight - padding;
             
-            // Get the natural width of the title
-            const naturalTitleWidth = museumNameDisplay.scrollWidth;
-            
-            console.log('Debug:', {
-                viewportWidth,
-                maxTitleWidth,
-                naturalTitleWidth,
-                needsScaling: naturalTitleWidth > maxTitleWidth
+            // Use the DRY scaling function
+            const scaleFactor = calculateAndApplyTextScaling(museumNameDisplay, maxTitleWidth, {
+                minScaleFactor: 0.3,
+                scaleThreshold: 0.99,
+                resetTransform: () => {
+                    museumNameDisplay.style.transform = '';
+                },
+                applyTransform: (factor) => {
+                    museumNameDisplay.style.transform = `scale(${factor})`;
+                    museumNameDisplay.style.transformOrigin = 'center';
+                },
+                debugLabel: 'Header'
             });
-            
-            // Always calculate scale factor, even when no scaling is needed
-            // This ensures smooth transitions in both directions
-            const scaleFactor = naturalTitleWidth > maxTitleWidth && maxTitleWidth > 100 
-                ? Math.min(0.99, maxTitleWidth / naturalTitleWidth)
-                : 1.0; // Normal size when no scaling needed
             
             // Scale header height proportionally (1.0 = 70px, smaller scale = smaller height)
             const newHeight = Math.min(70, 70 * scaleFactor);
@@ -822,14 +872,6 @@ This will replace your current museum data. Continue?`;
             } else {
                 // Show normal or scaled title
                 hideCollapsedTitle();
-                
-                // Apply scaling to title (1.0 = normal size, <1.0 = scaled down)
-                if (scaleFactor < 1.0) {
-                    museumNameDisplay.style.transform = `scale(${scaleFactor})`;
-                    museumNameDisplay.style.transformOrigin = 'center';
-                } else {
-                    museumNameDisplay.style.transform = '';
-                }
                 
                 // Apply scaling to buttons
                 if (headerControls) {
@@ -858,10 +900,9 @@ This will replace your current museum data. Continue?`;
                 // Update all container heights
                 updateContainerHeights(newHeight);
                 
-                console.log('Applied scaling:', { 
+                console.log('Applied header scaling:', { 
                     scaleFactor, 
                     newHeight, 
-                    naturalTitleWidth, 
                     maxTitleWidth,
                     needsScaling: scaleFactor < 1.0,
                     shouldShowDropdown: scaleFactor < 0.75
@@ -913,12 +954,12 @@ This will replace your current museum data. Continue?`;
                 titleDropdown.className = 'title-dropdown';
                 titleDropdown.style.cssText = `
                     position: fixed;
-                    top: 70px;
+                    top: var(--header-height, 70px);
                     left: 50%;
                     transform: translateX(-50%);
                     background: var(--primary-color);
                     color: white;
-                    padding: 1rem 2rem;
+                    padding: 4px 1rem;
                     border-radius: 0 0 8px 8px;
                     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
                     z-index: 10000;
@@ -926,25 +967,19 @@ This will replace your current museum data. Continue?`;
                     font-size: var(--font-size-xl);
                     font-weight: bold;
                     white-space: nowrap;
-                    max-width: 90vw;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
+                    overflow: visible;
                     cursor: pointer;
+                    width: auto;
+                    min-width: max-content;
+                    height: auto;
+                    min-height: auto;
+                    line-height: 1;
                 `;
+                // Store the original computed font-size for scaling
+                const computedFontSize = window.getComputedStyle(titleDropdown).fontSize;
+                titleDropdown.setAttribute('data-original-font-size', computedFontSize);
                 
-                // Create editable museum name element for dropdown
-                const dropdownNameContainer = document.createElement('div');
-                dropdownNameContainer.className = 'museum-name-container';
-                dropdownNameContainer.style.cssText = `
-                    display: flex;
-                    align-items: baseline;
-                    justify-content: center;
-                    font-size: var(--font-size-xl);
-                    font-weight: bold;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    position: relative;
-                `;
-                
+                // Create editable museum name element for dropdown - exactly like header
                 const dropdownNameDisplay = document.createElement('div');
                 dropdownNameDisplay.className = 'museum-name-display';
                 dropdownNameDisplay.style.cssText = `
@@ -952,6 +987,9 @@ This will replace your current museum data. Continue?`;
                     align-items: baseline;
                     gap: 0;
                     position: relative;
+                    width: auto;
+                    min-width: max-content;
+                    overflow: visible;
                 `;
                 
                 const dropdownNameText = createMuseumNameInput('museum-name-text dropdown-name-text');
@@ -967,11 +1005,10 @@ This will replace your current museum data. Continue?`;
                     dropdownNameText.textContent = currentName;
                 }
                 
-                // Assemble the dropdown structure
+                // Assemble the dropdown structure - exactly like header (just two spans in display div)
                 dropdownNameDisplay.appendChild(dropdownNameText);
                 dropdownNameDisplay.appendChild(dropdownSuffix);
-                dropdownNameContainer.appendChild(dropdownNameDisplay);
-                titleDropdown.appendChild(dropdownNameContainer);
+                titleDropdown.appendChild(dropdownNameDisplay);
                 
                 // Event handlers for dropdown name editing
                 dropdownNameText.addEventListener('focus', () => {
@@ -1014,33 +1051,48 @@ This will replace your current museum data. Continue?`;
                 
                 // Function to adjust dropdown size based on content width
                 function updateDropdownSize() {
-                    const maxDropdownWidth = window.innerWidth * 0.9; // 90vw
+                    // Account for dropdown padding when calculating max width
+                    const dropdownPadding = 32; // 1rem left + 1rem right = 32px (reduced from 64px)
+                    const maxDropdownWidth = window.innerWidth - dropdownPadding;
                     
-                    // Temporarily remove transform to get natural width
-                    const originalTransform = dropdownNameContainer.style.transform;
-                    dropdownNameContainer.style.transform = '';
+                    // Ensure minimum width for calculation
+                    if (maxDropdownWidth < 100) {
+                        console.warn('Dropdown max width too small:', maxDropdownWidth);
+                        return 1.0;
+                    }
                     
-                    // Force reflow and measure
-                    dropdownNameContainer.offsetWidth;
-                    const naturalWidth = dropdownNameContainer.scrollWidth;
-                    
-                    console.log('Dropdown Debug:', {
-                        naturalWidth,
-                        maxDropdownWidth,
-                        needsScaling: naturalWidth > maxDropdownWidth
+                    // Use the same DRY scaling function as the header - scale the display element like header does
+                    const scaleFactor = calculateAndApplyTextScaling(dropdownNameDisplay, maxDropdownWidth, {
+                        minScaleFactor: 0.1, // Very aggressive scaling - can go down to 10%
+                        scaleThreshold: 0.99,
+                        resetTransform: () => {
+                            dropdownNameDisplay.style.transform = '';
+                            dropdownNameDisplay.style.transformOrigin = '';
+                            titleDropdown.style.padding = '4px 1rem';
+                            titleDropdown.style.lineHeight = '1';
+                            // Restore original font-size
+                            const origFontSize = titleDropdown.getAttribute('data-original-font-size');
+                            if (origFontSize) titleDropdown.style.fontSize = origFontSize;
+                        },
+                        applyTransform: (factor) => {
+                            dropdownNameDisplay.style.transform = `scale(${factor})`;
+                            dropdownNameDisplay.style.transformOrigin = 'center';
+                            // Keep vertical padding fixed at 4px, only scale horizontal padding
+                            const baseHorizontalPadding = 16; // 1rem = 16px
+                            const horizontalPadding = Math.max(4, baseHorizontalPadding * factor);
+                            titleDropdown.style.padding = `4px ${horizontalPadding}px`;
+                            // Scale font-size and line-height of the dropdown container to match transform
+                            titleDropdown.style.lineHeight = factor.toString();
+                            const origFontSize = titleDropdown.getAttribute('data-original-font-size');
+                            if (origFontSize) {
+                                const px = parseFloat(origFontSize);
+                                if (!isNaN(px)) titleDropdown.style.fontSize = (px * factor) + 'px';
+                            }
+                        },
+                        debugLabel: 'Dropdown'
                     });
                     
-                    if (naturalWidth > maxDropdownWidth && maxDropdownWidth > 100) {
-                        // Scale down to fit
-                        const scaleFactor = Math.min(0.99, maxDropdownWidth / naturalWidth);
-                        dropdownNameContainer.style.transform = `scale(${scaleFactor})`;
-                        dropdownNameContainer.style.transformOrigin = 'center';
-                        
-                        console.log('Applied dropdown scaling:', { scaleFactor, naturalWidth, maxDropdownWidth });
-                    } else {
-                        // No scaling needed
-                        dropdownNameContainer.style.transform = '';
-                    }
+                    return scaleFactor;
                 }
                 
                 dropdownNameText.addEventListener('keydown', (event) => {
@@ -1120,14 +1172,12 @@ This will replace your current museum data. Continue?`;
             const dropdown = collapsedTitle._dropdown;
             if (dropdown) {
                 const dropdownNameText = dropdown.querySelector('.dropdown-name-text');
-                if (dropdownNameText) {
+                const dropdownNameDisplay = dropdown.querySelector('.museum-name-display');
+                if (dropdownNameText && dropdownNameDisplay) {
                     dropdownNameText.textContent = titleText;
                     // Update size after content change
                     setTimeout(() => {
-                        const dropdownNameContainer = dropdown.querySelector('.museum-name-container');
-                        if (dropdownNameContainer) {
-                            updateDropdownSizeForContainer(dropdownNameContainer);
-                        }
+                        updateDropdownSizeForContainer(dropdownNameDisplay);
                     }, 10);
                 }
             }
@@ -1135,8 +1185,8 @@ This will replace your current museum data. Continue?`;
             // Reset button transforms
             const headerControls = document.querySelector('.header-controls');
             const headerRight = document.querySelector('.header-right');
-            if (headerControls) headerControls.style.transform = 'translateY(-50%)';
-            if (headerRight) headerRight.style.transform = 'translateY(-50%)';
+            if (headerControls) { headerControls.style.transform = 'translateY(-50%)'; }
+            if (headerRight) { headerRight.style.transform = 'translateY(-50%)'; }
             
             // Keep header at normal height
             header.style.height = '70px';
@@ -1146,34 +1196,56 @@ This will replace your current museum data. Continue?`;
         }
         
         // Helper function to update dropdown size (can be called from outside the dropdown creation closure)
-        function updateDropdownSizeForContainer(dropdownNameContainer) {
-            const maxDropdownWidth = window.innerWidth * 0.9; // 90vw
+        function updateDropdownSizeForContainer(dropdownNameDisplay) {
+            // Account for dropdown padding when calculating max width
+            const dropdownPadding = 32; // 1rem left + 1rem right = 32px (reduced from 64px)
+            const maxDropdownWidth = window.innerWidth - dropdownPadding;
             
-            // Temporarily remove transform to get natural width
-            const originalTransform = dropdownNameContainer.style.transform;
-            dropdownNameContainer.style.transform = '';
+            // Ensure minimum width for calculation
+            if (maxDropdownWidth < 100) {
+                console.warn('Dropdown max width too small:', maxDropdownWidth);
+                return 1.0;
+            }
             
-            // Force reflow and measure
-            dropdownNameContainer.offsetWidth;
-            const naturalWidth = dropdownNameContainer.scrollWidth;
+            // Use the display element directly - same as header structure
+            const targetElement = dropdownNameDisplay;
             
-            console.log('Dropdown Debug:', {
-                naturalWidth,
-                maxDropdownWidth,
-                needsScaling: naturalWidth > maxDropdownWidth
+            // Use the same DRY scaling function as the header - scale the display element like header does
+            const scaleFactor = calculateAndApplyTextScaling(targetElement, maxDropdownWidth, {
+                minScaleFactor: 0.1, // Very aggressive scaling - can go down to 10%
+                scaleThreshold: 0.99,
+                resetTransform: () => {
+                    targetElement.style.transform = '';
+                    targetElement.style.transformOrigin = '';
+                    const titleDropdown = dropdownNameDisplay.closest('.title-dropdown');
+                    if (titleDropdown) {
+                        titleDropdown.style.padding = '4px 1rem';
+                        titleDropdown.style.lineHeight = '1';
+                        const origFontSize = titleDropdown.getAttribute('data-original-font-size');
+                        if (origFontSize) titleDropdown.style.fontSize = origFontSize;
+                    }
+                },
+                applyTransform: (factor) => {
+                    targetElement.style.transform = `scale(${factor})`;
+                    targetElement.style.transformOrigin = 'center';
+                    const titleDropdown = dropdownNameDisplay.closest('.title-dropdown');
+                    if (titleDropdown) {
+                        const baseHorizontalPadding = 16; // 1rem = 16px
+                        const horizontalPadding = Math.max(4, baseHorizontalPadding * factor);
+                        titleDropdown.style.padding = `4px ${horizontalPadding}px`;
+                        // Scale font-size and line-height of the dropdown container to match transform
+                        titleDropdown.style.lineHeight = factor.toString();
+                        const origFontSize = titleDropdown.getAttribute('data-original-font-size');
+                        if (origFontSize) {
+                            const px = parseFloat(origFontSize);
+                            if (!isNaN(px)) titleDropdown.style.fontSize = (px * factor) + 'px';
+                        }
+                    }
+                },
+                debugLabel: 'Dropdown Helper'
             });
             
-            if (naturalWidth > maxDropdownWidth && maxDropdownWidth > 100) {
-                // Scale down to fit
-                const scaleFactor = Math.min(0.99, maxDropdownWidth / naturalWidth);
-                dropdownNameContainer.style.transform = `scale(${scaleFactor})`;
-                dropdownNameContainer.style.transformOrigin = 'center';
-                
-                console.log('Applied dropdown scaling:', { scaleFactor, naturalWidth, maxDropdownWidth });
-            } else {
-                // No scaling needed
-                dropdownNameContainer.style.transform = '';
-            }
+            return scaleFactor;
         }
         
         function hideCollapsedTitle() {
@@ -1280,6 +1352,16 @@ This will replace your current museum data. Continue?`;
         // Update header size on window resize
         window.addEventListener('resize', () => {
             updateHeaderSize();
+            
+            // Also update dropdown size if it's visible
+            const collapsedTitle = document.querySelector('.collapsed-title-caret');
+            if (collapsedTitle && collapsedTitle._dropdown) {
+                const dropdown = collapsedTitle._dropdown;
+                const dropdownNameDisplay = dropdown.querySelector('.museum-name-display');
+                if (dropdown.style.display === 'block' && dropdownNameDisplay) {
+                    updateDropdownSizeForContainer(dropdownNameDisplay);
+                }
+            }
             
             // Also update container heights on resize
             const header = document.querySelector('header');
