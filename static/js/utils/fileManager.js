@@ -60,22 +60,51 @@ const FileManager = (function() {
             const data = await createExportData();
             const jsonString = JSON.stringify(data, null, 2);
             const blob = new Blob([jsonString], { type: 'application/octet-stream' });
-            
-            // Create download link
+
+            // Try File System Access API (for supported browsers)
+            if (window.showSaveFilePicker) {
+                try {
+                    const fileHandle = await window.showSaveFilePicker({
+                        suggestedName: filename,
+                        types: [
+                            {
+                                description: 'Math Museums File',
+                                accept: { 'application/octet-stream': ['.mathmuseums'] }
+                            }
+                        ]
+                    });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    console.log('User data saved using File System Access API');
+                    return true;
+                } catch (fsError) {
+                    // If user cancels, error has name 'AbortError' or 'AbortError' in message
+                    if (fsError && (fsError.name === 'AbortError' || (fsError.message && fsError.message.includes('AbortError')))) {
+                        // User cancelled, abort without fallback
+                        return false;
+                    }
+                    // Otherwise, fall back to download
+                    console.warn('File System Access API failed, falling back to download:', fsError);
+                }
+            }
+
+            // Fallback: Create download link
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
             link.download = filename;
-            
+
             // Trigger download
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             // Clean up
             URL.revokeObjectURL(url);
-            
+
             console.log('User data downloaded successfully');
+            return true;
         } catch (error) {
             console.error('Error downloading user data:', error);
             throw error;

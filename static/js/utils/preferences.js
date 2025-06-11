@@ -9,7 +9,8 @@ const PreferencesClient = (function() {
         theme: 'light',
         aspectRatioWidth: 1, // Default aspect ratio 1:1
         aspectRatioHeight: 1,
-        screenFit: 'fit' // Default screen fit mode (fit or fill) - stored in localStorage only
+        screenFit: 'fit', // Default screen fit mode (fit or fill) - stored in localStorage only
+        autosave: false // New: autosave preference
     };
     let loaded = false;
     let originalContentBounds = null; // Store original content bounds for consistent scaling
@@ -478,7 +479,8 @@ const PreferencesClient = (function() {
                 theme: parsed.theme || 'light',
                 aspectRatioWidth: parsed.aspectRatioWidth || 1,
                 aspectRatioHeight: parsed.aspectRatioHeight || 1,
-                screenFit: parsed.screenFit || 'fit'
+                screenFit: parsed.screenFit || 'fit',
+                autosave: parsed.autosave || false
             };
         } catch (error) {
             console.error('Error reading preferences from localStorage:', error);

@@ -101,10 +101,13 @@ var App = (function() {
                     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
                     const filename = `my-math-museum-${timestamp}.mathmuseums`;
                     
-                    await FileManager.downloadUserData(filename);
-                    
-                    // Show success message
-                    showNotification('File exported successfully!', 'success');
+                    const saveResult = await FileManager.downloadUserData(filename);
+                    if (saveResult) {
+                        // Set flag for autosave toggle
+                        localStorage.setItem('mm_has_saved_file', 'true');
+                        // No alert, just return
+                        return;
+                    } // else: user cancelled, do nothing
                     
                 } catch (error) {
                     console.error('Error exporting file:', error);

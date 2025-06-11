@@ -107,6 +107,30 @@ const SettingsController = (function() {
         if (settingsModal) {
             settingsModal.style.display = 'block';
             loadCurrentSettings(); // Ensure settings are current when opening
+            // Add Autosave toggle if user has saved a file
+            const hasSaved = localStorage.getItem('mm_has_saved_file') === 'true';
+            let autosaveRow = document.getElementById('autosave-toggle-row');
+            if (hasSaved && !autosaveRow) {
+                autosaveRow = document.createElement('div');
+                autosaveRow.className = 'settings-group';
+                autosaveRow.id = 'autosave-toggle-row';
+                autosaveRow.innerHTML = `
+                    <h3>Autosave</h3>
+                    <label style="display: flex; align-items: center; gap: 0.5em;">
+                        <input type="checkbox" id="autosave-toggle">
+                        Enable Autosave (automatically save after changes)
+                    </label>
+                `;
+                settingsModal.querySelector('.settings-container').appendChild(autosaveRow);
+                // Set initial state from preferences
+                const autosavePref = PreferencesClient.getPreferences().autosave;
+                document.getElementById('autosave-toggle').checked = !!autosavePref;
+                document.getElementById('autosave-toggle').addEventListener('change', function(e) {
+                    PreferencesClient.savePreferences({ autosave: e.target.checked });
+                });
+            } else if (!hasSaved && autosaveRow) {
+                autosaveRow.remove();
+            }
         }
     }
     
