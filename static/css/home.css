@@ -2,6 +2,7 @@
 #home-view {
     margin: 0;
     padding: 0;
+    background-color: var(--letterbox-color); /* Ensure letterbox background in all modes */
 }
 
 .tiles-container {
@@ -13,15 +14,15 @@
     margin: 0;
     padding: 0;
     overflow: hidden;
-    transition: height 0.3s ease; /* Smooth height transitions */
+    transition: width 0.3s ease, height 0.3s ease; /* Smooth width and height transitions */
 }
 
-/* Tiles container overrides for fill mode */
+/* In fit and fill modes, tiles container should inherit aspect ratio container size, not viewport size */
+#home-view.screen-fit-mode .tiles-container,
 #home-view.screen-fill-mode .tiles-container {
     width: 100%;
     height: 100%;
-    overflow: visible; /* Allow content to extend beyond container in fill mode */
-    position: relative;
+    background-color: var(--bg-color); /* Keep content background */
 }
 
 .concept-tile {

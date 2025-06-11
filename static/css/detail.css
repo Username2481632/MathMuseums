@@ -3,6 +3,8 @@
     display: flex;
     flex-direction: column;
     height: calc(100vh - 100px);
+    background-color: var(--bg-color); /* Override body letterbox color for content */
+    padding: var(--spacing-lg);
 }
 
 .detail-header {
@@ -44,9 +46,4 @@
 
 #back-button {
     background-color: var(--primary-color);
-}
-
-/* Detail view container specific styling */
-main#app-container #detail-view {
-    padding: var(--spacing-lg);
 }

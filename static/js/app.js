@@ -343,53 +343,157 @@ This will replace your current museum data. Continue?`;
                 needsScaling: naturalTitleWidth > maxTitleWidth
             });
             
-            if (naturalTitleWidth > maxTitleWidth && maxTitleWidth > 100) {
-                // Calculate scale factor (always less than 1)
-                const scaleFactor = Math.min(0.99, maxTitleWidth / naturalTitleWidth);
-                
-                // Apply scaling to title
+            // Always calculate scale factor, even when no scaling is needed
+            // This ensures smooth transitions in both directions
+            const scaleFactor = naturalTitleWidth > maxTitleWidth && maxTitleWidth > 100 
+                ? Math.min(0.99, maxTitleWidth / naturalTitleWidth)
+                : 1.0; // Normal size when no scaling needed
+            
+            // Apply scaling to title (1.0 = normal size, <1.0 = scaled down)
+            if (scaleFactor < 1.0) {
                 museumNameDisplay.style.transform = `scale(${scaleFactor})`;
                 museumNameDisplay.style.transformOrigin = 'center';
-                
-                // Apply scaling to buttons
-                if (headerControls) {
+            } else {
+                museumNameDisplay.style.transform = '';
+            }
+            
+            // Apply scaling to buttons
+            if (headerControls) {
+                if (scaleFactor < 1.0) {
                     headerControls.style.transform = `translateY(-50%) scale(${scaleFactor})`;
                     headerControls.style.transformOrigin = 'left center';
+                } else {
+                    headerControls.style.transform = 'translateY(-50%)';
                 }
-                if (headerRight) {
+            }
+            if (headerRight) {
+                if (scaleFactor < 1.0) {
                     headerRight.style.transform = `translateY(-50%) scale(${scaleFactor})`;
                     headerRight.style.transformOrigin = 'right center';
+                } else {
+                    headerRight.style.transform = 'translateY(-50%)';
+                }
+            }
+            
+            // Scale header height proportionally (1.0 = 70px, smaller scale = smaller height)
+            const newHeight = Math.min(70, 70 * scaleFactor);
+            header.style.height = `${newHeight}px`;
+            document.body.style.paddingTop = `${newHeight}px`;
+            
+            // Update CSS custom property for tiles container
+            document.documentElement.style.setProperty('--header-height', `${newHeight}px`);
+            
+            // Update all container heights
+            updateContainerHeights(newHeight);
+            
+            console.log('Applied scaling:', { 
+                scaleFactor, 
+                newHeight, 
+                naturalTitleWidth, 
+                maxTitleWidth,
+                needsScaling: scaleFactor < 1.0 
+            });
+        }
+        
+        // DRY function to update all container heights (and aspect ratio widths)
+        function updateContainerHeights(headerHeight) {
+            const viewportHeight = window.innerHeight;
+            const viewportWidth = window.innerWidth;
+            const containerHeight = viewportHeight - headerHeight;
+            
+            // Get containers that should fill the viewport height
+            const appContainer = document.querySelector('#app-container');
+            const homeView = document.querySelector('#home-view');
+            
+            // Update viewport-filling containers
+            [appContainer, homeView].forEach(container => {
+                if (container) {
+                    container.style.removeProperty('height');
+                    container.style.setProperty('height', `${containerHeight}px`, 'important');
+                    container.offsetHeight; // Force recalculation
+                }
+            });
+            
+            // For aspect ratio containers, we need to recalculate based on the new available space
+            const aspectRatioContainer = document.querySelector('.aspect-ratio-container');
+            if (aspectRatioContainer && homeView) {
+                // Get the current aspect ratio from preferences
+                const aspectRatio = window.PreferencesClient ? window.PreferencesClient.getAspectRatio() : { width: 16, height: 9 };
+                const targetAspectRatio = aspectRatio.width / aspectRatio.height;
+                
+                if (homeView.classList.contains('screen-fit-mode')) {
+                    // In screen-fit-mode, calculate optimal size that fits in available space
+                    let containerWidth = viewportWidth;
+                    let newContainerHeight = containerWidth / targetAspectRatio;
+                    if (newContainerHeight > containerHeight) {
+                        newContainerHeight = containerHeight;
+                        containerWidth = newContainerHeight * targetAspectRatio;
+                    }
+                    
+                    aspectRatioContainer.style.width = `${containerWidth}px`;
+                    aspectRatioContainer.style.height = `${newContainerHeight}px`;
+                } else if (homeView.classList.contains('screen-fill-mode')) {
+                    // In screen-fill-mode, calculate size that fills one dimension
+                    const fillWidthHeight = viewportWidth / targetAspectRatio;
+                    const fillHeightWidth = containerHeight * targetAspectRatio;
+                    
+                    let containerWidth, newContainerHeight;
+                    if (fillWidthHeight >= fillHeightWidth) {
+                        containerWidth = viewportWidth;
+                        newContainerHeight = fillWidthHeight;
+                    } else {
+                        containerWidth = fillHeightWidth;
+                        newContainerHeight = containerHeight;
+                    }
+                    
+                    aspectRatioContainer.style.width = `${containerWidth}px`;
+                    aspectRatioContainer.style.height = `${newContainerHeight}px`;
+                } else {
+                    // In default mode, calculate optimal size within available space
+                    let containerWidth = viewportWidth;
+                    let newContainerHeight = containerWidth / targetAspectRatio;
+                    if (newContainerHeight > containerHeight) {
+                        newContainerHeight = containerHeight;
+                        containerWidth = newContainerHeight * targetAspectRatio;
+                    }
+                    
+                    aspectRatioContainer.style.width = `${containerWidth}px`;
+                    aspectRatioContainer.style.height = `${newContainerHeight}px`;
                 }
                 
-                // Scale header height proportionally (never more than 70px)
-                const newHeight = Math.min(70, 70 * scaleFactor);
-                header.style.height = `${newHeight}px`;
-                document.body.style.paddingTop = `${newHeight}px`;
-                
-                // Update CSS custom property for tiles container
-                document.documentElement.style.setProperty('--header-height', `${newHeight}px`);
-                
-                console.log('Applied scaling:', { scaleFactor, newHeight });
-            } else {
-                // Reset to normal size
-                museumNameDisplay.style.transform = '';
-                if (headerControls) headerControls.style.transform = 'translateY(-50%)';
-                if (headerRight) headerRight.style.transform = 'translateY(-50%)';
-                header.style.height = '70px';
-                document.body.style.paddingTop = '70px';
-                
-                // Reset CSS custom property for tiles container
-                document.documentElement.style.setProperty('--header-height', '70px');
-                
-                console.log('Reset to normal size');
+                // Remove any explicit height from inner containers - let them inherit from parent
+                const aspectRatioContent = document.querySelector('.aspect-ratio-content');
+                const tilesContainer = document.querySelector('.tiles-container');
+                [aspectRatioContent, tilesContainer].forEach(container => {
+                    if (container) {
+                        container.style.removeProperty('height');
+                        container.style.removeProperty('width');
+                        container.offsetHeight;
+                    }
+                });
             }
         }
         
         // Update header size on window resize
-        window.addEventListener('resize', updateHeaderSize);
+        window.addEventListener('resize', () => {
+            updateHeaderSize();
+            
+            // Also update container heights on resize
+            const header = document.querySelector('header');
+            const currentHeaderHeight = header ? parseFloat(header.style.height) || 70 : 70;
+            updateContainerHeights(currentHeaderHeight);
+        });
         
-        // Initial header size update
-        setTimeout(updateHeaderSize, 100);
+        // Initial header size update and CSS property setup
+        setTimeout(() => {
+            // Set initial CSS property
+            document.documentElement.style.setProperty('--header-height', '70px');
+            
+            // Set initial container heights
+            updateContainerHeights(70);
+            
+            updateHeaderSize();
+        }, 100);
         
         function saveMuseumName() {
             const name = museumNameText.textContent.trim();
