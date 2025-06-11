@@ -23,6 +23,7 @@
     --font-size-lg: 1.25rem;
     --font-size-xl: 1.5rem;
     --font-size-xxl: 2rem;
+    --header-height: 70px; /* Consistent header height */
 }
 
 * {
@@ -565,4 +566,53 @@ main {
 #sync-notification.unsaved {
     background: #ef4444; /* Red for unsaved */
     color: #fff;
+}
+
+/* Collapsed Title Styles */
+.title-caret-btn {
+    background: transparent;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.title-caret-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.title-caret-btn.active {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.collapsed-title-overlay {
+    position: fixed;
+    top: var(--header-height, 70px);
+    left: 0;
+    right: 0;
+    background: var(--primary-color);
+    color: white;
+    z-index: 999;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transform: translateY(-100%);
+    transition: transform 0.3s ease-out;
+    pointer-events: none;
+}
+
+.collapsed-title-overlay.show {
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.collapsed-title-content {
+    padding: 16px;
+    text-align: center;
+    font-size: var(--font-size-xl);
+    font-weight: bold;
+    letter-spacing: -0.01em;
 }

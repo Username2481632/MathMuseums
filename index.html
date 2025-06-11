@@ -28,6 +28,12 @@
                     <span class="museum-title-suffix">'s Math Museum</span>
                 </div>
             </div>
+            <!-- Caret button for collapsed title -->
+            <button id="title-caret-button" class="title-caret-btn" style="display: none;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7 10l5 5 5-5z"/>
+                </svg>
+            </button>
         </div>
         <div class="header-right">
             <button id="settings-button" class="settings-btn btn"><img src="static/img/settings.svg" alt="Settings" class="icon"></button>
@@ -38,6 +44,14 @@
         <!-- Content will be dynamically replaced by the router -->
         <div id="loading">Loading your museum...</div>
     </main>
+
+    <!-- Collapsed title dropdown overlay -->
+    <div id="collapsed-title-overlay" class="collapsed-title-overlay">
+        <div class="collapsed-title-content">
+            <span id="collapsed-museum-name"></span>
+            <span class="museum-title-suffix">'s Math Museum</span>
+        </div>
+    </div>
 
     <!-- Home view template -->
     <template id="home-template">

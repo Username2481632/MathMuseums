@@ -608,8 +608,10 @@ This will replace your current museum data. Continue?`;
             
             // Get the viewport width and calculate truly available space
             const viewportWidth = window.innerWidth;
-            const buttonSpaceLeft = 200; // Space for left buttons
-            const buttonSpaceRight = 100; // Space for right buttons  
+            
+            // Measure actual button container widths instead of hardcoded estimates
+            const buttonSpaceLeft = headerControls ? headerControls.getBoundingClientRect().width + 32 : 0; // 32px for margins/padding
+            const buttonSpaceRight = headerRight ? headerRight.getBoundingClientRect().width + 32 : 0; // 32px for margins/padding
             const padding = 40; // Additional padding for safety
             const maxTitleWidth = viewportWidth - buttonSpaceLeft - buttonSpaceRight - padding;
             
@@ -629,50 +631,409 @@ This will replace your current museum data. Continue?`;
                 ? Math.min(0.99, maxTitleWidth / naturalTitleWidth)
                 : 1.0; // Normal size when no scaling needed
             
-            // Apply scaling to title (1.0 = normal size, <1.0 = scaled down)
-            if (scaleFactor < 1.0) {
-                museumNameDisplay.style.transform = `scale(${scaleFactor})`;
-                museumNameDisplay.style.transformOrigin = 'center';
-            } else {
-                museumNameDisplay.style.transform = '';
-            }
-            
-            // Apply scaling to buttons
-            if (headerControls) {
-                if (scaleFactor < 1.0) {
-                    headerControls.style.transform = `translateY(-50%) scale(${scaleFactor})`;
-                    headerControls.style.transformOrigin = 'left center';
-                } else {
-                    headerControls.style.transform = 'translateY(-50%)';
-                }
-            }
-            if (headerRight) {
-                if (scaleFactor < 1.0) {
-                    headerRight.style.transform = `translateY(-50%) scale(${scaleFactor})`;
-                    headerRight.style.transformOrigin = 'right center';
-                } else {
-                    headerRight.style.transform = 'translateY(-50%)';
-                }
-            }
-            
             // Scale header height proportionally (1.0 = 70px, smaller scale = smaller height)
             const newHeight = Math.min(70, 70 * scaleFactor);
-            header.style.height = `${newHeight}px`;
-            document.body.style.paddingTop = `${newHeight}px`;
             
-            // Update CSS custom property for tiles container
-            document.documentElement.style.setProperty('--header-height', `${newHeight}px`);
+            // Check if we need to show the collapsed title (when header becomes too small)
+            if (newHeight < 25) {
+                // Header is too small - show dropdown caret instead
+                showCollapsedTitle();
+            } else {
+                // Show normal or scaled title
+                hideCollapsedTitle();
+                
+                // Apply scaling to title (1.0 = normal size, <1.0 = scaled down)
+                if (scaleFactor < 1.0) {
+                    museumNameDisplay.style.transform = `scale(${scaleFactor})`;
+                    museumNameDisplay.style.transformOrigin = 'center';
+                } else {
+                    museumNameDisplay.style.transform = '';
+                }
+                
+                // Apply scaling to buttons
+                if (headerControls) {
+                    if (scaleFactor < 1.0) {
+                        headerControls.style.transform = `translateY(-50%) scale(${scaleFactor})`;
+                        headerControls.style.transformOrigin = 'left center';
+                    } else {
+                        headerControls.style.transform = 'translateY(-50%)';
+                    }
+                }
+                if (headerRight) {
+                    if (scaleFactor < 1.0) {
+                        headerRight.style.transform = `translateY(-50%) scale(${scaleFactor})`;
+                        headerRight.style.transformOrigin = 'right center';
+                    } else {
+                        headerRight.style.transform = 'translateY(-50%)';
+                    }
+                }
+                
+                header.style.height = `${newHeight}px`;
+                document.body.style.paddingTop = `${newHeight}px`;
+                
+                // Update CSS custom property for tiles container
+                document.documentElement.style.setProperty('--header-height', `${newHeight}px`);
+                
+                // Update all container heights
+                updateContainerHeights(newHeight);
+                
+                console.log('Applied scaling:', { 
+                    scaleFactor, 
+                    newHeight, 
+                    naturalTitleWidth, 
+                    maxTitleWidth,
+                    needsScaling: scaleFactor < 1.0,
+                    shouldShowDropdown: newHeight < 35
+                });
+            }
+        }
+        
+        function showCollapsedTitle() {
+            const header = document.querySelector('header');
+            const headerTitle = document.querySelector('.header-title');
             
-            // Update all container heights
-            updateContainerHeights(newHeight);
+            // Hide the normal title display
+            const museumNameDisplay = document.querySelector('.museum-name-display');
+            if (museumNameDisplay) {
+                museumNameDisplay.style.display = 'none';
+            }
             
-            console.log('Applied scaling:', { 
-                scaleFactor, 
-                newHeight, 
-                naturalTitleWidth, 
-                maxTitleWidth,
-                needsScaling: scaleFactor < 1.0 
+            // Create or show the collapsed title caret
+            let collapsedTitle = document.querySelector('.collapsed-title-caret');
+            if (!collapsedTitle) {
+                collapsedTitle = document.createElement('div');
+                collapsedTitle.className = 'collapsed-title-caret';
+                collapsedTitle.innerHTML = '▼'; // Down caret
+                collapsedTitle.style.cssText = `
+                    cursor: pointer;
+                    color: white;
+                    font-size: 1.2rem;
+                    padding: 0.5rem;
+                    user-select: none;
+                    transition: transform 0.2s ease;
+                `;
+                
+                // Create the dropdown overlay
+                const titleDropdown = document.createElement('div');
+                titleDropdown.className = 'title-dropdown';
+                titleDropdown.style.cssText = `
+                    position: fixed;
+                    top: 70px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: var(--primary-color);
+                    color: white;
+                    padding: 1rem 2rem;
+                    border-radius: 0 0 8px 8px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    z-index: 10000;
+                    display: none;
+                    font-size: var(--font-size-xl);
+                    font-weight: bold;
+                    white-space: nowrap;
+                    max-width: 90vw;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    cursor: pointer;
+                `;
+                
+                // Create editable museum name element for dropdown
+                const dropdownNameContainer = document.createElement('div');
+                dropdownNameContainer.className = 'museum-name-container';
+                dropdownNameContainer.style.cssText = `
+                    display: flex;
+                    align-items: baseline;
+                    justify-content: center;
+                    font-size: var(--font-size-xl);
+                    font-weight: bold;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    position: relative;
+                `;
+                
+                const dropdownNameDisplay = document.createElement('div');
+                dropdownNameDisplay.className = 'museum-name-display';
+                dropdownNameDisplay.style.cssText = `
+                    display: flex;
+                    align-items: baseline;
+                    gap: 0;
+                    position: relative;
+                `;
+                
+                const dropdownNameText = document.createElement('div');
+                dropdownNameText.className = 'museum-name-text dropdown-name-text';
+                dropdownNameText.contentEditable = true;
+                dropdownNameText.setAttribute('data-placeholder', 'Click to name your museum');
+                dropdownNameText.style.cssText = `
+                    background: rgba(255, 255, 255, 0.08);
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border-radius: 6px;
+                    padding: 0.5rem 0.8rem;
+                    color: white;
+                    font-size: var(--font-size-xl);
+                    font-weight: 600;
+                    letter-spacing: -0.01em;
+                    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+                    outline: none;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    text-rendering: optimizeLegibility;
+                    -webkit-font-smoothing: antialiased;
+                    -moz-osx-font-smoothing: grayscale;
+                    min-width: 4ch;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    cursor: text;
+                `;
+                
+                const dropdownSuffix = document.createElement('span');
+                dropdownSuffix.className = 'museum-title-suffix';
+                dropdownSuffix.textContent = ' Math Museum';
+                dropdownSuffix.style.cssText = `
+                    color: white;
+                    font-size: var(--font-size-xl);
+                    font-weight: 600;
+                    letter-spacing: -0.01em;
+                    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+                    opacity: 0.8;
+                    margin-left: 0.3rem;
+                `;
+                
+                // Load current museum name
+                const museumNameText = document.getElementById('museum-name-text');
+                const currentName = museumNameText ? museumNameText.textContent.trim() : '';
+                if (currentName) {
+                    dropdownNameText.textContent = currentName;
+                }
+                
+                // Assemble the dropdown structure
+                dropdownNameDisplay.appendChild(dropdownNameText);
+                dropdownNameDisplay.appendChild(dropdownSuffix);
+                dropdownNameContainer.appendChild(dropdownNameDisplay);
+                titleDropdown.appendChild(dropdownNameContainer);
+                
+                // Event handlers for dropdown name editing
+                dropdownNameText.addEventListener('focus', () => {
+                    dropdownNameText.style.background = 'rgba(255, 255, 255, 0.12)';
+                    dropdownNameText.style.boxShadow = '0 0 0 2px rgba(255, 255, 255, 0.4), 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)';
+                });
+                
+                dropdownNameText.addEventListener('blur', () => {
+                    dropdownNameText.style.background = 'rgba(255, 255, 255, 0.08)';
+                    dropdownNameText.style.boxShadow = '';
+                    
+                    // Sync with main museum name input
+                    const mainNameText = document.getElementById('museum-name-text');
+                    if (mainNameText) {
+                        mainNameText.textContent = dropdownNameText.textContent.trim();
+                        saveMuseumName();
+                    }
+                    
+                    // Update dropdown size after content change
+                    updateDropdownSize();
+                });
+                
+                dropdownNameText.addEventListener('input', () => {
+                    // Clean up content
+                    const textContent = dropdownNameText.textContent.trim();
+                    if (!textContent) {
+                        dropdownNameText.innerHTML = '';
+                    }
+                    
+                    // Sync with main museum name input
+                    const mainNameText = document.getElementById('museum-name-text');
+                    if (mainNameText) {
+                        mainNameText.textContent = dropdownNameText.textContent.trim();
+                        saveMuseumName();
+                    }
+                    
+                    // Update dropdown size in real-time as user types
+                    updateDropdownSize();
+                });
+                
+                // Function to adjust dropdown size based on content width
+                function updateDropdownSize() {
+                    const maxDropdownWidth = window.innerWidth * 0.9; // 90vw
+                    
+                    // Temporarily remove transform to get natural width
+                    const originalTransform = dropdownNameContainer.style.transform;
+                    dropdownNameContainer.style.transform = '';
+                    
+                    // Force reflow and measure
+                    dropdownNameContainer.offsetWidth;
+                    const naturalWidth = dropdownNameContainer.scrollWidth;
+                    
+                    console.log('Dropdown Debug:', {
+                        naturalWidth,
+                        maxDropdownWidth,
+                        needsScaling: naturalWidth > maxDropdownWidth
+                    });
+                    
+                    if (naturalWidth > maxDropdownWidth && maxDropdownWidth > 100) {
+                        // Scale down to fit
+                        const scaleFactor = Math.min(0.99, maxDropdownWidth / naturalWidth);
+                        dropdownNameContainer.style.transform = `scale(${scaleFactor})`;
+                        dropdownNameContainer.style.transformOrigin = 'center';
+                        
+                        console.log('Applied dropdown scaling:', { scaleFactor, naturalWidth, maxDropdownWidth });
+                    } else {
+                        // No scaling needed
+                        dropdownNameContainer.style.transform = '';
+                    }
+                }
+                
+                dropdownNameText.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        dropdownNameText.blur();
+                        // Close dropdown
+                        titleDropdown.style.display = 'none';
+                        collapsedTitle.innerHTML = '▼';
+                        collapsedTitle.style.transform = '';
+                    }
+                });
+                
+                // Prevent dropdown click from closing when clicking on editable text
+                dropdownNameText.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+                
+                // Click handler for caret
+                collapsedTitle.addEventListener('click', () => {
+                    const isVisible = titleDropdown.style.display === 'block';
+                    if (isVisible) {
+                        titleDropdown.style.display = 'none';
+                        collapsedTitle.innerHTML = '▼';
+                        collapsedTitle.style.transform = '';
+                    } else {
+                        titleDropdown.style.display = 'block';
+                        collapsedTitle.innerHTML = '▲';
+                        collapsedTitle.style.transform = 'translateY(-2px)';
+                        
+                        // Update dropdown content and focus
+                        const mainNameText = document.getElementById('museum-name-text');
+                        const dropdownNameText = titleDropdown.querySelector('.dropdown-name-text');
+                        if (mainNameText && dropdownNameText) {
+                            dropdownNameText.textContent = mainNameText.textContent.trim();
+                            // Update size after content change
+                            setTimeout(() => {
+                                updateDropdownSize();
+                                // Focus the dropdown input for immediate editing
+                                dropdownNameText.focus();
+                            }, 100);
+                        }
+                    }
+                });
+                
+                // Click handler for dropdown (only close when clicking outside the name input)
+                titleDropdown.addEventListener('click', (e) => {
+                    if (!e.target.closest('.dropdown-name-text')) {
+                        // Hide dropdown
+                        titleDropdown.style.display = 'none';
+                        collapsedTitle.innerHTML = '▼';
+                        collapsedTitle.style.transform = '';
+                    }
+                });
+                
+                // Close dropdown when clicking elsewhere
+                document.addEventListener('click', (e) => {
+                    if (!collapsedTitle.contains(e.target) && !titleDropdown.contains(e.target)) {
+                        titleDropdown.style.display = 'none';
+                        collapsedTitle.innerHTML = '▼';
+                        collapsedTitle.style.transform = '';
+                    }
+                });
+                
+                headerTitle.appendChild(collapsedTitle);
+                document.body.appendChild(titleDropdown);
+                
+                // Store reference for updates
+                collapsedTitle._dropdown = titleDropdown;
+            }
+            
+            collapsedTitle.style.display = 'block';
+            
+            // Update dropdown content if museum name changed
+            const museumNameText = document.getElementById('museum-name-text');
+            const titleText = museumNameText ? museumNameText.textContent.trim() : '';
+            const dropdown = collapsedTitle._dropdown;
+            if (dropdown) {
+                const dropdownNameText = dropdown.querySelector('.dropdown-name-text');
+                if (dropdownNameText) {
+                    dropdownNameText.textContent = titleText;
+                    // Update size after content change
+                    setTimeout(() => {
+                        const dropdownNameContainer = dropdown.querySelector('.museum-name-container');
+                        if (dropdownNameContainer) {
+                            updateDropdownSizeForContainer(dropdownNameContainer);
+                        }
+                    }, 10);
+                }
+            }
+            
+            // Reset button transforms
+            const headerControls = document.querySelector('.header-controls');
+            const headerRight = document.querySelector('.header-right');
+            if (headerControls) headerControls.style.transform = 'translateY(-50%)';
+            if (headerRight) headerRight.style.transform = 'translateY(-50%)';
+            
+            // Keep header at normal height
+            header.style.height = '70px';
+            document.body.style.paddingTop = '70px';
+            document.documentElement.style.setProperty('--header-height', '70px');
+            updateContainerHeights(70);
+        }
+        
+        // Helper function to update dropdown size (can be called from outside the dropdown creation closure)
+        function updateDropdownSizeForContainer(dropdownNameContainer) {
+            const maxDropdownWidth = window.innerWidth * 0.9; // 90vw
+            
+            // Temporarily remove transform to get natural width
+            const originalTransform = dropdownNameContainer.style.transform;
+            dropdownNameContainer.style.transform = '';
+            
+            // Force reflow and measure
+            dropdownNameContainer.offsetWidth;
+            const naturalWidth = dropdownNameContainer.scrollWidth;
+            
+            console.log('Dropdown Debug:', {
+                naturalWidth,
+                maxDropdownWidth,
+                needsScaling: naturalWidth > maxDropdownWidth
             });
+            
+            if (naturalWidth > maxDropdownWidth && maxDropdownWidth > 100) {
+                // Scale down to fit
+                const scaleFactor = Math.min(0.99, maxDropdownWidth / naturalWidth);
+                dropdownNameContainer.style.transform = `scale(${scaleFactor})`;
+                dropdownNameContainer.style.transformOrigin = 'center';
+                
+                console.log('Applied dropdown scaling:', { scaleFactor, naturalWidth, maxDropdownWidth });
+            } else {
+                // No scaling needed
+                dropdownNameContainer.style.transform = '';
+            }
+        }
+        
+        function hideCollapsedTitle() {
+            const museumNameDisplay = document.querySelector('.museum-name-display');
+            const collapsedTitle = document.querySelector('.collapsed-title-caret');
+            
+            // Show normal title
+            if (museumNameDisplay) {
+                museumNameDisplay.style.display = '';
+            }
+            
+            // Hide collapsed title caret
+            if (collapsedTitle) {
+                collapsedTitle.style.display = 'none';
+                // Also hide any open dropdown
+                const dropdown = collapsedTitle._dropdown;
+                if (dropdown) {
+                    dropdown.style.display = 'none';
+                    collapsedTitle.innerHTML = '▼';
+                    collapsedTitle.style.transform = '';
+                }
+            }
         }
         
         // DRY function to update all container heights (and aspect ratio widths)
