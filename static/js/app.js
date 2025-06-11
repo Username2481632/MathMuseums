@@ -680,7 +680,6 @@ This will replace your current museum data. Continue?`;
                 text-rendering: optimizeLegibility;
                 -webkit-font-smoothing: antialiased;
                 -moz-osx-font-smoothing: grayscale;
-                min-width: 4ch;
                 white-space: nowrap;
                 overflow: visible;
                 cursor: text;
@@ -764,7 +763,7 @@ This will replace your current museum data. Continue?`;
         const DROPDOWN_CONFIG = {
             PADDING_HORIZONTAL: 32, // 1rem left + 1rem right = 32px
             PADDING_BASE: 16, // 1rem = 16px
-            PADDING_VERTICAL: 4, // 4px
+            PADDING_VERTICAL: 12, // 12px
             MIN_VIEWPORT_WIDTH: 100,
             SCALING: {
                 MIN_FACTOR: 0.1,
@@ -776,7 +775,7 @@ This will replace your current museum data. Continue?`;
         // Helper function to manage dropdown container scaling effects
         function applyDropdownContainerScaling(titleDropdown, factor, isReset = false) {
             if (isReset) {
-                titleDropdown.style.padding = '4px 1rem';
+                titleDropdown.style.padding = '12px 1rem';
                 titleDropdown.style.lineHeight = '1';
                 const origFontSize = titleDropdown.getAttribute('data-original-font-size');
                 if (origFontSize) titleDropdown.style.fontSize = origFontSize;
@@ -1016,7 +1015,7 @@ This will replace your current museum data. Continue?`;
                     transform: translateX(-50%);
                     background: var(--primary-color);
                     color: white;
-                    padding: 4px 1rem;
+                    padding: 12px 1rem;
                     border-radius: 0 0 8px 8px;
                     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
                     z-index: 10000;
