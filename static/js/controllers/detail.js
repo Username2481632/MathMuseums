@@ -99,7 +99,8 @@ const DetailController = (function() {
                 zoomButtons: true,
                 expressionsTopbar: true,
                 border: false,
-                lockViewport: false
+                lockViewport: false,
+                pasteGraphLink: true
             });
             
             // Load saved state if available
