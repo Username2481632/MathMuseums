@@ -1127,7 +1127,6 @@ This will replace your current museum data. Continue?`;
                             dropdownNameText.textContent = mainNameText.textContent.trim();
                             setTimeout(() => {
                                 updateDropdownSize();
-                                dropdownNameText.focus();
                             }, 100);
                         }
                     }
