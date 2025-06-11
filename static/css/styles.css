@@ -80,7 +80,7 @@ header {
     justify-content: center;
     font-size: var(--font-size-xxl);
     font-weight: bold;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
 }
 
@@ -89,7 +89,7 @@ header {
     align-items: baseline;
     gap: 0;
     position: relative;
-    transition: transform 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     white-space: nowrap;
     overflow: visible;
 }
@@ -97,57 +97,123 @@ header {
 .museum-name-text {
     color: white;
     font-size: var(--font-size-xxl);
-    font-weight: bold;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     min-width: 0;
     white-space: pre;
     outline: none;
     border: none;
     background: transparent;
     caret-color: white;
-    border-radius: 6px;
-    padding: 4px 8px;
-    margin: -4px -8px;
-    transition: all 0.2s ease;
+    border-radius: 8px;
+    padding: 4px 12px;
+    margin: -4px -12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .museum-name-text:empty::before {
     content: attr(data-placeholder);
-    color: rgba(255, 255, 255, 0.7);
-    font-weight: 900;
-    text-shadow: 0 0 1px rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     pointer-events: none;
+    font-style: italic;
+}
+
+/* Subtle attention indicator when empty and NOT focused */
+.museum-name-text:empty:not(:focus) {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    box-shadow: 
+        0 0 0 2px rgba(255, 255, 255, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    animation: gentle-pulse 4s ease-in-out infinite;
+}
+
+.museum-name-text:empty:not(:focus)::before {
+    color: rgba(255, 255, 255, 0.9);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    font-weight: 600;
+    font-style: italic;
+}
+
+@keyframes gentle-pulse {
+    0%, 100% { 
+        box-shadow: 
+            0 0 0 2px rgba(255, 255, 255, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        transform: scale(1);
+    }
+    50% { 
+        box-shadow: 
+            0 0 0 2px rgba(255, 255, 255, 0.6),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        transform: scale(1);
+    }
 }
 
 .museum-name-text:focus:empty::before {
-    color: rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.8);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    font-weight: 600;
+    font-style: italic;
+}
+
+.museum-name-text:focus:empty {
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    animation: none;
+    box-shadow: 
+        0 0 0 2px rgba(255, 255, 255, 0.4),
+        0 4px 16px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .museum-name-text:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .museum-name-text:focus {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.12);
     box-shadow: 
-        0 0 0 2px rgba(255, 255, 255, 0.3),
-        0 4px 12px rgba(0, 0, 0, 0.15);
+        0 0 0 2px rgba(255, 255, 255, 0.4),
+        0 4px 16px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transform: none;
 }
 
 .museum-name-text:focus:empty::before {
-    animation: pulse 2s infinite;
+    animation: pulse 2s infinite ease-in-out;
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 0.6; }
+    0%, 100% { 
+        opacity: 0.5; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.8; 
+        transform: scale(1.02);
+    }
 }
 
 .museum-title-suffix {
     color: white;
     font-size: var(--font-size-xxl);
-    font-weight: bold;
-    transition: all 0.2s ease;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 h1 {
