@@ -748,27 +748,83 @@ This will replace your current museum data. Continue?`;
         });
         
         museumNameText.addEventListener('blur', () => {
-            // Clean up the content when losing focus
-            const textContent = museumNameText.textContent.trim();
-            if (!textContent) {
-                // If empty, clear everything to ensure CSS :empty pseudo-element works
-                museumNameText.innerHTML = '';
-            }
+            cleanupContentEditable(museumNameText);
             updateHeaderSize();
             saveMuseumName();
         });
         
         museumNameText.addEventListener('input', () => {
-            // Clean up the content - remove any non-text nodes or empty spaces
-            const textContent = museumNameText.textContent.trim();
-            if (!textContent) {
-                // If empty, clear everything to ensure CSS :empty pseudo-element works
-                museumNameText.innerHTML = '';
-            }
+            cleanupContentEditable(museumNameText);
             updateHeaderSize(false); // Don't allow dropdown transitions while typing
             saveMuseumName();
         });
         
+        // Constants for dropdown scaling
+        const DROPDOWN_CONFIG = {
+            PADDING_HORIZONTAL: 32, // 1rem left + 1rem right = 32px
+            PADDING_BASE: 16, // 1rem = 16px
+            PADDING_VERTICAL: 4, // 4px
+            MIN_VIEWPORT_WIDTH: 100,
+            SCALING: {
+                MIN_FACTOR: 0.1,
+                THRESHOLD: 0.99,
+                AGGRESSIVE_MIN: 0.1 // Very aggressive scaling for dropdowns
+            }
+        };
+
+        // Helper function to manage dropdown container scaling effects
+        function applyDropdownContainerScaling(titleDropdown, factor, isReset = false) {
+            if (isReset) {
+                titleDropdown.style.padding = '4px 1rem';
+                titleDropdown.style.lineHeight = '1';
+                const origFontSize = titleDropdown.getAttribute('data-original-font-size');
+                if (origFontSize) titleDropdown.style.fontSize = origFontSize;
+            } else {
+                // Scale horizontal padding while keeping vertical fixed
+                const horizontalPadding = Math.max(DROPDOWN_CONFIG.PADDING_VERTICAL, DROPDOWN_CONFIG.PADDING_BASE * factor);
+                titleDropdown.style.padding = `${DROPDOWN_CONFIG.PADDING_VERTICAL}px ${horizontalPadding}px`;
+                
+                // Scale font-size and line-height to match transform
+                titleDropdown.style.lineHeight = factor.toString();
+                const origFontSize = titleDropdown.getAttribute('data-original-font-size');
+                if (origFontSize) {
+                    const px = parseFloat(origFontSize);
+                    if (!isNaN(px)) titleDropdown.style.fontSize = (px * factor) + 'px';
+                }
+            }
+        }
+
+        // Unified dropdown scaling function
+        function scaleDropdownToFit(dropdownNameDisplay) {
+            const titleDropdown = dropdownNameDisplay.closest('.title-dropdown');
+            if (!titleDropdown) {
+                console.warn('No title dropdown container found');
+                return 1.0;
+            }
+
+            const maxDropdownWidth = window.innerWidth - DROPDOWN_CONFIG.PADDING_HORIZONTAL;
+            if (maxDropdownWidth < DROPDOWN_CONFIG.MIN_VIEWPORT_WIDTH) {
+                console.warn('Dropdown max width too small:', maxDropdownWidth);
+                return 1.0;
+            }
+
+            return calculateAndApplyTextScaling(dropdownNameDisplay, maxDropdownWidth, {
+                minScaleFactor: DROPDOWN_CONFIG.SCALING.AGGRESSIVE_MIN,
+                scaleThreshold: DROPDOWN_CONFIG.SCALING.THRESHOLD,
+                resetTransform: () => {
+                    dropdownNameDisplay.style.transform = '';
+                    dropdownNameDisplay.style.transformOrigin = '';
+                    applyDropdownContainerScaling(titleDropdown, 0, true);
+                },
+                applyTransform: (factor) => {
+                    dropdownNameDisplay.style.transform = `scale(${factor})`;
+                    dropdownNameDisplay.style.transformOrigin = 'center';
+                    applyDropdownContainerScaling(titleDropdown, factor, false);
+                },
+                debugLabel: 'Dropdown'
+            });
+        }
+
         // DRY function to calculate and apply text scaling
         function calculateAndApplyTextScaling(element, maxWidth, options = {}) {
             const {
@@ -1020,79 +1076,19 @@ This will replace your current museum data. Continue?`;
                     dropdownNameText.style.background = 'rgba(255, 255, 255, 0.08)';
                     dropdownNameText.style.boxShadow = '';
                     
-                    // Sync with main museum name input
-                    const mainNameText = document.getElementById('museum-name-text');
-                    if (mainNameText) {
-                        mainNameText.textContent = dropdownNameText.textContent.trim();
-                        saveMuseumName();
-                    }
-                    
-                    // Update dropdown size after content change
+                    syncDropdownWithMain(dropdownNameText);
                     updateDropdownSize();
                 });
                 
                 dropdownNameText.addEventListener('input', () => {
-                    // Clean up content
-                    const textContent = dropdownNameText.textContent.trim();
-                    if (!textContent) {
-                        dropdownNameText.innerHTML = '';
-                    }
-                    
-                    // Sync with main museum name input
-                    const mainNameText = document.getElementById('museum-name-text');
-                    if (mainNameText) {
-                        mainNameText.textContent = dropdownNameText.textContent.trim();
-                        saveMuseumName();
-                    }
-                    
-                    // Update dropdown size in real-time as user types
+                    cleanupContentEditable(dropdownNameText);
+                    syncDropdownWithMain(dropdownNameText);
                     updateDropdownSize();
                 });
                 
                 // Function to adjust dropdown size based on content width
                 function updateDropdownSize() {
-                    // Account for dropdown padding when calculating max width
-                    const dropdownPadding = 32; // 1rem left + 1rem right = 32px (reduced from 64px)
-                    const maxDropdownWidth = window.innerWidth - dropdownPadding;
-                    
-                    // Ensure minimum width for calculation
-                    if (maxDropdownWidth < 100) {
-                        console.warn('Dropdown max width too small:', maxDropdownWidth);
-                        return 1.0;
-                    }
-                    
-                    // Use the same DRY scaling function as the header - scale the display element like header does
-                    const scaleFactor = calculateAndApplyTextScaling(dropdownNameDisplay, maxDropdownWidth, {
-                        minScaleFactor: 0.1, // Very aggressive scaling - can go down to 10%
-                        scaleThreshold: 0.99,
-                        resetTransform: () => {
-                            dropdownNameDisplay.style.transform = '';
-                            dropdownNameDisplay.style.transformOrigin = '';
-                            titleDropdown.style.padding = '4px 1rem';
-                            titleDropdown.style.lineHeight = '1';
-                            // Restore original font-size
-                            const origFontSize = titleDropdown.getAttribute('data-original-font-size');
-                            if (origFontSize) titleDropdown.style.fontSize = origFontSize;
-                        },
-                        applyTransform: (factor) => {
-                            dropdownNameDisplay.style.transform = `scale(${factor})`;
-                            dropdownNameDisplay.style.transformOrigin = 'center';
-                            // Keep vertical padding fixed at 4px, only scale horizontal padding
-                            const baseHorizontalPadding = 16; // 1rem = 16px
-                            const horizontalPadding = Math.max(4, baseHorizontalPadding * factor);
-                            titleDropdown.style.padding = `4px ${horizontalPadding}px`;
-                            // Scale font-size and line-height of the dropdown container to match transform
-                            titleDropdown.style.lineHeight = factor.toString();
-                            const origFontSize = titleDropdown.getAttribute('data-original-font-size');
-                            if (origFontSize) {
-                                const px = parseFloat(origFontSize);
-                                if (!isNaN(px)) titleDropdown.style.fontSize = (px * factor) + 'px';
-                            }
-                        },
-                        debugLabel: 'Dropdown'
-                    });
-                    
-                    return scaleFactor;
+                    return scaleDropdownToFit(dropdownNameDisplay);
                 }
                 
                 dropdownNameText.addEventListener('keydown', (event) => {
@@ -1128,10 +1124,8 @@ This will replace your current museum data. Continue?`;
                         const dropdownNameText = titleDropdown.querySelector('.dropdown-name-text');
                         if (mainNameText && dropdownNameText) {
                             dropdownNameText.textContent = mainNameText.textContent.trim();
-                            // Update size after content change
                             setTimeout(() => {
                                 updateDropdownSize();
-                                // Focus the dropdown input for immediate editing
                                 dropdownNameText.focus();
                             }, 100);
                         }
@@ -1195,57 +1189,22 @@ This will replace your current museum data. Continue?`;
             updateContainerHeights(70);
         }
         
-        // Helper function to update dropdown size (can be called from outside the dropdown creation closure)
-        function updateDropdownSizeForContainer(dropdownNameDisplay) {
-            // Account for dropdown padding when calculating max width
-            const dropdownPadding = 32; // 1rem left + 1rem right = 32px (reduced from 64px)
-            const maxDropdownWidth = window.innerWidth - dropdownPadding;
-            
-            // Ensure minimum width for calculation
-            if (maxDropdownWidth < 100) {
-                console.warn('Dropdown max width too small:', maxDropdownWidth);
-                return 1.0;
+        // Helper function to sync dropdown name with main input
+        function syncDropdownWithMain(dropdownNameText) {
+            const mainNameText = document.getElementById('museum-name-text');
+            if (mainNameText) {
+                mainNameText.textContent = dropdownNameText.textContent.trim();
+                saveMuseumName();
             }
-            
-            // Use the display element directly - same as header structure
-            const targetElement = dropdownNameDisplay;
-            
-            // Use the same DRY scaling function as the header - scale the display element like header does
-            const scaleFactor = calculateAndApplyTextScaling(targetElement, maxDropdownWidth, {
-                minScaleFactor: 0.1, // Very aggressive scaling - can go down to 10%
-                scaleThreshold: 0.99,
-                resetTransform: () => {
-                    targetElement.style.transform = '';
-                    targetElement.style.transformOrigin = '';
-                    const titleDropdown = dropdownNameDisplay.closest('.title-dropdown');
-                    if (titleDropdown) {
-                        titleDropdown.style.padding = '4px 1rem';
-                        titleDropdown.style.lineHeight = '1';
-                        const origFontSize = titleDropdown.getAttribute('data-original-font-size');
-                        if (origFontSize) titleDropdown.style.fontSize = origFontSize;
-                    }
-                },
-                applyTransform: (factor) => {
-                    targetElement.style.transform = `scale(${factor})`;
-                    targetElement.style.transformOrigin = 'center';
-                    const titleDropdown = dropdownNameDisplay.closest('.title-dropdown');
-                    if (titleDropdown) {
-                        const baseHorizontalPadding = 16; // 1rem = 16px
-                        const horizontalPadding = Math.max(4, baseHorizontalPadding * factor);
-                        titleDropdown.style.padding = `4px ${horizontalPadding}px`;
-                        // Scale font-size and line-height of the dropdown container to match transform
-                        titleDropdown.style.lineHeight = factor.toString();
-                        const origFontSize = titleDropdown.getAttribute('data-original-font-size');
-                        if (origFontSize) {
-                            const px = parseFloat(origFontSize);
-                            if (!isNaN(px)) titleDropdown.style.fontSize = (px * factor) + 'px';
-                        }
-                    }
-                },
-                debugLabel: 'Dropdown Helper'
-            });
-            
-            return scaleFactor;
+        }
+
+        // Helper function to clean up contenteditable content
+        function cleanupContentEditable(element) {
+            const textContent = element.textContent.trim();
+            if (!textContent) {
+                element.innerHTML = '';
+            }
+            return textContent;
         }
         
         function hideCollapsedTitle() {
