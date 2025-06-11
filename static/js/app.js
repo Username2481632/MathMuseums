@@ -1167,11 +1167,10 @@ This will replace your current museum data. Continue?`;
                 const dropdownNameText = dropdown.querySelector('.dropdown-name-text');
                 const dropdownNameDisplay = dropdown.querySelector('.museum-name-display');
                 if (dropdownNameText && dropdownNameDisplay) {
-                    dropdownNameText.textContent = titleText;
-                    // Update size after content change
-                    setTimeout(() => {
-                        updateDropdownSizeForContainer(dropdownNameDisplay);
-                    }, 10);
+                    dropdownNameText.textContent = titleText;                // Update size after content change
+                setTimeout(() => {
+                    scaleDropdownToFit(dropdownNameDisplay);
+                }, 10);
                 }
             }
             
@@ -1317,7 +1316,7 @@ This will replace your current museum data. Continue?`;
                 const dropdown = collapsedTitle._dropdown;
                 const dropdownNameDisplay = dropdown.querySelector('.museum-name-display');
                 if (dropdown.style.display === 'block' && dropdownNameDisplay) {
-                    updateDropdownSizeForContainer(dropdownNameDisplay);
+                    scaleDropdownToFit(dropdownNameDisplay);
                 }
             }
             
