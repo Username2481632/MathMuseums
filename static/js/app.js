@@ -235,124 +235,215 @@ This will replace your current museum data. Continue?`;
      * Set up museum name input functionality
      */
     function setupMuseumNameInput() {
-        const museumNameInput = document.getElementById('museum-name-input');
-        if (!museumNameInput) return;
+        const museumNameText = document.getElementById('museum-name-text');
+        const museumNameBox = document.getElementById('museum-name-box');
+        
+        if (!museumNameText || !museumNameBox) return;
         
         // Load saved museum name
         const savedName = localStorage.getItem('mm_museum_name');
         if (savedName) {
-            museumNameInput.value = savedName;
+            museumNameText.textContent = savedName;
         }
         
-        // Initial resize and show the input
-        resizeInputToContent();
+        // Initial setup - delay to ensure elements are fully rendered
+        setTimeout(() => {
+            updateDisplay();
+            updateContentVisibility();
+        }, 50);
         
-        // Show the entire title section after proper sizing to prevent centering jump
+        // Show the entire title section after proper sizing
         const headerTitle = document.querySelector('.header-title');
         setTimeout(() => {
             if (headerTitle) {
                 headerTitle.classList.add('ready');
             }
-            updateContentVisibility(); // Initial state check
         }, 10);
         
-        // Function to manage content visibility (hide green box when has content and not focused)
+        // Function to manage content visibility
         function updateContentVisibility() {
-            const hasContent = museumNameInput.value.trim().length > 0;
-            const isFocused = document.activeElement === museumNameInput;
+            const hasContent = museumNameText.textContent.trim().length > 0;
+            const isFocused = document.activeElement === museumNameText;
             
             if (hasContent && !isFocused) {
-                museumNameInput.classList.add('content-hidden');
+                museumNameBox.classList.add('content-hidden');
             } else {
-                museumNameInput.classList.remove('content-hidden');
+                museumNameBox.classList.remove('content-hidden');
             }
         }
         
-        // Function to dynamically resize input to fit content
-        function resizeInputToContent() {
-            let text = museumNameInput.value || museumNameInput.placeholder;
+        // Function to update display and sizing
+        function updateDisplay() {
+            const value = museumNameText.textContent.trim();
+            const displayValue = value || museumNameText.getAttribute('data-placeholder');
+            const isEmpty = !value;
             
-            // Handle spaces properly - replace with non-breaking spaces for measurement
-            const measureText = text.replace(/ /g, '\u00A0');
-            
-            // Create a temporary measuring element each time for accuracy
+            // Measure both the name text and the suffix to get total width
             const measurer = document.createElement('span');
             measurer.style.visibility = 'hidden';
             measurer.style.position = 'absolute';
-            measurer.style.whiteSpace = 'nowrap';
+            measurer.style.whiteSpace = 'pre';
             measurer.style.pointerEvents = 'none';
-            measurer.style.top = '-9999px'; // Move further offscreen
+            measurer.style.top = '-9999px';
             
-            // Copy all relevant font properties from the input
-            const inputStyles = window.getComputedStyle(museumNameInput);
-            measurer.style.fontFamily = inputStyles.fontFamily;
-            measurer.style.fontSize = inputStyles.fontSize;
-            measurer.style.fontWeight = inputStyles.fontWeight;
-            measurer.style.fontStyle = inputStyles.fontStyle;
-            measurer.style.letterSpacing = inputStyles.letterSpacing;
-            measurer.style.wordSpacing = inputStyles.wordSpacing;
+            // Copy font properties
+            const textStyles = window.getComputedStyle(museumNameText);
+            measurer.style.fontFamily = textStyles.fontFamily;
+            measurer.style.fontSize = textStyles.fontSize;
+            measurer.style.fontWeight = textStyles.fontWeight;
+            measurer.style.fontStyle = textStyles.fontStyle;
+            measurer.style.letterSpacing = textStyles.letterSpacing;
+            measurer.style.wordSpacing = textStyles.wordSpacing;
             
-            measurer.textContent = measureText;
+            // Measure the name text width (use actual value or placeholder)
+            measurer.textContent = displayValue;
             document.body.appendChild(measurer);
+            const nameWidth = measurer.offsetWidth;
             
-            const textWidth = measurer.offsetWidth;
+            // Measure the suffix width
+            measurer.textContent = "'s Math Museum";
+            const suffixWidth = measurer.offsetWidth;
+            
             document.body.removeChild(measurer);
             
-            // Add offset for visual spacing without CSS padding (28px total = 14px per side)
-            // This includes space for borders, visual breathing room, and proper text spacing
-            const spacingOffset = 28;
-            const totalWidth = textWidth + spacingOffset;
-            const maxWidth = window.innerWidth * 0.4; // Allow up to 40% of viewport
+            // Calculate total title width (name + suffix)
+            const totalTitleWidth = nameWidth + suffixWidth;
             
-            const finalWidth = Math.min(totalWidth, maxWidth);
-            museumNameInput.style.width = `${finalWidth}px`;
+            // Calculate container position to center the entire title
+            const headerTitle = document.querySelector('.header-title');
+            const headerTitleWidth = headerTitle.offsetWidth;
+            const headerControls = document.querySelector('.header-controls');
+            const headerRight = document.querySelector('.header-right');
+            
+            // Calculate available space (excluding controls)
+            const controlsWidth = headerControls ? headerControls.offsetWidth + 32 : 0; // 32px for margins
+            const rightWidth = headerRight ? headerRight.offsetWidth + 32 : 0;
+            const availableWidth = headerTitleWidth - controlsWidth - rightWidth;
+            
+            // Calculate center position within available space
+            const centerOfAvailableSpace = controlsWidth + (availableWidth / 2);
+            
+            // Calculate left position: center minus half of total title width
+            // This positions the left edge such that the entire title appears centered
+            const leftPosition = centerOfAvailableSpace - (totalTitleWidth / 2);
+            
+            // Apply the calculated position
+            const container = document.querySelector('.museum-name-container');
+            container.style.left = `${leftPosition}px`;
+            container.style.transform = 'none'; // Remove the initial centering transform
+            
+            // Always calculate and position the box, regardless of visibility
+            const boxPadding = 16;
+            const boxWidth = Math.max(nameWidth + boxPadding, 40); // Box only around the name
+            const maxWidth = availableWidth * 0.8; // Limit to 80% of available space
+            const finalWidth = Math.min(boxWidth, maxWidth);
+            
+            // Position and size the box under the text
+            const textRect = museumNameText.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            
+            // Set box dimensions
+            museumNameBox.style.width = `${finalWidth}px`;
+            museumNameBox.style.height = `${textRect.height}px`;
+            
+            // Position box to align with text
+            const leftOffset = textRect.left - containerRect.left - (boxPadding / 2);
+            museumNameBox.style.left = `${leftOffset}px`;
+            museumNameBox.style.top = '0px';
         }
         
-        // Add faint styling when focused on empty input (showing placeholder)
-        museumNameInput.addEventListener('focus', () => {
-            if (!museumNameInput.value.trim()) {
-                museumNameInput.classList.add('placeholder-focused');
-            }
+        // Event listeners
+        museumNameText.addEventListener('focus', () => {
             updateContentVisibility();
-            resizeInputToContent();
         });
         
-        // Toggle faint styling based on input content and resize
-        museumNameInput.addEventListener('input', () => {
-            if (!museumNameInput.value.trim() && document.activeElement === museumNameInput) {
-                museumNameInput.classList.add('placeholder-focused');
-            } else {
-                museumNameInput.classList.remove('placeholder-focused');
+        museumNameText.addEventListener('input', () => {
+            // Clean up the content - remove any non-text nodes or empty spaces
+            const textContent = museumNameText.textContent.trim();
+            if (!textContent) {
+                // If empty, clear everything to ensure CSS :empty pseudo-element works
+                museumNameText.innerHTML = '';
             }
+            
+            updateDisplay();
             updateContentVisibility();
-            resizeInputToContent();
             saveMuseumName();
         });
         
-        // Handle Enter key and resize on other keys
-        museumNameInput.addEventListener('keydown', (event) => {
+        museumNameText.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
-                museumNameInput.blur();
+                event.preventDefault();
+                museumNameText.blur();
                 return;
             }
-            // Resize after key is processed
-            setTimeout(resizeInputToContent, 0);
+            
+            // Handle delete/backspace keys
+            if (event.key === 'Backspace' || event.key === 'Delete') {
+                setTimeout(() => {
+                    const textContent = museumNameText.textContent.trim();
+                    if (!textContent) {
+                        // If empty after deletion, clear everything
+                        museumNameText.innerHTML = '';
+                    }
+                    updateDisplay();
+                }, 0);
+            } else {
+                setTimeout(updateDisplay, 0);
+            }
         });
         
-        // Resize on paste
-        museumNameInput.addEventListener('paste', () => {
-            setTimeout(resizeInputToContent, 10);
+        museumNameText.addEventListener('paste', (event) => {
+            // Allow paste but prevent HTML formatting
+            event.preventDefault();
+            const text = (event.clipboardData || window.clipboardData).getData('text/plain');
+            const maxLength = 30;
+            const truncatedText = text.substring(0, maxLength);
+            
+            // Insert plain text at cursor position
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                range.deleteContents();
+                range.insertNode(document.createTextNode(truncatedText));
+                range.collapse(false);
+            }
+            
+            setTimeout(() => {
+                updateDisplay();
+                updateContentVisibility();
+                saveMuseumName();
+            }, 10);
         });
         
-        // Remove faint styling on blur and save
-        museumNameInput.addEventListener('blur', () => {
-            museumNameInput.classList.remove('placeholder-focused');
+        museumNameText.addEventListener('blur', () => {
+            // Clean up the content when losing focus
+            const textContent = museumNameText.textContent.trim();
+            if (!textContent) {
+                // If empty, clear everything to ensure CSS :empty pseudo-element works
+                museumNameText.innerHTML = '';
+            }
+            
             updateContentVisibility();
             saveMuseumName();
         });
         
+        // Limit text length to 30 characters
+        museumNameText.addEventListener('beforeinput', (event) => {
+            if (event.inputType === 'insertText' || event.inputType === 'insertCompositionText') {
+                const currentLength = museumNameText.textContent.length;
+                const newTextLength = event.data ? event.data.length : 0;
+                
+                if (currentLength + newTextLength > 30) {
+                    event.preventDefault();
+                }
+            }
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', updateDisplay);
+        
         function saveMuseumName() {
-            const name = museumNameInput.value.trim();
+            const name = museumNameText.textContent.trim();
             if (name) {
                 localStorage.setItem('mm_museum_name', name);
             } else {
