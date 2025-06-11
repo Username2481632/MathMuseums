@@ -6,7 +6,7 @@ const FileManager = (function() {
     
     // File format version for future compatibility
     const FILE_FORMAT_VERSION = '1.0';
-    const DEFAULT_FILENAME = 'my-math-museum.json';
+    const DEFAULT_FILENAME = 'my-math-museum.mathmuseums';
     
     /**
      * Create the data structure for export
@@ -28,13 +28,18 @@ const FileManager = (function() {
                 }
             }
             
+            // Get user's museum name
+            const userName = localStorage.getItem('mm_museum_name') || '';
+            
             const exportData = {
                 version: FILE_FORMAT_VERSION,
                 exportDate: new Date().toISOString(),
+                userName: userName,
                 concepts: concepts || [],
                 layoutState: parsedLayoutState,
                 metadata: {
-                    totalConcepts: (concepts || []).length
+                    totalConcepts: (concepts || []).length,
+                    userName: userName
                 }
             };
             
@@ -54,7 +59,7 @@ const FileManager = (function() {
         try {
             const data = await createExportData();
             const jsonString = JSON.stringify(data, null, 2);
-            const blob = new Blob([jsonString], { type: 'application/json' });
+            const blob = new Blob([jsonString], { type: 'application/octet-stream' });
             
             // Create download link
             const url = URL.createObjectURL(blob);
@@ -117,8 +122,8 @@ const FileManager = (function() {
                 return;
             }
             
-            if (!file.name.endsWith('.json')) {
-                reject(new Error('Invalid file type: Please select a JSON file'));
+            if (!file.name.endsWith('.mathmuseums')) {
+                reject(new Error('Invalid file type: Please select a .mathmuseums file'));
                 return;
             }
             
@@ -177,6 +182,22 @@ const FileManager = (function() {
                 localStorage.setItem('mm_layout_state', JSON.stringify(importData.layoutState));
             }
             
+            // Import user's name if available
+            if (importData.userName) {
+                localStorage.setItem('mm_museum_name', importData.userName);
+                
+                // Update the museum name display if we're on the home page
+                const museumNameText = document.getElementById('museum-name-text');
+                if (museumNameText) {
+                    museumNameText.textContent = importData.userName;
+                    
+                    // Trigger the display update and content visibility functions
+                    // to ensure the green box is hidden when the museum has a name
+                    const updateEvent = new Event('input', { bubbles: true });
+                    museumNameText.dispatchEvent(updateEvent);
+                }
+            }
+            
             console.log(`Successfully imported ${importData.concepts.length} concepts`);
         } catch (error) {
             console.error('Error importing user data:', error);
@@ -192,7 +213,7 @@ const FileManager = (function() {
     function createFileInput(onFileSelected) {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.json';
+        input.accept = '.mathmuseums';
         input.style.display = 'none';
         
         input.addEventListener('change', function(e) {
@@ -231,6 +252,7 @@ const FileManager = (function() {
         return {
             version: data.version,
             exportDate: data.exportDate,
+            userName: data.userName || 'Unknown',
             totalConcepts: data.metadata?.totalConcepts || data.concepts?.length || 0,
             hasLayoutData: !!data.layoutState
         };

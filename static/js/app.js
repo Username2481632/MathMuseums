@@ -99,7 +99,7 @@ var App = (function() {
                     // You could create a loading SVG or just disable the button
                     
                     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-                    const filename = `my-math-museum-${timestamp}.json`;
+                    const filename = `my-math-museum-${timestamp}.mathmuseums`;
                     
                     await FileManager.downloadUserData(filename);
                     
@@ -177,9 +177,11 @@ var App = (function() {
      * @returns {Promise<boolean>} Whether to proceed with import
      */
     async function showImportConfirmation(fileInfo) {
+        const userNameDisplay = fileInfo.userName !== 'Unknown' ? `${fileInfo.userName}'s Math Museum` : 'Unknown User';
         const message = `Import museum data from file?
         
 File contains:
+• Museum: ${userNameDisplay}
 • ${fileInfo.totalConcepts} concepts
 • Export date: ${new Date(fileInfo.exportDate).toLocaleDateString()}
 • Version: ${fileInfo.version}
