@@ -1078,12 +1078,42 @@ This will replace your current museum data. Continue?`;
                     
                     syncDropdownWithMain(dropdownNameText);
                     updateDropdownSize();
+                    // Check if title now fits inline, and if so, transition back
+                    const museumNameDisplay = document.querySelector('.museum-name-display');
+                    if (museumNameDisplay) {
+                        // Use the same logic as updateHeaderSize to determine scaleFactor
+                        museumNameDisplay.style.transform = '';
+                        museumNameDisplay.offsetWidth;
+                        const header = document.querySelector('header');
+                        const headerControls = document.querySelector('.header-controls');
+                        const headerRight = document.querySelector('.header-right');
+                        const viewportWidth = window.innerWidth;
+                        const buttonSpaceLeft = headerControls ? headerControls.getBoundingClientRect().width + 32 : 0;
+                        const buttonSpaceRight = headerRight ? headerRight.getBoundingClientRect().width + 32 : 0;
+                        const padding = 40;
+                        const maxTitleWidth = viewportWidth - buttonSpaceLeft - buttonSpaceRight - padding;
+                        const scaleFactor = calculateAndApplyTextScaling(museumNameDisplay, maxTitleWidth, {
+                            minScaleFactor: 0.3,
+                            scaleThreshold: 0.99,
+                            resetTransform: () => { museumNameDisplay.style.transform = ''; },
+                            applyTransform: (factor) => { museumNameDisplay.style.transform = `scale(${factor})`; museumNameDisplay.style.transformOrigin = 'center'; },
+                            debugLabel: 'HeaderCheck'
+                        });
+                        if (scaleFactor >= 0.75) {
+                            // Hide dropdown and show inline
+                            titleDropdown.style.display = 'none';
+                            collapsedTitle.innerHTML = '▼';
+                            collapsedTitle.style.transform = '';
+                            hideCollapsedTitle();
+                        }
+                    }
                 });
                 
                 dropdownNameText.addEventListener('input', () => {
                     cleanupContentEditable(dropdownNameText);
                     syncDropdownWithMain(dropdownNameText);
                     updateDropdownSize();
+                    // (No transition back to inline here; only on blur)
                 });
                 
                 // Function to adjust dropdown size based on content width
