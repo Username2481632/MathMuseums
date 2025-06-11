@@ -3,6 +3,209 @@
  * Initializes the application and sets up routing
  */
 var App = (function() {
+    // --- Sync Status Footer Logic ---
+    let syncStatus = 'saved'; // 'saving', 'saved', 'unsaved'
+    let dirtySinceFileSave = false;
+    let syncNotificationTimeout = null;
+    let inactivityTimeout = null;
+    const syncStatusEl = document.getElementById('sync-notification');
+
+    function setSyncStatus(status) {
+        syncStatus = status;
+        if (!syncStatusEl) return;
+        
+        console.log('Setting sync status:', status); // Debug logging
+        
+        // Clear existing timeouts
+        if (syncNotificationTimeout) {
+            clearTimeout(syncNotificationTimeout);
+            syncNotificationTimeout = null;
+        }
+        if (inactivityTimeout) {
+            clearTimeout(inactivityTimeout);
+            inactivityTimeout = null;
+        }
+        
+        // Remove all status classes
+        syncStatusEl.classList.remove('saving', 'saved', 'unsaved', 'show');
+        
+        if (status === 'saving') {
+            syncStatusEl.textContent = 'Saving...';
+            syncStatusEl.classList.add('saving');
+            // Show notification for saving
+            syncStatusEl.classList.add('show');
+            console.log('Showing saving notification'); // Debug logging
+        } else if (status === 'unsaved') {
+            syncStatusEl.textContent = 'Unsaved changes';
+            syncStatusEl.classList.add('unsaved');
+            // Show notification for unsaved changes
+            syncStatusEl.classList.add('show');
+            // Hide after 3 seconds of inactivity
+            resetInactivityTimer();
+        } else {
+            syncStatusEl.textContent = 'All changes saved';
+            syncStatusEl.classList.add('saved');
+            // Show briefly for saved confirmation
+            syncStatusEl.classList.add('show');
+            console.log('Showing saved notification'); // Debug logging
+            // Auto-hide after 3 seconds (longer for autosave visibility)
+            syncNotificationTimeout = setTimeout(() => {
+                syncStatusEl.classList.remove('show');
+                syncNotificationTimeout = null;
+                console.log('Hiding saved notification'); // Debug logging
+            }, 3000);
+        }
+    }
+
+    function resetInactivityTimer() {
+        if (inactivityTimeout) {
+            clearTimeout(inactivityTimeout);
+        }
+        // Hide notification after 3 seconds of inactivity
+        inactivityTimeout = setTimeout(() => {
+            if (syncStatus === 'unsaved') {
+                syncStatusEl.classList.remove('show');
+            }
+            inactivityTimeout = null;
+        }, 3000);
+    }
+
+    function handleActivity() {
+        if (syncStatus === 'unsaved' && syncStatusEl.classList.contains('show')) {
+            resetInactivityTimer();
+        }
+    }
+
+    // Listen for user activity to reset inactivity timer
+    window.addEventListener('mousemove', handleActivity, true);
+    window.addEventListener('keydown', handleActivity, true);
+    window.addEventListener('click', handleActivity, true);
+    window.addEventListener('scroll', handleActivity, true);
+    window.addEventListener('touchstart', handleActivity, true);
+
+    // Mark as unsaved on any input/change, undo/redo, or local save
+    let autosaveTimeout = null;
+    
+    function markDirty() {
+        dirtySinceFileSave = true;
+        setSyncStatus('unsaved');
+        
+        // Clear any existing autosave timeout
+        if (autosaveTimeout) {
+            console.log('Clearing existing autosave timeout'); // Debug logging
+            clearTimeout(autosaveTimeout);
+            autosaveTimeout = null;
+        }
+        
+        // Check if autosave is enabled
+        const preferences = window.PreferencesClient ? window.PreferencesClient.getPreferences() : {};
+        console.log('Preferences:', preferences); // Debug logging
+        if (preferences.autosave) {
+            console.log('Autosave is enabled, setting timer'); // Debug logging
+            // Auto-save after 2 seconds of no changes
+            autosaveTimeout = setTimeout(async () => {
+                console.log('Autosave timer fired!'); // Debug logging
+                console.log('dirtySinceFileSave:', dirtySinceFileSave); // Debug logging
+                console.log('window.FileManager exists:', !!window.FileManager); // Debug logging
+                console.log('window.FileManager.autosaveUserData exists:', !!(window.FileManager && window.FileManager.autosaveUserData)); // Debug logging
+                
+                if (!dirtySinceFileSave) {
+                    console.log('Not saving: dirtySinceFileSave is false'); // Debug logging
+                } else if (!window.FileManager) {
+                    console.log('Not saving: window.FileManager is undefined'); // Debug logging
+                } else if (!window.FileManager.autosaveUserData) {
+                    console.log('Not saving: window.FileManager.autosaveUserData is undefined'); // Debug logging
+                }
+                
+                if (dirtySinceFileSave && window.FileManager && window.FileManager.autosaveUserData) {
+                    console.log('Triggering autosave'); // Debug logging
+                    try {
+                        setSyncStatus('saving');
+                        // Use autosave method to avoid Save As dialog
+                        const result = await window.FileManager.autosaveUserData();
+                        if (result) {
+                            console.log('Autosave successful'); // Debug logging
+                            dirtySinceFileSave = false;
+                            setSyncStatus('saved');
+                            // Set flag for autosave toggle
+                            localStorage.setItem('mm_has_saved_file', 'true');
+                        } else {
+                            console.log('Autosave failed - no previous save location'); // Debug logging
+                            // Autosave failed (no previous save location), show unsaved
+                            setSyncStatus('unsaved');
+                        }
+                    } catch (error) {
+                        console.error('Autosave failed:', error);
+                        setSyncStatus('unsaved');
+                    }
+                } else {
+                    console.log('Autosave conditions not met - not saving'); // Debug logging
+                }
+                autosaveTimeout = null;
+            }, 2000);
+        } else {
+            console.log('Autosave is disabled'); // Debug logging
+        }
+    }
+
+    window.addEventListener('input', markDirty, true);
+    window.addEventListener('change', markDirty, true);
+
+    // Patch StorageManager.saveConcept to mark as unsaved (not saved!)
+    if (window.StorageManager) {
+        const origSaveConcept = window.StorageManager.saveConcept;
+        window.StorageManager.saveConcept = async function(...args) {
+            const result = await origSaveConcept.apply(this, args);
+            markDirty();
+            return result;
+        };
+    }
+
+    // Patch undo/redo to mark as unsaved
+    if (window.createUndoRedoManager) {
+        const origCreateUndoRedoManager = window.createUndoRedoManager;
+        window.createUndoRedoManager = function(opts) {
+            const mgr = origCreateUndoRedoManager(opts);
+            const origUndo = mgr.undoLayout;
+            const origRedo = mgr.redoLayout;
+            mgr.undoLayout = function(...args) {
+                markDirty();
+                return origUndo.apply(this, args);
+            };
+            mgr.redoLayout = function(...args) {
+                markDirty();
+                return origRedo.apply(this, args);
+            };
+            return mgr;
+        };
+    }
+
+    // Patch settings save to mark as unsaved
+    if (window.PreferencesClient) {
+        const origSavePreferences = window.PreferencesClient.savePreferences;
+        window.PreferencesClient.savePreferences = async function(...args) {
+            const result = await origSavePreferences.apply(this, args);
+            markDirty();
+            return result;
+        };
+    }
+
+    // Patch FileManager.downloadUserData to mark as saving/saved (file save resets dirty flag)
+    if (window.FileManager) {
+        const origDownloadUserData = window.FileManager.downloadUserData;
+        window.FileManager.downloadUserData = async function(...args) {
+            setSyncStatus('saving');
+            const result = await origDownloadUserData.apply(this, args);
+            if (result) {
+                dirtySinceFileSave = false;
+                setSyncStatus('saved');
+            } else if (dirtySinceFileSave) {
+                setSyncStatus('unsaved');
+            }
+            return result;
+        };
+    }
+
     // Initialize the application
     async function init() {
         try {

@@ -8,6 +8,10 @@ const FileManager = (function() {
     const FILE_FORMAT_VERSION = '1.0';
     const DEFAULT_FILENAME = 'my-math-museum.mathmuseums';
     
+    // Track last saved file handle and filename for autosave
+    let lastFileHandle = null;
+    let lastFilename = null;
+    
     /**
      * Create the data structure for export
      * @returns {Promise<Object>} User data object
@@ -53,7 +57,7 @@ const FileManager = (function() {
     /**
      * Download user data as a JSON file
      * @param {string} filename - Optional custom filename
-     * @returns {Promise<void>}
+     * @returns {Promise<boolean>} Success status
      */
     async function downloadUserData(filename = DEFAULT_FILENAME) {
         try {
@@ -76,6 +80,11 @@ const FileManager = (function() {
                     const writable = await fileHandle.createWritable();
                     await writable.write(blob);
                     await writable.close();
+                    
+                    // Store for autosave
+                    lastFileHandle = fileHandle;
+                    lastFilename = filename;
+                    
                     console.log('User data saved using File System Access API');
                     return true;
                 } catch (fsError) {
@@ -103,10 +112,67 @@ const FileManager = (function() {
             // Clean up
             URL.revokeObjectURL(url);
 
+            // Store filename for autosave
+            lastFilename = filename;
+
             console.log('User data downloaded successfully');
             return true;
         } catch (error) {
             console.error('Error downloading user data:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Autosave to the last saved file without showing Save As dialog
+     * @returns {Promise<boolean>} Success status
+     */
+    async function autosaveUserData() {
+        try {
+            const data = await createExportData();
+            const jsonString = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/octet-stream' });
+
+            // Try to use existing file handle first
+            if (lastFileHandle) {
+                try {
+                    const writable = await lastFileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    console.log('User data autosaved using existing file handle');
+                    return true;
+                } catch (fsError) {
+                    console.warn('Failed to autosave to existing file handle:', fsError);
+                    // Clear invalid handle and fall back
+                    lastFileHandle = null;
+                }
+            }
+
+            // Fallback: Use download with last filename if available
+            if (lastFilename) {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = lastFilename;
+
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Clean up
+                URL.revokeObjectURL(url);
+
+                console.log('User data autosaved using fallback download');
+                return true;
+            }
+
+            // No previous save location - cannot autosave
+            console.warn('No previous save location for autosave');
+            return false;
+
+        } catch (error) {
+            console.error('Error during autosave:', error);
             throw error;
         }
     }
@@ -211,23 +277,12 @@ const FileManager = (function() {
                 localStorage.setItem('mm_layout_state', JSON.stringify(importData.layoutState));
             }
             
-            // Import user's name if available
+            // Import user name if available
             if (importData.userName) {
                 localStorage.setItem('mm_museum_name', importData.userName);
-                
-                // Update the museum name display if we're on the home page
-                const museumNameText = document.getElementById('museum-name-text');
-                if (museumNameText) {
-                    museumNameText.textContent = importData.userName;
-                    
-                    // Trigger the display update and content visibility functions
-                    // to ensure the green box is hidden when the museum has a name
-                    const updateEvent = new Event('input', { bubbles: true });
-                    museumNameText.dispatchEvent(updateEvent);
-                }
             }
             
-            console.log(`Successfully imported ${importData.concepts.length} concepts`);
+            console.log('Import completed successfully');
         } catch (error) {
             console.error('Error importing user data:', error);
             throw error;
@@ -236,20 +291,16 @@ const FileManager = (function() {
     
     /**
      * Create a file input element for importing
-     * @param {Function} onFileSelected - Callback when file is selected
-     * @returns {HTMLInputElement}
+     * @returns {HTMLInputElement} File input element
      */
-    function createFileInput(onFileSelected) {
+    function createFileInput() {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.mathmuseums';
         input.style.display = 'none';
         
-        input.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file && onFileSelected) {
-                onFileSelected(file);
-            }
+        // Add change event listener
+        input.addEventListener('change', (event) => {
             // Reset input so same file can be selected again
             input.value = '';
         });
@@ -297,9 +348,12 @@ const FileManager = (function() {
         getFileInfo,
         createExportData,
         FILE_FORMAT_VERSION,
-        DEFAULT_FILENAME
+        DEFAULT_FILENAME,
+        autosaveUserData
     };
 })();
 
 // Make FileManager available globally
-window.FileManager = FileManager;
+if (typeof window !== 'undefined') {
+    window.FileManager = FileManager;
+}
