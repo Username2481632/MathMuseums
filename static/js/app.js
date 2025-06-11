@@ -520,6 +520,67 @@ This will replace your current museum data. Continue?`;
         
         if (!museumNameText) return;
         
+        // Shared configuration for museum name inputs
+        const museumNameConfig = {
+            placeholder: museumNameText.getAttribute('data-placeholder') || '____________',
+            suffix: document.querySelector('.museum-title-suffix')?.textContent || "'s Math Museum"
+        };
+        
+        // Helper function to create museum name input with consistent styling
+        function createMuseumNameInput(className = 'museum-name-text') {
+            const input = document.createElement('div');
+            input.className = className;
+            input.contentEditable = true;
+            input.setAttribute('data-placeholder', museumNameConfig.placeholder);
+            return input;
+        }
+        
+        // Helper function to create museum title suffix with consistent styling
+        function createMuseumTitleSuffix() {
+            const suffix = document.createElement('span');
+            suffix.className = 'museum-title-suffix';
+            suffix.textContent = museumNameConfig.suffix;
+            return suffix;
+        }
+        
+        // Helper function to apply dropdown-specific overrides to base museum name styling
+        function applyDropdownInputStyling(input) {
+            input.style.cssText = `
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 6px;
+                padding: 0.5rem 0.8rem;
+                color: white;
+                font-size: var(--font-size-xl);
+                font-weight: 600;
+                letter-spacing: -0.01em;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+                outline: none;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                text-rendering: optimizeLegibility;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                min-width: 4ch;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                cursor: text;
+            `;
+        }
+        
+        // Helper function to apply dropdown-specific styling to suffix
+        function applyDropdownSuffixStyling(suffix) {
+            suffix.style.cssText = `
+                color: white;
+                font-size: var(--font-size-xl);
+                font-weight: 600;
+                letter-spacing: -0.01em;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+                opacity: 0.8;
+                margin-left: 0.3rem;
+            `;
+        }
+        
         // Load saved museum name
         const savedName = localStorage.getItem('mm_museum_name');
         if (savedName) {
@@ -759,44 +820,11 @@ This will replace your current museum data. Continue?`;
                     position: relative;
                 `;
                 
-                const dropdownNameText = document.createElement('div');
-                dropdownNameText.className = 'museum-name-text dropdown-name-text';
-                dropdownNameText.contentEditable = true;
-                dropdownNameText.setAttribute('data-placeholder', 'Click to name your museum');
-                dropdownNameText.style.cssText = `
-                    background: rgba(255, 255, 255, 0.08);
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                    border-radius: 6px;
-                    padding: 0.5rem 0.8rem;
-                    color: white;
-                    font-size: var(--font-size-xl);
-                    font-weight: 600;
-                    letter-spacing: -0.01em;
-                    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-                    outline: none;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    text-rendering: optimizeLegibility;
-                    -webkit-font-smoothing: antialiased;
-                    -moz-osx-font-smoothing: grayscale;
-                    min-width: 4ch;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    cursor: text;
-                `;
+                const dropdownNameText = createMuseumNameInput('museum-name-text dropdown-name-text');
+                applyDropdownInputStyling(dropdownNameText);
                 
-                const dropdownSuffix = document.createElement('span');
-                dropdownSuffix.className = 'museum-title-suffix';
-                dropdownSuffix.textContent = ' Math Museum';
-                dropdownSuffix.style.cssText = `
-                    color: white;
-                    font-size: var(--font-size-xl);
-                    font-weight: 600;
-                    letter-spacing: -0.01em;
-                    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-                    opacity: 0.8;
-                    margin-left: 0.3rem;
-                `;
+                const dropdownSuffix = createMuseumTitleSuffix();
+                applyDropdownSuffixStyling(dropdownSuffix);
                 
                 // Load current museum name
                 const museumNameText = document.getElementById('museum-name-text');
