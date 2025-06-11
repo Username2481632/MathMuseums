@@ -78,7 +78,7 @@ header {
 .museum-name-container {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 2px; /* Small gap to ensure proper spacing between name and 's */
     font-size: var(--font-size-xxl);
     font-weight: bold;
 }
@@ -90,16 +90,29 @@ header {
     font-size: var(--font-size-xxl);
     font-weight: bold;
     font-family: inherit;
-    padding: 0.125rem 0; /* Remove horizontal padding */
+    padding: 0; /* No padding - spacing handled in JS */
     border-radius: 4px;
     text-align: center;
     width: auto;
     transition: width 0.15s ease;
 }
 
+/* Hide green box when has content and not focused */
+.museum-name-input.content-hidden {
+    background: transparent;
+    border: 2px solid transparent;
+    transition: width 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
 .museum-name-input:hover {
     background: rgba(76, 175, 80, 0.4);
     border-color: rgba(76, 175, 80, 0.7);
+}
+
+/* Show green box on hover even when content is hidden */
+.museum-name-input.content-hidden:hover {
+    background: rgba(76, 175, 80, 0.2);
+    border-color: rgba(76, 175, 80, 0.3);
 }
 
 .museum-name-input::placeholder {

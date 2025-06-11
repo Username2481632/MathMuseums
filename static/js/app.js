@@ -253,7 +253,20 @@ This will replace your current museum data. Continue?`;
             if (headerTitle) {
                 headerTitle.classList.add('ready');
             }
+            updateContentVisibility(); // Initial state check
         }, 10);
+        
+        // Function to manage content visibility (hide green box when has content and not focused)
+        function updateContentVisibility() {
+            const hasContent = museumNameInput.value.trim().length > 0;
+            const isFocused = document.activeElement === museumNameInput;
+            
+            if (hasContent && !isFocused) {
+                museumNameInput.classList.add('content-hidden');
+            } else {
+                museumNameInput.classList.remove('content-hidden');
+            }
+        }
         
         // Function to dynamically resize input to fit content
         function resizeInputToContent() {
@@ -285,9 +298,10 @@ This will replace your current museum data. Continue?`;
             const textWidth = measurer.offsetWidth;
             document.body.removeChild(measurer);
             
-            // Make box wider than needed - extra space acts as visual padding
-            const extraSpace = 48; // 24px on each side as visual padding
-            const totalWidth = textWidth + extraSpace;
+            // Add offset for visual spacing without CSS padding (28px total = 14px per side)
+            // This includes space for borders, visual breathing room, and proper text spacing
+            const spacingOffset = 28;
+            const totalWidth = textWidth + spacingOffset;
             const maxWidth = window.innerWidth * 0.4; // Allow up to 40% of viewport
             
             const finalWidth = Math.min(totalWidth, maxWidth);
@@ -299,6 +313,7 @@ This will replace your current museum data. Continue?`;
             if (!museumNameInput.value.trim()) {
                 museumNameInput.classList.add('placeholder-focused');
             }
+            updateContentVisibility();
             resizeInputToContent();
         });
         
@@ -309,6 +324,7 @@ This will replace your current museum data. Continue?`;
             } else {
                 museumNameInput.classList.remove('placeholder-focused');
             }
+            updateContentVisibility();
             resizeInputToContent();
             saveMuseumName();
         });
@@ -331,6 +347,7 @@ This will replace your current museum data. Continue?`;
         // Remove faint styling on blur and save
         museumNameInput.addEventListener('blur', () => {
             museumNameInput.classList.remove('placeholder-focused');
+            updateContentVisibility();
             saveMuseumName();
         });
         
