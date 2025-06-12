@@ -597,13 +597,14 @@ var App = (function() {
      */
     async function showImportConfirmation(fileInfo) {
         const userNameDisplay = fileInfo.userName !== 'Unknown' ? `${fileInfo.userName}'s Math Museum` : 'Unknown User';
+        const layoutInfo = fileInfo.hasLayoutData ? '\n• Tile positions included' : '\n• Tile positions will use default layout';
         const message = `Import museum data from file?
         
 File contains:
 • Museum: ${userNameDisplay}
 • ${fileInfo.totalConcepts} concepts
 • Export date: ${new Date(fileInfo.exportDate).toLocaleDateString()}
-• Version: ${fileInfo.version}
+• Version: ${fileInfo.version}${layoutInfo}
 
 This will replace your current museum data. Continue?`;
         

@@ -18,12 +18,9 @@ const FileManager = (function() {
      */
     async function createExportData() {
         try {
-            // Get current session concept data for export
+            // Get current session concept data for export (includes coordinates)
             const concepts = await StorageManager.getAllConcepts();
             
-            // Layout state and museum name are no longer stored in localStorage
-            // They are only maintained in exported files
-            const parsedLayoutState = null;
             const userName = '';
             
             const exportData = {
@@ -31,7 +28,7 @@ const FileManager = (function() {
                 exportDate: new Date().toISOString(),
                 userName: userName,
                 concepts: concepts || [],
-                layoutState: parsedLayoutState,
+                // layoutState removed - coordinates are stored in concepts themselves
                 metadata: {
                     totalConcepts: (concepts || []).length,
                     userName: userName
@@ -195,6 +192,21 @@ const FileManager = (function() {
             if (!concept.id || !concept.displayName) {
                 throw new Error(`Invalid concept at index ${index}: Missing required fields`);
             }
+            
+            // Validate coordinates if present
+            if (concept.coordinates) {
+                const coords = concept.coordinates;
+                if (typeof coords.centerX === 'number' && typeof coords.centerY === 'number') {
+                    // Valid coordinate data - ensure bounds are reasonable
+                    if (coords.centerX < 0 || coords.centerX > 100 || coords.centerY < 0 || coords.centerY > 100) {
+                        console.warn(`Concept ${concept.id} has coordinates outside normal bounds - will be repositioned`);
+                    }
+                } else if (coords.centerX !== undefined || coords.centerY !== undefined) {
+                    // Partial coordinate data - warn and clear
+                    console.warn(`Concept ${concept.id} has incomplete coordinate data - will use default positioning`);
+                    delete concept.coordinates;
+                }
+            }
         });
         
         return data;
@@ -256,7 +268,7 @@ const FileManager = (function() {
                 await StorageManager.clearAllConcepts();
             }
             
-            // Import concepts
+            // Import concepts (which already contain their coordinate data)
             for (const concept of importData.concepts) {
                 try {
                     if (mergeMode === 'replace' || !(await StorageManager.getConcept(concept.id))) {
@@ -267,9 +279,7 @@ const FileManager = (function() {
                 }
             }
             
-            // Layout state and museum name are no longer stored in localStorage
-            // They are only maintained within exported files
-            // No need to restore to localStorage since we've moved away from persistent storage
+            // No need to handle layoutState separately since coordinates are in concepts
         } catch (error) {
             console.error('Error importing user data:', error);
             throw error;
@@ -326,12 +336,19 @@ const FileManager = (function() {
      * @returns {Object} File information
      */
     function getFileInfo(data) {
+        // Check if concepts have coordinate data (not just layoutState)
+        const hasLayoutData = data.concepts && data.concepts.some(concept => 
+            concept.coordinates && 
+            concept.coordinates.centerX !== undefined && 
+            concept.coordinates.centerY !== undefined
+        );
+        
         return {
             version: data.version,
             exportDate: data.exportDate,
             userName: data.userName || 'Unknown',
             totalConcepts: data.metadata?.totalConcepts || data.concepts?.length || 0,
-            hasLayoutData: !!data.layoutState
+            hasLayoutData: hasLayoutData
         };
     }
     

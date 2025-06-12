@@ -70,12 +70,14 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
 
     // --- PERCENTAGE-BASED DYNAMIC GRID LAYOUT ---
     // Default tile size as percentage of container (responsive)
-    const defaultTileWidthPercent = 20;  // 20% of container width
-    const defaultTileHeightPercent = 22; // 22% of container height  
-    const paddingPercent = 2; // 2% padding
+    const defaultTileWidthPercent = 18;  // 18% of container width (reduced to prevent overlap)
+    const defaultTileHeightPercent = 20; // 20% of container height (reduced to prevent overlap)
+    const paddingPercent = 3; // 3% padding between tiles
 
     // Calculate max columns that fit with percentage-based sizing
-    const maxColumns = Math.max(1, Math.floor(100 / (defaultTileWidthPercent + paddingPercent)));
+    // Formula: each column needs (tileWidth + padding), except last column doesn't need padding
+    const spacePerColumn = defaultTileWidthPercent + paddingPercent;
+    const maxColumns = Math.max(1, Math.floor((100 + paddingPercent) / spacePerColumn));
     const columns = Math.min(maxColumns, uniqueConcepts.length);
     const rows = Math.ceil(uniqueConcepts.length / columns);
     
@@ -90,32 +92,50 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
         homePoster.appendChild(tile);
         tile.style.position = 'absolute';
 
-        // Use percentage-based grid layout
-        const col = index % columns;
-        const row = Math.floor(index / columns);
-        
-        // Calculate percentage positions
-        const tileXPercent = gridOffsetXPercent + col * (defaultTileWidthPercent + paddingPercent);
-        const tileYPercent = gridOffsetYPercent + row * (defaultTileHeightPercent + paddingPercent);
-        
-        // Always use percentage-based sizing for tiles
-        tile.style.width = '';
-        tile.style.height = '';
-        tile.style.left = '';
-        tile.style.top = '';
-        // Apply percentage-based positioning and sizing
-        tile.style.left = `${tileXPercent}%`;
-        tile.style.top = `${tileYPercent}%`;
-        tile.style.width = `${defaultTileWidthPercent}%`;
-        tile.style.height = `${defaultTileHeightPercent}%`;
+        // Check if concept already has coordinates (e.g., from import)
+        const existingCoords = ConceptModel.getCoordinates(concept);
+        const hasExistingCoords = concept.coordinates && 
+                                 concept.coordinates.centerX !== undefined && 
+                                 concept.coordinates.centerY !== undefined;
 
-        // Store percentage coordinates in concept for persistence
-        concept.coordinates = concept.coordinates || {};
-        concept.coordinates.centerX = tileXPercent + (defaultTileWidthPercent / 2);
-        concept.coordinates.centerY = tileYPercent + (defaultTileHeightPercent / 2);
-        concept.coordinates.width = defaultTileWidthPercent;
-        concept.coordinates.height = defaultTileHeightPercent;
-        StorageManager.saveConcept(concept);
+        if (hasExistingCoords) {
+            // Use existing coordinates from concept (e.g., imported positions)
+            const containerWidth = homePoster.offsetWidth || 800; // fallback width
+            const containerHeight = homePoster.offsetHeight || 600; // fallback height
+            
+            const pixelCoords = window.CoordinateUtils.percentageToPixels(
+                existingCoords.centerX, existingCoords.centerY,
+                existingCoords.width, existingCoords.height,
+                containerWidth, containerHeight
+            );
+            
+            tile.style.left = `${pixelCoords.x}px`;
+            tile.style.top = `${pixelCoords.y}px`;
+            tile.style.width = `${pixelCoords.width}px`;
+            tile.style.height = `${pixelCoords.height}px`;
+        } else {
+            // Use default grid layout for new concepts
+            const col = index % columns;
+            const row = Math.floor(index / columns);
+            
+            // Calculate percentage positions
+            const tileXPercent = gridOffsetXPercent + col * (defaultTileWidthPercent + paddingPercent);
+            const tileYPercent = gridOffsetYPercent + row * (defaultTileHeightPercent + paddingPercent);
+            
+            // Apply percentage-based positioning and sizing
+            tile.style.left = `${tileXPercent}%`;
+            tile.style.top = `${tileYPercent}%`;
+            tile.style.width = `${defaultTileWidthPercent}%`;
+            tile.style.height = `${defaultTileHeightPercent}%`;
+
+            // Store percentage coordinates in concept for persistence
+            concept.coordinates = concept.coordinates || {};
+            concept.coordinates.centerX = tileXPercent + (defaultTileWidthPercent / 2);
+            concept.coordinates.centerY = tileYPercent + (defaultTileHeightPercent / 2);
+            concept.coordinates.width = defaultTileWidthPercent;
+            concept.coordinates.height = defaultTileHeightPercent;
+            StorageManager.saveConcept(concept);
+        }
     });
     
     // After rendering all tiles, use FontSizer for immediate optimal font sizing

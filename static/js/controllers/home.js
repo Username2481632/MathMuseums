@@ -609,6 +609,7 @@ const HomeController = (function() {
             // Reload concepts and re-render
             concepts = await loadConcepts();
             render();
+            setupEventListeners();
             debouncedRenderTiles();
         },
         clearThumbnailQueue: function() {
