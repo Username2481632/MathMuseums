@@ -12,8 +12,8 @@ const OnboardingController = (function() {
     let dismissButton;
     let neverButton;
     let currentStep = 0;
-    let isExperienced = false;
     let positionUpdateInterval;
+    let currentTarget = null;
     
     // Steps in the onboarding flow
     const steps = [
@@ -53,9 +53,8 @@ const OnboardingController = (function() {
     
     /**
      * Start the onboarding flow
-     * @param {boolean} experienced - Whether the user is experienced (has uploaded images before)
      */
-    function start(experienced) {
+    function start() {
         // Check if onboarding has already been shown in this session
         if (StorageManager.getOnboardingSession()) {
             console.log('Onboarding already shown in this session, skipping');
@@ -67,7 +66,6 @@ const OnboardingController = (function() {
         
         // Reset step
         currentStep = 0;
-        isExperienced = experienced;
         
         // Create the overlay if it doesn't exist
         createOverlay();
@@ -112,12 +110,8 @@ const OnboardingController = (function() {
         arrow.style.left = '-9999px';
         text.style.left = '-9999px';
         
-        // Show "Never show again" button only for experienced users
-        if (isExperienced) {
-            neverButton.style.display = 'inline-block';
-        } else {
-            neverButton.style.display = 'none';
-        }
+        // Always show "Never show again" button for all users
+        neverButton.style.display = 'inline-block';
         
         // Add the overlay to the body
         document.body.appendChild(overlay);
@@ -302,6 +296,9 @@ const OnboardingController = (function() {
         // Make sure target is visible in viewport
         await ensureElementVisible(target);
         
+        // Set the target element for click forwarding
+        setTargetElement(target);
+        
         // Position the highlight around the target
         positionHighlight(target, step.highlightStyle);
         
@@ -406,6 +403,22 @@ const OnboardingController = (function() {
         }
     }
     
+    /**
+     * Set the current target element for click forwarding
+     * @param {HTMLElement} element - Target element
+     */
+    function setTargetElement(element) {
+        currentTarget = element;
+        console.log('Set target element for onboarding:', element);
+    }
+    
+    /**
+     * Clear the current target element
+     */
+    function clearTargetElement() {
+        currentTarget = null;
+    }
+
     /**
      * Handle click events
      * @param {Event} event - Click event
@@ -512,6 +525,9 @@ const OnboardingController = (function() {
     function stop() {
         // Make sure the session flag is set
         StorageManager.saveOnboardingSession(true);
+        
+        // Clear clickable target
+        clearTargetElement();
         
         // Remove event listeners
         document.removeEventListener('click', handleClick);
@@ -629,6 +645,9 @@ const OnboardingController = (function() {
                     positionHighlight(target, step.highlightStyle);
                     positionArrow(target, step.arrowPosition);
                     positionText(target, step.textPosition);
+                    
+                    // Ensure target remains set (in case DOM has changed)
+                    setTargetElement(target);
                 }
             }
         }, 500); // Update every 500ms

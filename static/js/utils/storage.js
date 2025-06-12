@@ -56,6 +56,9 @@ const StorageManager = (function() {
      * @returns {Promise} Resolves when storage is ready
      */
     async function init() {
+        // Clean up deprecated localStorage entries
+        localStorage.removeItem('mm_image_skill_shown');
+        
         return await initDatabase();
     }
     
@@ -270,23 +273,6 @@ const StorageManager = (function() {
         sessionStorage.removeItem('mm_onboarding_shown');
     }
     
-    /**
-     * Save image skill state
-     * @param {boolean} skillShown - Whether image skill explanation was shown
-     */
-    function saveImageSkill(skillShown) {
-        localStorage.setItem('mm_image_skill_shown', skillShown.toString());
-    }
-    
-    /**
-     * Get image skill state
-     * @returns {boolean} Whether image skill explanation was shown
-     */
-    function getImageSkill() {
-        const stored = localStorage.getItem('mm_image_skill_shown');
-        return stored === 'true';
-    }
-    
     // Public API
     return {
         init,
@@ -300,9 +286,7 @@ const StorageManager = (function() {
         getOnboardingPreference,
         saveOnboardingSession,
         getOnboardingSession,
-        clearOnboardingSession,
-        saveImageSkill,
-        getImageSkill
+        clearOnboardingSession
     };
 })();
 

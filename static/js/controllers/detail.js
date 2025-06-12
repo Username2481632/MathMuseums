@@ -197,10 +197,8 @@ const DetailController = (function() {
                              state.expressions.list && 
                              state.expressions.list.some(item => item.type === 'image');
             
-            // If an image was detected, save image skill
+            // If an image was detected, stop onboarding if in progress
             if (hasImage) {
-                StorageManager.saveImageSkill(true);
-                
                 // Stop onboarding if in progress
                 OnboardingController.stop();
             }
@@ -296,8 +294,7 @@ const DetailController = (function() {
         }
         
         console.log('Desmos UI appears to be loaded, starting onboarding');
-        const hasImageSkill = StorageManager.getImageSkill();
-        OnboardingController.start(hasImageSkill);
+        OnboardingController.start();
     }
     
     /**
