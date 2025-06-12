@@ -275,10 +275,14 @@ const HomeController = (function() {
      */
     async function loadConcepts() {
         // Concepts are no longer stored in localStorage
-        // All concept data is now maintained only in exported files
-        // Users need to import a file to load their museum data
-        console.log('No concepts to load - data only stored in exported files');
-        return [];
+        // Create default concepts for display until user imports a file
+        console.log('Creating default concepts - data only persisted in exported files');
+        
+        // Create all default concept types
+        const defaultConcepts = ConceptModel.createAllConcepts();
+        
+        console.log('Created default concepts:', defaultConcepts);
+        return defaultConcepts;
     }
     
     /**
