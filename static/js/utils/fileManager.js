@@ -18,9 +18,8 @@ const FileManager = (function() {
      */
     async function createExportData() {
         try {
-            // No concept data to export since we no longer store locally
-            // All data is now maintained only in exported files
-            const concepts = [];
+            // Get current session concept data for export
+            const concepts = await StorageManager.getAllConcepts();
             
             // Layout state and museum name are no longer stored in localStorage
             // They are only maintained in exported files

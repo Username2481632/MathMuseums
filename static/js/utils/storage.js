@@ -5,6 +5,9 @@
  */
 const StorageManager = (function() {
     // All concept storage removed - data only stored in exported files
+    // But we maintain an in-memory store of current session concepts for detail views
+    let sessionConcepts = {};
+    let conceptsInitialized = false;
     
     /**
      * Initialize the storage manager
@@ -33,53 +36,81 @@ const StorageManager = (function() {
         return Promise.resolve(true);
     }
     
-    // Concept storage methods - now no-ops since data is only stored in files
+    // Concept storage methods - now use in-memory session storage only
     
     /**
-     * Save concept (no-op - concepts no longer stored locally)
+     * Initialize default concepts in memory if not already done
+     */
+    function initializeDefaultConcepts() {
+        if (!conceptsInitialized && typeof ConceptModel !== 'undefined') {
+            const defaultConcepts = ConceptModel.createAllConcepts();
+            defaultConcepts.forEach(concept => {
+                sessionConcepts[concept.id] = concept;
+            });
+            conceptsInitialized = true;
+            console.log('Initialized default concepts in memory');
+        }
+    }
+    
+    /**
+     * Save concept (in-memory only for current session)
      * @param {Object} concept - The concept data
      * @returns {Promise<Object>} The concept (unchanged)
      */
     async function saveConcept(concept) {
-        console.log('Concept save ignored - data only stored in exported files');
+        initializeDefaultConcepts();
+        sessionConcepts[concept.id] = { ...concept };
+        console.log('Concept saved to session memory:', concept.id);
         return concept;
     }
     
     /**
-     * Get concept (no-op - concepts no longer stored locally)
+     * Get concept (from in-memory session store)
      * @param {string} conceptId - The concept ID
-     * @returns {Promise<null>} Always returns null
+     * @returns {Promise<Object|null>} The concept or null if not found
      */
     async function getConcept(conceptId) {
-        console.log('Concept retrieval ignored - data only stored in exported files');
-        return null;
+        initializeDefaultConcepts();
+        const concept = sessionConcepts[conceptId] || null;
+        if (concept) {
+            console.log('Concept retrieved from session memory:', conceptId);
+        } else {
+            console.log('Concept not found in session memory:', conceptId);
+        }
+        return concept;
     }
     
     /**
-     * Get all concepts (no-op - concepts no longer stored locally)
-     * @returns {Promise<Array>} Always returns empty array
+     * Get all concepts (from in-memory session store)
+     * @returns {Promise<Array>} Array of concepts
      */
     async function getAllConcepts() {
-        console.log('Concept retrieval ignored - data only stored in exported files');
-        return [];
+        initializeDefaultConcepts();
+        const concepts = Object.values(sessionConcepts);
+        console.log('Retrieved all concepts from session memory:', concepts.length);
+        return concepts;
     }
     
     /**
-     * Delete concept (no-op - concepts no longer stored locally)
+     * Delete concept (from in-memory session store)
      * @param {string} conceptId - The concept ID
      * @returns {Promise<boolean>} Always returns true
      */
     async function deleteConcept(conceptId) {
-        console.log('Concept deletion ignored - data only stored in exported files');
+        initializeDefaultConcepts();
+        delete sessionConcepts[conceptId];
+        console.log('Concept deleted from session memory:', conceptId);
         return true;
     }
     
     /**
-     * Clear all concepts (no-op - concepts no longer stored locally)
+     * Clear all concepts (from in-memory session store)
      * @returns {Promise<void>}
      */
     async function clearAllConcepts() {
-        console.log('Concept clearing ignored - data only stored in exported files');
+        sessionConcepts = {};
+        conceptsInitialized = false;
+        console.log('All concepts cleared from session memory');
     }
     
     /**
