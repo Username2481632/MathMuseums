@@ -1,10 +1,6 @@
 /**
  * Storage Module - Preferences and Settings Only
- *     async function saveConcept(concept) {
-        initializeDefaultConcepts();
-        sessionConcepts[concept.id] = concept;
-        return concept;
-    }s user preferences and onboarding state
+ * Handles user preferences and onboarding state
  * Concept data is now stored only in exported files
  */
 const StorageManager = (function() {
@@ -61,8 +57,7 @@ const StorageManager = (function() {
      */
     async function saveConcept(concept) {
         initializeDefaultConcepts();
-        sessionConcepts[concept.id] = { ...concept };
-        console.log('Concept saved to session memory:', concept.id);
+        sessionConcepts[concept.id] = concept;
         return concept;
     }
     

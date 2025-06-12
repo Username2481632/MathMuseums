@@ -174,15 +174,11 @@ const HomeController = (function() {
 
     // Debounced render function to prevent multiple rapid renders
     function debouncedRenderTiles() {
-        // console.log('=== debouncedRenderTiles called ===');
         if (renderDebounceTimer) {
             clearTimeout(renderDebounceTimer);
-            // console.log('Cleared existing render timer');
         }
         renderDebounceTimer = setTimeout(() => {
-            // console.log('=== Executing debounced render ===');
             if (homePoster && concepts.length > 0) {
-                // console.log('Calling renderTilesOnPoster with concepts:', concepts.length);
                 renderTilesOnPoster(homePoster, concepts, { 
                     handleResizeStart: resizeManager.handleResizeStart, 
                     handleTouchResizeStart: resizeManager.handleTouchResizeStart,
@@ -224,7 +220,6 @@ const HomeController = (function() {
     
     // Helper: Restore layout state (center-based coordinates)
     function restoreLayoutState(state) {
-        console.log('Restoring layout state:', state);
         if (!Array.isArray(state)) return;
         for (const s of state) {
             const conceptIndex = concepts.findIndex(c => c.id === s.id);
@@ -279,8 +274,6 @@ const HomeController = (function() {
         
         // If no concepts exist (or only defaults), check if we should create defaults
         if (!concepts || concepts.length === 0) {
-            console.log('No concepts found, creating default concepts - data only persisted in exported files');
-            
             // Create all default concept types
             const defaultConcepts = ConceptModel.createAllConcepts();
             
@@ -290,9 +283,6 @@ const HomeController = (function() {
             }
             
             concepts = defaultConcepts;
-            console.log('Created default concepts:', concepts);
-        } else {
-            console.log('Loaded existing concepts from session memory:', concepts.length);
         }
         
         return concepts;
@@ -302,7 +292,6 @@ const HomeController = (function() {
      * Render the home view (home poster and tiles)
      */
     function render() {
-        // console.log('=== Home render called ===');
         const appContainer = document.getElementById('app-container');
         appContainer.innerHTML = '';
         const template = document.getElementById('home-template');
@@ -426,13 +415,10 @@ const HomeController = (function() {
             }
             
             // Check for direct image first
-            console.log('generateThumbnailWithRetry: Checking for direct image for concept:', concept.id);
             const directImageUrl = DesmosUtils.extractImageUrl(concept.desmosState);
-            console.log('generateThumbnailWithRetry: Direct image URL result:', directImageUrl);
             
             if (directImageUrl) {
                 // Use the direct image instead of generating a thumbnail
-                console.log('generateThumbnailWithRetry: Using direct image for concept:', concept.id);
                 thumbnailQueue[queueIndex] = null; // Clear from queue
                 
                 const img = document.createElement('img');
@@ -458,7 +444,6 @@ const HomeController = (function() {
                 };
                 
                 img.onerror = () => {
-                    console.warn('generateThumbnailWithRetry: Direct image failed to load, falling back to thumbnail generation for concept:', concept.id);
                     // Fall back to thumbnail generation
                     generateThumbnailFromDesmos();
                 };
@@ -500,14 +485,11 @@ const HomeController = (function() {
                         // Clear from queue
                         thumbnailQueue[queueIndex] = null;
                         
-                        console.error('Error generating thumbnail:', error);
-                        
                         // Retry if under the limit
                         if (retryCount < MAX_RETRIES && previewElement.isConnected) {
                             const tile = previewElement.closest('.concept-tile');
                             const poster = tile ? tile.closest('.tiles-container') : null;
                             if (poster && homePoster && poster === homePoster && poster.dataset.renderGeneration === currentRenderGeneration) {
-                                console.log(`Retrying thumbnail generation (${retryCount + 1}/${MAX_RETRIES})`);
                                 generateThumbnailWithRetry(concept, previewElement, retryCount + 1);
                             }
                         } else if (previewElement.isConnected) {
@@ -595,8 +577,6 @@ const HomeController = (function() {
      * Force cleanup of all corrupted data from storage
      */
     async function forceCleanupCorruptedData() {
-        console.log('=== Force cleanup of corrupted data ===');
-        
         // Clear localStorage of any concept-related data with numeric IDs
         const keysToRemove = [];
         for (let i = 0; i < localStorage.length; i++) {
@@ -607,7 +587,6 @@ const HomeController = (function() {
         }
         
         for (const key of keysToRemove) {
-            console.log('Removing corrupted localStorage key:', key);
             localStorage.removeItem(key);
         }
         
@@ -616,13 +595,10 @@ const HomeController = (function() {
             if (window.StorageManager && window.StorageManager.deleteConcept) {
                 await window.StorageManager.deleteConcept('1');
                 await window.StorageManager.deleteConcept(1);
-                console.log('Attempted to delete concept with ID 1 from storage');
             }
         } catch (error) {
-            console.log('Error during storage cleanup (expected):', error);
+            // Expected - concepts may not exist
         }
-        
-        console.log('Force cleanup completed');
     }
 
     // Public API
