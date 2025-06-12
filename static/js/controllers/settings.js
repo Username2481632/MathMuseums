@@ -12,6 +12,9 @@ const SettingsController = (function() {
     let aspectHeightInput;
     let screenFitControl;
     
+    // Track original settings when modal opens
+    let originalSettings = {};
+    
     /**
      * Initialize the settings controller
      */
@@ -116,6 +119,10 @@ const SettingsController = (function() {
     function openSettingsModal() {
         if (settingsModal) {
             settingsModal.style.display = 'block';
+            
+            // Store original settings to restore if user cancels
+            originalSettings = { ...PreferencesClient.getPreferences() };
+            
             loadCurrentSettings(); // Ensure settings are current when opening
             // Add Autosave toggle - always available now since file save status is no longer tracked
             let autosaveRow = document.getElementById('autosave-toggle-row');
@@ -136,27 +143,23 @@ const SettingsController = (function() {
                 // Set initial state from preferences
                 const autosavePref = PreferencesClient.getPreferences().autosave;
                 document.getElementById('autosave-toggle').checked = !!autosavePref;
-                document.getElementById('autosave-toggle').addEventListener('change', function(e) {
-                    PreferencesClient.savePreferences({ autosave: e.target.checked });
-                    
-                    // If user enabled autosave, check if warning should be shown
-                    if (e.target.checked && window.App && window.App.checkAutosaveWarning) {
-                        // Delay slightly to allow modal to close first
-                        setTimeout(() => {
-                            window.App.checkAutosaveWarning();
-                        }, 300);
-                    }
-                });
+                // Note: Autosave changes are now only saved when "Save Settings" is clicked
             }
         }
     }
     
     /**
-     * Close settings modal
+     * Close settings modal without saving changes
      */
     function closeSettingsModal() {
         if (settingsModal) {
             settingsModal.style.display = 'none';
+            
+            // Restore original settings (in case user made changes but didn't save)
+            if (originalSettings && Object.keys(originalSettings).length > 0) {
+                PreferencesClient.savePreferences(originalSettings);
+                console.log('Settings restored to original values');
+            }
         }
     }
     
@@ -179,6 +182,12 @@ const SettingsController = (function() {
                 btn.classList.toggle('active', btn.dataset.value === preferences.screenFit);
             });
         }
+        
+        // Set autosave toggle
+        const autosaveToggle = document.getElementById('autosave-toggle');
+        if (autosaveToggle) {
+            autosaveToggle.checked = !!preferences.autosave;
+        }
     }
     
     /**
@@ -188,6 +197,7 @@ const SettingsController = (function() {
         let aspectRatioWidth = 1; // Default
         let aspectRatioHeight = 1; // Default
         let screenFit = 'fit'; // Default
+        let autosave = false; // Default
         
         // Get aspect ratio values
         if (aspectWidthInput && aspectHeightInput) {
@@ -203,15 +213,33 @@ const SettingsController = (function() {
             }
         }
         
+        // Get autosave setting
+        const autosaveToggle = document.getElementById('autosave-toggle');
+        if (autosaveToggle) {
+            autosave = autosaveToggle.checked;
+        }
+        
         // Save new preferences
         PreferencesClient.savePreferences({
             aspectRatioWidth: aspectRatioWidth,
             aspectRatioHeight: aspectRatioHeight,
-            screenFit: screenFit
+            screenFit: screenFit,
+            autosave: autosave
         });
         
-        // Close modal
-        closeSettingsModal();
+        // If user enabled autosave, check if warning should be shown
+        if (autosave && !originalSettings.autosave && window.App && window.App.checkAutosaveWarning) {
+            // Delay slightly to allow modal to close first
+            setTimeout(() => {
+                window.App.checkAutosaveWarning();
+            }, 300);
+        }
+        
+        // Clear original settings since changes are now saved
+        originalSettings = {};
+        
+        // Close modal (don't restore settings since they were intentionally saved)
+        settingsModal.style.display = 'none';
     }
     
     // Public API
