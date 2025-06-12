@@ -284,16 +284,26 @@ const FileManager = (function() {
     
     /**
      * Create a file input element for importing
+     * @param {Function} onFileSelected - Callback function to handle selected file
      * @returns {HTMLInputElement} File input element
      */
-    function createFileInput() {
+    function createFileInput(onFileSelected) {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = '.mathmuseums';
         input.style.display = 'none';
         
         // Add change event listener
-        input.addEventListener('change', (event) => {
+        input.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (file && onFileSelected) {
+                try {
+                    await onFileSelected(file);
+                } catch (error) {
+                    console.error('Error processing selected file:', error);
+                }
+            }
+            
             // Reset input so same file can be selected again
             input.value = '';
         });
