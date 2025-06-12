@@ -52,26 +52,12 @@ const ConceptModel = (function() {
             return null;
         }
 
-        // Calculate grid position for this concept using center-based coordinates
-        const col = index % 3;
-        const row = Math.floor(index / 3);
-        
-        // Convert grid position to center-based percentage coordinates
-        // Place tiles in a 3x3 grid, centered around the origin (0,0)
-        const centerX = (col - 1) * 25; // -25, 0, 25 for left, center, right
-        const centerY = (row - 1) * 25; // -25, 0, 25 for top, center, bottom
-        
         return {
             id: type,
             type: type,
             displayName: getDisplayName(type),
-            // Center-based coordinate system (percentage of baseSize from center)
-            coordinates: {
-                centerX: centerX,   // Center X position relative to container center
-                centerY: centerY,   // Center Y position relative to container center
-                width: 25,          // Default width as percentage of base size
-                height: 20          // Default height as percentage of base size
-            },
+            // No coordinates - let the grid layout position new concepts
+            // coordinates: undefined,
             // Legacy pixel-based coordinates (for backward compatibility)
             position: { x: 0, y: 0 },
             size: { width: 250, height: 200 },
