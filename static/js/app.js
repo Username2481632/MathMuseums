@@ -79,7 +79,6 @@ var App = (function() {
             syncStatusEl.classList.add(`position-${newPosition}`);
             
             currentNotificationPosition = newPosition;
-            console.log('Updated notification position to:', newPosition);
             
             // If it was visible, show it again in the new position after a brief delay
             if (wasVisible) {
@@ -126,8 +125,6 @@ var App = (function() {
         syncStatus = status;
         if (!syncStatusEl) return;
         
-        console.log('Setting sync status:', status); // Debug logging
-        
         // Clear existing timeouts
         if (syncNotificationTimeout) {
             clearTimeout(syncNotificationTimeout);
@@ -145,7 +142,6 @@ var App = (function() {
             syncStatusEl.classList.add('saving');
             // Show notification for saving
             syncStatusEl.classList.add('show');
-            console.log('Showing saving notification'); // Debug logging
         } else if (status === 'unsaved') {
             syncStatusEl.textContent = 'Unsaved changes';
             syncStatusEl.classList.add('unsaved');
@@ -157,7 +153,6 @@ var App = (function() {
             syncStatusEl.classList.add('saved');
             // Show notification for saved confirmation
             syncStatusEl.classList.add('show');
-            console.log('Showing saved notification'); // Debug logging
             // No autohide: notification stays visible until next status change
         }
         
@@ -267,44 +262,26 @@ var App = (function() {
         
         // Clear any existing autosave timeout
         if (autosaveTimeout) {
-            console.log('Clearing existing autosave timeout'); // Debug logging
             clearTimeout(autosaveTimeout);
             autosaveTimeout = null;
         }
         
         // Check if autosave is enabled
         const preferences = window.PreferencesClient ? window.PreferencesClient.getPreferences() : {};
-        console.log('Preferences:', preferences); // Debug logging
         if (preferences.autosave) {
-            console.log('Autosave is enabled, setting timer'); // Debug logging
             // Auto-save after 2 seconds of no changes
             autosaveTimeout = setTimeout(async () => {
-                console.log('Autosave timer fired!'); // Debug logging
-                console.log('dirtySinceFileSave:', dirtySinceFileSave); // Debug logging
-                console.log('window.FileManager exists:', !!window.FileManager); // Debug logging
-                console.log('window.FileManager.autosaveUserData exists:', !!(window.FileManager && window.FileManager.autosaveUserData)); // Debug logging
                 
                 if (!dirtySinceFileSave) {
-                    console.log('Not saving: dirtySinceFileSave is false'); // Debug logging
-                } else if (!window.FileManager) {
-                    console.log('Not saving: window.FileManager is undefined'); // Debug logging
-                } else if (!window.FileManager.autosaveUserData) {
-                    console.log('Not saving: window.FileManager.autosaveUserData is undefined'); // Debug logging
-                }
-                
-                if (dirtySinceFileSave && window.FileManager && window.FileManager.autosaveUserData) {
-                    console.log('Triggering autosave'); // Debug logging
                     try {
                         setSyncStatus('saving');
                         // Use autosave method to avoid Save As dialog
                         const result = await window.FileManager.autosaveUserData();
                         if (result) {
-                            console.log('Autosave successful'); // Debug logging
                             dirtySinceFileSave = false;
                             setSyncStatus('saved');
                             // File save status no longer tracked in localStorage
                         } else {
-                            console.log('Autosave failed - no previous save location'); // Debug logging
                             // Autosave failed (no previous save location), show unsaved
                             setSyncStatus('unsaved');
                         }
@@ -313,12 +290,9 @@ var App = (function() {
                         setSyncStatus('unsaved');
                     }
                 } else {
-                    console.log('Autosave conditions not met - not saving'); // Debug logging
                 }
                 autosaveTimeout = null;
             }, 2000);
-        } else {
-            console.log('Autosave is disabled'); // Debug logging
         }
     }
 
@@ -383,8 +357,6 @@ var App = (function() {
     // Initialize the application
     async function init() {
         try {
-            // console.log('🚀 Starting application initialization...');
-            
             // Check that all required modules are available
             const requiredModules = {
                 'AuthClient': typeof AuthClient !== 'undefined',
@@ -395,8 +367,6 @@ var App = (function() {
                 'SettingsController': typeof SettingsController !== 'undefined'
             };
             
-            // console.log('📦 Module availability check:', requiredModules);
-            
             const missingModules = Object.entries(requiredModules)
                 .filter(([name, available]) => !available)
                 .map(([name]) => name);
@@ -406,22 +376,16 @@ var App = (function() {
             }
             
             // Initialize auth first
-            // console.log('🔐 Initializing authentication...');
             await AuthClient.init();
             
             // Initialize storage
-            // console.log('💾 Initializing storage...');
             await StorageManager.init();
             
             // Initialize preferences
-            // console.log('⚙️ Initializing preferences...');
             await PreferencesClient.init(); // Ensure this completes before accessing prefs
             
             // Initialize controllers that depend on PreferencesClient
-            // console.log('🎛️ Initializing settings controller...');
             SettingsController.init();
-            
-            // console.log('✅ Core modules initialized successfully');
             
             // Sync client removed - using local file storage instead
             
@@ -902,13 +866,6 @@ This will replace your current museum data. Continue?`;
                 ? Math.max(minScaleFactor, Math.min(scaleThreshold, maxWidth / naturalWidth))
                 : 1.0;
             
-            console.log(`${debugLabel} Scaling Debug:`, {
-                naturalWidth,
-                maxWidth,
-                scaleFactor,
-                needsScaling: scaleFactor < 1.0
-            });
-            
             // Apply scaling
             if (scaleFactor < 1.0) {
                 applyTransform(scaleFactor);
@@ -996,14 +953,6 @@ This will replace your current museum data. Continue?`;
                 
                 // Update all container heights
                 updateContainerHeights(newHeight);
-                
-                console.log('Applied header scaling:', { 
-                    scaleFactor, 
-                    newHeight, 
-                    maxTitleWidth,
-                    needsScaling: scaleFactor < 1.0,
-                    shouldShowDropdown: scaleFactor < 0.75
-                });
             }
         }
         

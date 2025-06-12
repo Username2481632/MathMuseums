@@ -45,7 +45,6 @@ const PreferencesClient = (function() {
                 (newPrefs.aspectRatioWidth !== preferences.aspectRatioWidth || 
                  newPrefs.aspectRatioHeight !== preferences.aspectRatioHeight)) {
                 lastAspectRatio = `${preferences.aspectRatioWidth}:${preferences.aspectRatioHeight}`;
-                console.log('Saved previous aspect ratio:', lastAspectRatio);
             }
             
             // Update local preferences
@@ -196,14 +195,6 @@ const PreferencesClient = (function() {
         const availableHeight = window.innerHeight - headerHeight;
         const targetAspectRatio = preferences.aspectRatioWidth / preferences.aspectRatioHeight;
 
-        console.log('Container sizing debug:', {
-            aspectRatioWidth: preferences.aspectRatioWidth,
-            aspectRatioHeight: preferences.aspectRatioHeight,
-            targetAspectRatio,
-            availableWidth,
-            availableHeight
-        });
-
         // Compute the largest size for the aspect ratio container that fits in the viewport
         let containerWidth = availableWidth;
         let containerHeight = containerWidth / targetAspectRatio;
@@ -227,7 +218,6 @@ const PreferencesClient = (function() {
         
         // Re-render tiles now that container has proper dimensions
         if (window.renderTilesOnPoster) {
-            console.log('Container sizing complete - dispatching containerSized event');
             document.dispatchEvent(new CustomEvent('containerSized'));
         }
     }
@@ -246,14 +236,6 @@ const PreferencesClient = (function() {
         const availableWidth = window.innerWidth;
         const availableHeight = window.innerHeight - headerHeight;
         const targetAspectRatio = preferences.aspectRatioWidth / preferences.aspectRatioHeight;
-
-        console.log('Fill mode sizing debug:', {
-            aspectRatioWidth: preferences.aspectRatioWidth,
-            aspectRatioHeight: preferences.aspectRatioHeight,
-            targetAspectRatio,
-            availableWidth,
-            availableHeight
-        });
 
         // Calculate dimensions for both scenarios:
         // 1. Fill width (height might exceed viewport)
@@ -276,8 +258,6 @@ const PreferencesClient = (function() {
             containerHeight = availableHeight;
         }
 
-        console.log('Fill mode calculated size:', { containerWidth, containerHeight });
-
         // Set the container size
         aspectRatioContainer.style.width = `${containerWidth}px`;
         aspectRatioContainer.style.height = `${containerHeight}px`;
@@ -299,29 +279,23 @@ const PreferencesClient = (function() {
         
         // Re-render tiles now that container has proper dimensions
         if (window.renderTilesOnPoster) {
-            console.log('Fill mode container sizing complete - dispatching containerSized event');
             document.dispatchEvent(new CustomEvent('containerSized'));
         }
     }
 
     // Scale tiles for aspect ratio change using center-based proportional scaling
     async function scaleTilesForAspectRatioChange(aspectRatioContainer, aspectRatioWidth, aspectRatioHeight) {
-        console.log(`Scaling tiles for aspect ratio change: ${aspectRatioWidth}:${aspectRatioHeight}`);
-        
         const tiles = aspectRatioContainer.querySelectorAll('.concept-tile');
         if (!tiles || tiles.length === 0) return;
         
         // Get old aspect ratio
         const oldAspectRatio = getLastAspectRatio();
         if (!oldAspectRatio) {
-            console.log('No previous aspect ratio found, using simple re-render');
             return simpleReRenderTiles(aspectRatioContainer, aspectRatioWidth, aspectRatioHeight);
         }
         
         const oldRatio = oldAspectRatio.width / oldAspectRatio.height;
         const newRatio = aspectRatioWidth / aspectRatioHeight;
-        
-        console.log(`Old ratio: ${oldRatio.toFixed(3)}, New ratio: ${newRatio.toFixed(3)}`);
         
         // Calculate scale factor to fit content into new aspect ratio
         // If new ratio is wider (landscape), scale based on height
@@ -337,8 +311,6 @@ const PreferencesClient = (function() {
             scaleX = 1.0;
             scaleY = newRatio / oldRatio;
         }
-        
-        console.log(`Scale factors: scaleX=${scaleX.toFixed(3)}, scaleY=${scaleY.toFixed(3)}`);
         
         // Transform all tiles using center-based scaling
         for (const tile of tiles) {
@@ -357,8 +329,6 @@ const PreferencesClient = (function() {
                             width: coords.width * scaleX,
                             height: coords.height * scaleY
                         };
-                        
-                        console.log(`Tile ${conceptId}: (${coords.centerX.toFixed(1)}, ${coords.centerY.toFixed(1)}) → (${scaledCoords.centerX.toFixed(1)}, ${scaledCoords.centerY.toFixed(1)})`);
                         
                         // Update the concept with scaled coordinates
                         const updatedConcept = window.ConceptModel.updateCoordinates(concept, scaledCoords);
@@ -383,8 +353,6 @@ const PreferencesClient = (function() {
                 }
             }
         }
-        
-        console.log('Aspect ratio scaling complete');
     }
 
     // Simple re-render fallback for when no previous aspect ratio is available
@@ -600,16 +568,6 @@ const PreferencesClient = (function() {
         return newBaseSize / oldBaseSize;
     }
     
-    /**
-     * Debug function to log scaling information
-     * @param {string} action - Action being performed
-     * @param {Object} data - Data to log
-     */
-    function debugScaling(action, data) {
-        if (window.location.search.includes('debug=true')) {
-            console.log(`[AspectRatio] ${action}:`, data);
-        }
-    }
     
     // Public API
     return {

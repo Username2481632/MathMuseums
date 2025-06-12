@@ -221,16 +221,12 @@ const DetailController = (function() {
     function startIdleTimer() {
         // Only start if not disabled and not already shown in this session
         if (isOnboardingDisabled) {
-            console.log('Onboarding is permanently disabled by user preference');
             return;
         }
         
         if (StorageManager.getOnboardingSession()) {
-            console.log('Onboarding already shown in this session, not starting idle timer');
             return;
         }
-        
-        console.log('Starting idle timer for onboarding');
         
         // Wait a bit to ensure Desmos is fully initialized
         setTimeout(() => {
@@ -315,100 +311,6 @@ const DetailController = (function() {
         };
     }
     
-    /**
-     * Debug function to reveal Desmos DOM structure
-     */
-    function debugDesmosDomStructure() {
-        console.log('Debugging Desmos DOM structure');
-        
-        // Log all calculator container elements
-        const calculatorContainer = document.getElementById('calculator-container');
-        if (!calculatorContainer) {
-            console.log('Calculator container not found');
-            return;
-        }
-        
-        console.log('Calculator container structure:', calculatorContainer);
-        
-        // Find all potential "add item" buttons using various possible selectors
-        const addItemButton = calculatorContainer.querySelector('[aria-label="Add Item"]');
-        const potentialButtons = [
-            ...calculatorContainer.querySelectorAll('.dcg-action-additem'),
-            ...calculatorContainer.querySelectorAll('.dcg-btn-dropdown-toggle'),
-            ...calculatorContainer.querySelectorAll('[aria-label="Add Item"]'),
-            ...calculatorContainer.querySelectorAll('.dcg-exppanel-btn'),
-            ...calculatorContainer.querySelectorAll('button')
-        ];
-        
-        console.log('Add Item button found via aria-label:', !!addItemButton);
-        console.log('Potential add item buttons found:', potentialButtons.length);
-        potentialButtons.forEach((btn, index) => {
-            console.log(`Button ${index}:`, {
-                element: btn,
-                classes: btn.className,
-                ariaLabel: btn.getAttribute('aria-label'),
-                dataAction: btn.getAttribute('data-action'),
-                innerText: btn.innerText,
-                innerHTML: btn.innerHTML
-            });
-        });
-        
-        // Look for all dom elements with class containing 'dcg-'
-        const dcgElements = calculatorContainer.querySelectorAll('[class*="dcg-"]');
-        console.log(`Found ${dcgElements.length} elements with dcg- classes`);
-        
-        // Extract and log all unique dcg- class names for reference
-        const uniqueClasses = new Set();
-        dcgElements.forEach(el => {
-            el.classList.forEach(cls => {
-                if (cls.startsWith('dcg-')) {
-                    uniqueClasses.add(cls);
-                }
-            });
-        });
-        
-        console.log('Unique dcg- classes:', Array.from(uniqueClasses).sort());
-        
-        // Look specifically for any open menus that might contain the image button
-        const menus = calculatorContainer.querySelectorAll('.dcg-popover, .dcg-menu, .dcg-options-menu');
-        console.log('Open menus found:', menus.length);
-        
-        menus.forEach((menu, index) => {
-            console.log(`Menu ${index} contents:`, menu);
-            
-            // Look for image-related items
-            const items = menu.querySelectorAll('.dcg-menu-item, [data-action="image"]');
-            console.log(`  Menu items found: ${items.length}`);
-            
-            items.forEach((item, itemIndex) => {
-                console.log(`  Item ${itemIndex}:`, {
-                    element: item,
-                    classes: item.className,
-                    dataAction: item.getAttribute('data-action'),
-                    ariaLabel: item.getAttribute('aria-label'),
-                    text: item.textContent.trim()
-                });
-            });
-        });
-        
-        // Check different selector variations for the "add item" button
-        const selectors = [
-            '[aria-label="Add Item"]',
-            '.dcg-action-add-expression',
-            '.dcg-add-expression-btn',
-            '.dcg-exppanel-btn',
-            '.dcg-btn-dropdown-toggle',
-            '.dcg-plus-circle'
-        ];
-        
-        selectors.forEach(selector => {
-            const elements = calculatorContainer.querySelectorAll(selector);
-            console.log(`Elements matching "${selector}":`, elements.length);
-            if (elements.length > 0) {
-                console.log('First element:', elements[0]);
-            }
-        });
-    }
     
     // Public API
     return {

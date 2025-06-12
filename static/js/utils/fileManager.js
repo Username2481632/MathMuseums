@@ -76,7 +76,6 @@ const FileManager = (function() {
                     lastFileHandle = fileHandle;
                     lastFilename = filename;
                     
-                    console.log('User data saved using File System Access API');
                     return true;
                 } catch (fsError) {
                     // If user cancels, error has name 'AbortError' or 'AbortError' in message
@@ -106,7 +105,6 @@ const FileManager = (function() {
             // Store filename for autosave
             lastFilename = filename;
 
-            console.log('User data downloaded successfully');
             return true;
         } catch (error) {
             console.error('Error downloading user data:', error);
@@ -130,7 +128,6 @@ const FileManager = (function() {
                     const writable = await lastFileHandle.createWritable();
                     await writable.write(blob);
                     await writable.close();
-                    console.log('User data autosaved using existing file handle');
                     return true;
                 } catch (fsError) {
                     console.warn('Failed to autosave to existing file handle:', fsError);
@@ -154,7 +151,6 @@ const FileManager = (function() {
                 // Clean up
                 URL.revokeObjectURL(url);
 
-                console.log('User data autosaved using fallback download');
                 return true;
             }
 
@@ -274,8 +270,6 @@ const FileManager = (function() {
             // Layout state and museum name are no longer stored in localStorage
             // They are only maintained within exported files
             // No need to restore to localStorage since we've moved away from persistent storage
-            
-            console.log('Import completed successfully');
         } catch (error) {
             console.error('Error importing user data:', error);
             throw error;

@@ -1,6 +1,10 @@
 /**
  * Storage Module - Preferences and Settings Only
- * Handles user preferences and onboarding state
+ *     async function saveConcept(concept) {
+        initializeDefaultConcepts();
+        sessionConcepts[concept.id] = concept;
+        return concept;
+    }s user preferences and onboarding state
  * Concept data is now stored only in exported files
  */
 const StorageManager = (function() {
@@ -32,7 +36,6 @@ const StorageManager = (function() {
             }
         });
         
-        console.log('Storage initialized - cleaned up concept data and deprecated entries');
         return Promise.resolve(true);
     }
     
@@ -48,7 +51,6 @@ const StorageManager = (function() {
                 sessionConcepts[concept.id] = concept;
             });
             conceptsInitialized = true;
-            console.log('Initialized default concepts in memory');
         }
     }
     
@@ -72,11 +74,6 @@ const StorageManager = (function() {
     async function getConcept(conceptId) {
         initializeDefaultConcepts();
         const concept = sessionConcepts[conceptId] || null;
-        if (concept) {
-            console.log('Concept retrieved from session memory:', conceptId);
-        } else {
-            console.log('Concept not found in session memory:', conceptId);
-        }
         return concept;
     }
     
@@ -87,7 +84,6 @@ const StorageManager = (function() {
     async function getAllConcepts() {
         initializeDefaultConcepts();
         const concepts = Object.values(sessionConcepts);
-        console.log('Retrieved all concepts from session memory:', concepts.length);
         return concepts;
     }
     
@@ -99,7 +95,6 @@ const StorageManager = (function() {
     async function deleteConcept(conceptId) {
         initializeDefaultConcepts();
         delete sessionConcepts[conceptId];
-        console.log('Concept deleted from session memory:', conceptId);
         return true;
     }
     
@@ -110,7 +105,6 @@ const StorageManager = (function() {
     async function clearAllConcepts() {
         sessionConcepts = {};
         conceptsInitialized = false;
-        console.log('All concepts cleared from session memory');
     }
     
     /**

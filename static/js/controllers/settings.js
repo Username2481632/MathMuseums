@@ -158,7 +158,6 @@ const SettingsController = (function() {
             // Restore original settings (in case user made changes but didn't save)
             if (originalSettings && Object.keys(originalSettings).length > 0) {
                 PreferencesClient.savePreferences(originalSettings);
-                console.log('Settings restored to original values');
             }
         }
     }
