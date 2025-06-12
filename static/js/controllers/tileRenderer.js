@@ -65,25 +65,83 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
     } else if (homePoster.closest('.aspect-ratio-container')) {
         container = homePoster.closest('.aspect-ratio-container');
     }
-    let containerWidth = container.offsetWidth;
-    let containerHeight = container.offsetHeight;
+    
+    // Use the homePoster's dimensions directly for percentage calculations
+    // since that's the actual container where tiles are positioned
+    let containerWidth = homePoster.offsetWidth;
+    let containerHeight = homePoster.offsetHeight;
 
     // --- PERCENTAGE-BASED DYNAMIC GRID LAYOUT ---
-    // Default tile size as percentage of container (responsive)
-    const defaultTileWidthPercent = 18;  // 18% of container width (reduced to prevent overlap)
-    const defaultTileHeightPercent = 20; // 20% of container height (reduced to prevent overlap)
-    const paddingPercent = 3; // 3% padding between tiles
+    // Increased tile sizes and reduced padding for maximum space utilization
+    let tileWidthPercent = 22;  // Increased from 18% to 22% for larger tiles
+    let tileHeightPercent = 26; // Increased from 20% to 26% for larger tiles  
+    const paddingPercent = 2; // Reduced from 3% to 2% for tighter spacing
 
-    // Calculate max columns that fit with percentage-based sizing
-    // Formula: each column needs (tileWidth + padding), except last column doesn't need padding
-    const spacePerColumn = defaultTileWidthPercent + paddingPercent;
+    // Calculate max columns and rows that fit with percentage-based sizing
+    const spacePerColumn = tileWidthPercent + paddingPercent;
+    const spacePerRow = tileHeightPercent + paddingPercent;
     const maxColumns = Math.max(1, Math.floor((100 + paddingPercent) / spacePerColumn));
-    const columns = Math.min(maxColumns, uniqueConcepts.length);
-    const rows = Math.ceil(uniqueConcepts.length / columns);
+    const maxRows = Math.max(1, Math.floor((100 + paddingPercent) / spacePerRow));
+    
+    // Calculate initial grid dimensions
+    let columns = Math.min(maxColumns, uniqueConcepts.length);
+    let rows = Math.ceil(uniqueConcepts.length / columns);
+    
+    // If we need more rows than can fit, adjust the layout
+    if (rows > maxRows) {
+        // Option 1: Try increasing columns to reduce rows
+        const minColumns = Math.ceil(uniqueConcepts.length / maxRows);
+        if (minColumns <= maxColumns) {
+            columns = minColumns;
+            rows = Math.ceil(uniqueConcepts.length / columns);
+        } else {
+            // Option 2: We need to reduce tile sizes to fit everything
+            const totalCells = uniqueConcepts.length;
+            const aspectRatio = tileWidthPercent / tileHeightPercent;
+            
+            // Calculate optimal grid that fits in available space
+            let bestColumns = 1;
+            let bestRows = totalCells;
+            let bestTileWidth = 0;
+            let bestTileHeight = 0;
+            
+            // Try different column counts and find the one that gives largest tiles
+            for (let testColumns = 1; testColumns <= totalCells; testColumns++) {
+                const testRows = Math.ceil(totalCells / testColumns);
+                
+                // Calculate required tile sizes to fit this grid within 100% bounds
+                const availableWidthPerTile = (100 - (testColumns - 1) * paddingPercent) / testColumns;
+                const availableHeightPerTile = (100 - (testRows - 1) * paddingPercent) / testRows;
+                
+                // Maintain aspect ratio and use the smaller constraint
+                let testTileWidth = Math.min(availableWidthPerTile, availableHeightPerTile * aspectRatio);
+                let testTileHeight = testTileWidth / aspectRatio;
+                
+                // Ensure tiles don't exceed available space
+                if (testTileHeight > availableHeightPerTile) {
+                    testTileHeight = availableHeightPerTile;
+                    testTileWidth = testTileHeight * aspectRatio;
+                }
+                
+                // If this gives larger tiles and fits within bounds, use it
+                if (testTileWidth > bestTileWidth) {
+                    bestColumns = testColumns;
+                    bestRows = testRows;
+                    bestTileWidth = testTileWidth;
+                    bestTileHeight = testTileHeight;
+                }
+            }
+            
+            columns = bestColumns;
+            rows = bestRows;
+            tileWidthPercent = bestTileWidth;
+            tileHeightPercent = bestTileHeight;
+        }
+    }
     
     // Center grid horizontally and vertically using percentages
-    const totalGridWidthPercent = columns * defaultTileWidthPercent + (columns - 1) * paddingPercent;
-    const totalGridHeightPercent = rows * defaultTileHeightPercent + (rows - 1) * paddingPercent;
+    const totalGridWidthPercent = columns * tileWidthPercent + (columns - 1) * paddingPercent;
+    const totalGridHeightPercent = rows * tileHeightPercent + (rows - 1) * paddingPercent;
     const gridOffsetXPercent = Math.max(0, (100 - totalGridWidthPercent) / 2);
     const gridOffsetYPercent = Math.max(0, (100 - totalGridHeightPercent) / 2);
 
@@ -119,21 +177,21 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
             const row = Math.floor(index / columns);
             
             // Calculate percentage positions
-            const tileXPercent = gridOffsetXPercent + col * (defaultTileWidthPercent + paddingPercent);
-            const tileYPercent = gridOffsetYPercent + row * (defaultTileHeightPercent + paddingPercent);
+            const tileXPercent = gridOffsetXPercent + col * (tileWidthPercent + paddingPercent);
+            const tileYPercent = gridOffsetYPercent + row * (tileHeightPercent + paddingPercent);
             
             // Apply percentage-based positioning and sizing
             tile.style.left = `${tileXPercent}%`;
             tile.style.top = `${tileYPercent}%`;
-            tile.style.width = `${defaultTileWidthPercent}%`;
-            tile.style.height = `${defaultTileHeightPercent}%`;
+            tile.style.width = `${tileWidthPercent}%`;
+            tile.style.height = `${tileHeightPercent}%`;
 
             // Store percentage coordinates in concept for persistence
             concept.coordinates = concept.coordinates || {};
-            concept.coordinates.centerX = tileXPercent + (defaultTileWidthPercent / 2);
-            concept.coordinates.centerY = tileYPercent + (defaultTileHeightPercent / 2);
-            concept.coordinates.width = defaultTileWidthPercent;
-            concept.coordinates.height = defaultTileHeightPercent;
+            concept.coordinates.centerX = tileXPercent + (tileWidthPercent / 2);
+            concept.coordinates.centerY = tileYPercent + (tileHeightPercent / 2);
+            concept.coordinates.width = tileWidthPercent;
+            concept.coordinates.height = tileHeightPercent;
             StorageManager.saveConcept(concept);
         }
     });

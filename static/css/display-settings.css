@@ -168,9 +168,9 @@ input:checked + .slider:before {
     height: 100%;
     display: flex;
     flex-direction: column;
-    /* Center content if needed */
-    align-items: center;
-    justify-content: center;
+    /* Don't center content - let tiles position themselves */
+    align-items: stretch;
+    justify-content: flex-start;
 }
 
 /* Fit Mode (scale down to fit viewport with no scrolling) */

@@ -304,18 +304,39 @@ const HomeController = (function() {
             if (window.PreferencesClient && window.PreferencesClient.applyDisplaySettings) {
                 window.PreferencesClient.applyDisplaySettings();
             }
-            // Render tiles after aspect ratio is applied
-            renderTilesOnPoster(homePoster, concepts, { 
-                handleResizeStart: resizeManager.handleResizeStart, 
-                handleTouchResizeStart: resizeManager.handleTouchResizeStart,
-                generateThumbnailWithRetry: generateThumbnailWithRetry
-            });
-            // Wait for tiles to be visible, then adjust fonts
-            if (window.FontSizer) {
-                setTimeout(() => {
-                    window.FontSizer.forceAdjustment();
-                }, 250); // Delay to allow for animation and DOM layout
+            
+            // Wait for CSS layout to complete after applyDisplaySettings
+            function renderWhenReady() {
+                // Force a layout calculation to ensure CSS changes are applied
+                homePoster.offsetWidth; // Force reflow
+                
+                const containerWidth = homePoster.offsetWidth;
+                const containerHeight = homePoster.offsetHeight;
+                
+                if (containerWidth > 0 && containerHeight > 0) {
+                    // Container has dimensions, safe to render
+                    renderTilesOnPoster(homePoster, concepts, { 
+                        handleResizeStart: resizeManager.handleResizeStart, 
+                        handleTouchResizeStart: resizeManager.handleTouchResizeStart,
+                        generateThumbnailWithRetry: generateThumbnailWithRetry
+                    });
+                    
+                    // Wait for tiles to be visible, then adjust fonts
+                    if (window.FontSizer) {
+                        setTimeout(() => {
+                            window.FontSizer.forceAdjustment();
+                        }, 250);
+                    }
+                } else {
+                    // Container not ready yet, try again after next frame
+                    requestAnimationFrame(renderWhenReady);
+                }
             }
+            
+            // Use requestAnimationFrame to ensure CSS changes are applied before checking dimensions
+            requestAnimationFrame(() => {
+                renderWhenReady();
+            });
         }, 0);
     }
     

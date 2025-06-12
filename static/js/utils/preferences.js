@@ -203,14 +203,37 @@ const PreferencesClient = (function() {
             containerWidth = containerHeight * targetAspectRatio;
         }
 
-        console.log('Calculated container size:', { containerWidth, containerHeight });
-
         // Set the container size (this creates black bars if needed)
-        aspectRatioContainer.style.width = `${containerWidth}px`;
-        aspectRatioContainer.style.height = `${containerHeight}px`;
-        aspectRatioContainer.style.maxWidth = 'none';
-        aspectRatioContainer.style.maxHeight = 'none';
+        aspectRatioContainer.style.setProperty('width', `${containerWidth}px`, 'important');
+        aspectRatioContainer.style.setProperty('height', `${containerHeight}px`, 'important');
+        aspectRatioContainer.style.setProperty('max-width', 'none', 'important');
+        aspectRatioContainer.style.setProperty('max-height', 'none', 'important');
+        aspectRatioContainer.style.setProperty('min-width', `${containerWidth}px`, 'important');
+        aspectRatioContainer.style.setProperty('min-height', `${containerHeight}px`, 'important');
         aspectRatioContainer.style.transform = 'none';
+        aspectRatioContainer.style.overflow = 'hidden';
+        aspectRatioContainer.style.position = 'relative';
+
+        // Also ensure child containers respect the parent dimensions
+        const aspectRatioContent = aspectRatioContainer.querySelector('.aspect-ratio-content');
+        const tilesContainer = aspectRatioContainer.querySelector('.tiles-container');
+        
+        if (aspectRatioContent) {
+            aspectRatioContent.style.setProperty('width', '100%', 'important');
+            aspectRatioContent.style.setProperty('height', '100%', 'important');
+            aspectRatioContent.style.setProperty('max-width', `${containerWidth}px`, 'important');
+            aspectRatioContent.style.setProperty('max-height', `${containerHeight}px`, 'important');
+        }
+        
+        if (tilesContainer) {
+            tilesContainer.style.setProperty('width', '100%', 'important');
+            tilesContainer.style.setProperty('height', '100%', 'important');
+            tilesContainer.style.setProperty('max-width', `${containerWidth}px`, 'important');
+            tilesContainer.style.setProperty('max-height', `${containerHeight}px`, 'important');
+        }
+
+        // Force a layout recalculation to ensure the styles take effect
+        aspectRatioContainer.offsetWidth; // Force reflow
 
         // Center the container
         homeView.style.alignItems = 'center';
@@ -435,6 +458,7 @@ const PreferencesClient = (function() {
     }
     
     /**
+     /**
      * Get preferences from localStorage
      * @returns {Object|null} Preferences or null if not found
      */
