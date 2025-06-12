@@ -38,7 +38,7 @@ const DesmosUtils = (function() {
                 
                 // Create a hidden calculator instance
                 hiddenCalculator = Desmos.GraphingCalculator(hiddenContainer, {
-                    expressions: false,
+                    expressions: true, // must be true to render equations/images
                     settingsMenu: false,
                     zoomButtons: false,
                     expressionsTopbar: false,
@@ -100,62 +100,6 @@ const DesmosUtils = (function() {
     }
     
     /**
-     * Extract direct image URLs from a Desmos state if available
-     * @param {string} stateString - Stringified Desmos state
-     * @returns {string|null} The image URL or null if not found
-     */
-    function extractImageUrl(stateString) {
-        if (!stateString) {
-            console.log('extractImageUrl: No state string provided');
-            return null;
-        }
-        
-        try {
-            const state = JSON.parse(stateString);
-            console.log('extractImageUrl: Parsed state:', state);
-            
-            if (!state || !state.expressions || !state.expressions.list) {
-                console.log('extractImageUrl: No expressions list found');
-                return null;
-            }
-            
-            // Look for images in the state
-            const imageExpression = state.expressions.list.find(item => item.type === 'image');
-            console.log('extractImageUrl: Found image expression:', imageExpression);
-            
-            if (!imageExpression) {
-                console.log('extractImageUrl: No image expression found');
-                return null;
-            }
-            
-            // Check for the direct image_url property (Desmos API format)
-            if (imageExpression.image_url) {
-                console.log('extractImageUrl: Found image_url:', imageExpression.image_url.substring(0, 50) + '...');
-                return imageExpression.image_url;
-            }
-            
-            // Check if the image has a nested image object with URL
-            if (imageExpression.image && imageExpression.image.url) {
-                console.log('extractImageUrl: Found nested image URL:', imageExpression.image.url);
-                return imageExpression.image.url;
-            }
-            
-            // Check for data URL in nested image object
-            if (imageExpression.image && imageExpression.image.data) {
-                const dataUrl = `data:${imageExpression.image.mime};base64,${imageExpression.image.data}`;
-                console.log('extractImageUrl: Found nested image data, created data URL length:', dataUrl.length);
-                return dataUrl;
-            }
-            
-            console.log('extractImageUrl: No URL or data found in image');
-            return null;
-        } catch (error) {
-            console.error('Error extracting image URL:', error);
-            return null;
-        }
-    }
-    
-    /**
      * Clean up resources
      */
     function cleanup() {
@@ -177,7 +121,6 @@ const DesmosUtils = (function() {
     // Expose the public API
     return {
         generateThumbnail,
-        extractImageUrl,
         cleanup
     };
 })();

@@ -212,9 +212,6 @@ function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, g
     tile.className = 'concept-tile';
     tile.dataset.id = concept.id;
     
-    // Tiles will be sized using CSS percentages set by the grid layout
-    // No need to set width/height here as it's handled in the grid positioning above
-    
     // Create the tile header
     const header = document.createElement('div');
     header.className = 'tile-header';
@@ -228,64 +225,9 @@ function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, g
     // Create the preview area
     const preview = document.createElement('div');
     preview.className = 'tile-preview';
-    
-    // If the concept has a Desmos state with an image, show preview
-    if (ConceptModel.hasImage(concept)) {
-        try {
-            // First show loading state
-            preview.innerHTML = '<div class="loading-preview"></div>';
-            
-            // Try to extract direct image URL first (faster approach)
-            const imageUrl = DesmosUtils.extractImageUrl(concept.desmosState);
-            
-            if (imageUrl) {
-                console.log('tileRenderer: Using direct image URL for', concept.displayName, imageUrl);
-                // Create image with direct URL
-                const img = document.createElement('img');
-                img.alt = `${concept.displayName} preview`;
-                img.src = imageUrl;
-                img.className = 'preview-image';
-                img.draggable = false;
-                
-                // Prevent default drag behavior
-                img.addEventListener('dragstart', (e) => e.preventDefault());
-                img.addEventListener('drag', (e) => e.preventDefault());
-                
-                img.onload = () => {
-                    console.log('tileRenderer: Direct image loaded successfully for', concept.displayName);
-                };
-                
-                img.onerror = () => {
-                    console.warn('tileRenderer: Direct image failed to load for', concept.displayName, 'falling back to thumbnail');
-                    // Fall back to thumbnail generation if image loading fails
-                    generateThumbnailWithRetry(concept, preview);
-                };
-                
-                // Set a timeout as additional fallback in case the image never loads or errors
-                setTimeout(() => {
-                    if (!img.complete) {
-                        console.warn('tileRenderer: Direct image timed out for', concept.displayName, 'falling back to thumbnail');
-                        generateThumbnailWithRetry(concept, preview);
-                    }
-                }, 5000);
-                
-                // Replace loading with image
-                preview.innerHTML = '';
-                preview.appendChild(img);
-            } else {
-                console.log('tileRenderer: No direct image URL, generating thumbnail for', concept.displayName);
-                // Generate thumbnail using hidden calculator
-                generateThumbnailWithRetry(concept, preview);
-            }
-        } catch (error) {
-            console.error('Error creating preview:', error);
-            preview.innerHTML = '<div class="preview-error">Preview unavailable</div>';
-        }
-    } else {
-        // Show placeholder
-        preview.innerHTML = '<div class="no-preview">No image yet</div>';
-    }
-    
+    // Always show a Desmos render (even if blank)
+    preview.innerHTML = '<div class="loading-preview"></div>';
+    generateThumbnailWithRetry(concept, preview);
     content.appendChild(preview);
     tile.appendChild(content);
     
@@ -295,9 +237,7 @@ function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, g
         const handle = document.createElement('div');
         handle.className = `resize-handle ${pos}`;
         handle.dataset.position = pos;
-        // Add mouse down event for resize start
         handle.addEventListener('mousedown', handleResizeStart);
-        // Add touch start event for resize start
         handle.addEventListener('touchstart', handleTouchResizeStart);
         tile.appendChild(handle);
     });
