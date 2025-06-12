@@ -60,8 +60,8 @@
 #onboarding-buttons {
     position: fixed;
     display: flex; /* Changed from 'none' to always be visible but with opacity 0 */
-    gap: var(--spacing-sm);
-    top: 50%;
+    gap: var(--spacing-lg);
+    top: 66.67%;
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 10002;
