@@ -49,8 +49,9 @@
     position: fixed;
     display: flex; /* Changed from 'none' to always be visible but with opacity 0 */
     gap: var(--spacing-sm);
-    bottom: 20px;
-    right: 20px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     z-index: 10002;
     pointer-events: auto;
     opacity: 0;
