@@ -169,6 +169,14 @@ const FileManager = (function() {
     }
     
     /**
+     * Check if autosave is available (user has saved before this session)
+     * @returns {boolean} True if autosave can work
+     */
+    function canAutosave() {
+        return !!(lastFileHandle || lastFilename);
+    }
+
+    /**
      * Parse and validate imported data
      * @param {Object} data - Imported data object
      * @returns {Object} Validated data
@@ -334,7 +342,8 @@ const FileManager = (function() {
         createExportData,
         FILE_FORMAT_VERSION,
         DEFAULT_FILENAME,
-        autosaveUserData
+        autosaveUserData,
+        canAutosave
     };
 })();
 

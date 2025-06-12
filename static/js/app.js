@@ -447,6 +447,9 @@ var App = (function() {
             // Initialize smart notification positioning
             initializeInteractionTracking();
 
+            // Check if autosave warning should be shown
+            checkAutosaveWarning();
+
             // Remove loading state
             const loading = document.getElementById('loading');
             if (loading) {
@@ -461,6 +464,79 @@ var App = (function() {
             if (loading) {
                 loading.textContent = 'Error loading application. Please try again later.';
             }
+        }
+    }
+
+    /**
+     * Check if autosave warning should be shown
+     */
+    function checkAutosaveWarning() {
+        const preferences = PreferencesClient.getPreferences();
+        
+        // Only show warning if autosave is enabled
+        if (!preferences.autosave) {
+            return;
+        }
+
+        // Check if user has already been warned this session
+        if (sessionStorage.getItem('mm_autosave_warning_shown') === 'true') {
+            return;
+        }
+
+        // Check if autosave can actually work (user has saved before)
+        if (!window.FileManager || !window.FileManager.canAutosave()) {
+            showAutosaveWarning();
+        }
+    }
+
+    /**
+     * Show the autosave warning modal
+     */
+    function showAutosaveWarning() {
+        const modal = document.getElementById('autosave-warning-modal');
+        if (modal) {
+            modal.style.display = 'block';
+            
+            // Mark as shown this session
+            sessionStorage.setItem('mm_autosave_warning_shown', 'true');
+            
+            // Setup event handlers if not already done
+            setupAutosaveWarningHandlers();
+        }
+    }
+
+    /**
+     * Setup event handlers for autosave warning modal
+     */
+    function setupAutosaveWarningHandlers() {
+        const dismissBtn = document.getElementById('autosave-warning-dismiss');
+        const disableBtn = document.getElementById('autosave-warning-disable');
+        const modal = document.getElementById('autosave-warning-modal');
+
+        if (dismissBtn && !dismissBtn.hasAttribute('data-handler-added')) {
+            dismissBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+            dismissBtn.setAttribute('data-handler-added', 'true');
+        }
+
+        if (disableBtn && !disableBtn.hasAttribute('data-handler-added')) {
+            disableBtn.addEventListener('click', () => {
+                // Disable autosave in preferences
+                PreferencesClient.savePreferences({ autosave: false });
+                modal.style.display = 'none';
+            });
+            disableBtn.setAttribute('data-handler-added', 'true');
+        }
+
+        // Close modal when clicking outside
+        if (modal && !modal.hasAttribute('data-handler-added')) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+            modal.setAttribute('data-handler-added', 'true');
         }
     }
 
@@ -1343,9 +1419,15 @@ This will replace your current museum data. Continue?`;
     
     // Public API
     return {
-        init
+        init,
+        checkAutosaveWarning
     };
 })();
+
+// Make App available globally for access from other modules
+if (typeof window !== 'undefined') {
+    window.App = App;
+}
 
 // Initialize the application when the DOM is ready
 document.addEventListener('DOMContentLoaded', App.init);

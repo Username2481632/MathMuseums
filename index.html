@@ -122,6 +122,25 @@
         </div>
     </div>
 
+    <!-- Autosave Warning Modal -->
+    <div id="autosave-warning-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>⚠️ Autosave Setup Required</h2>
+            <p>You have autosave enabled, but due to browser security restrictions, autosave requires you to manually save your file at least once per session.</p>
+            <p><strong>To enable autosave:</strong></p>
+            <ol>
+                <li>Click the <strong>Export</strong> button in the top left</li>
+                <li>Save your museum file to your computer</li>
+                <li>Autosave will then work automatically for the rest of this session</li>
+            </ol>
+            <p><em>This is a one-time requirement per browser session due to web security policies.</em></p>
+            <div class="modal-actions">
+                <button id="autosave-warning-dismiss" class="btn">Got it!</button>
+                <button id="autosave-warning-disable" class="btn btn-secondary">Turn off autosave</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Sync Status Notification -->
     <div id="sync-notification">All changes saved</div>
 

@@ -138,6 +138,14 @@ const SettingsController = (function() {
                 document.getElementById('autosave-toggle').checked = !!autosavePref;
                 document.getElementById('autosave-toggle').addEventListener('change', function(e) {
                     PreferencesClient.savePreferences({ autosave: e.target.checked });
+                    
+                    // If user enabled autosave, check if warning should be shown
+                    if (e.target.checked && window.App && window.App.checkAutosaveWarning) {
+                        // Delay slightly to allow modal to close first
+                        setTimeout(() => {
+                            window.App.checkAutosaveWarning();
+                        }, 300);
+                    }
                 });
             }
         }
