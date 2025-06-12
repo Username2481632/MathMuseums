@@ -274,15 +274,28 @@ const HomeController = (function() {
      * @returns {Array} Array of concept objects
      */
     async function loadConcepts() {
-        // Concepts are no longer stored in localStorage
-        // Create default concepts for display until user imports a file
-        console.log('Creating default concepts - data only persisted in exported files');
+        // First try to get concepts from session memory (in case they were imported)
+        let concepts = await StorageManager.getAllConcepts();
         
-        // Create all default concept types
-        const defaultConcepts = ConceptModel.createAllConcepts();
+        // If no concepts exist (or only defaults), check if we should create defaults
+        if (!concepts || concepts.length === 0) {
+            console.log('No concepts found, creating default concepts - data only persisted in exported files');
+            
+            // Create all default concept types
+            const defaultConcepts = ConceptModel.createAllConcepts();
+            
+            // Save them to session memory so they persist during the session
+            for (const concept of defaultConcepts) {
+                await StorageManager.saveConcept(concept);
+            }
+            
+            concepts = defaultConcepts;
+            console.log('Created default concepts:', concepts);
+        } else {
+            console.log('Loaded existing concepts from session memory:', concepts.length);
+        }
         
-        console.log('Created default concepts:', defaultConcepts);
-        return defaultConcepts;
+        return concepts;
     }
     
     /**
@@ -616,6 +629,12 @@ const HomeController = (function() {
     return {
         init,
         render,
+        refresh: async function() {
+            // Reload concepts and re-render
+            concepts = await loadConcepts();
+            render();
+            debouncedRenderTiles();
+        },
         clearThumbnailQueue: function() {
             // Clear the thumbnail queue to prevent ghost tiles
             thumbnailQueue = [];

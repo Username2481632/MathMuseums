@@ -601,11 +601,8 @@ var App = (function() {
                     await FileManager.importUserData(importData, options);
                     
                     // Refresh the display
-                    if (window.HomeController && window.HomeController.loadConcepts) {
-                        await window.HomeController.loadConcepts();
-                        if (window.HomeController.render) {
-                            window.HomeController.render();
-                        }
+                    if (window.HomeController && window.HomeController.refresh) {
+                        await window.HomeController.refresh();
                     }
                     
                     showNotification(`Successfully imported ${fileInfo.totalConcepts} concepts!`, 'success');
