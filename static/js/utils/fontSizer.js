@@ -19,7 +19,6 @@ const FontSizer = (function() {
         // - Manual tile resize → FontSizer.forceAdjustment() (during resize)
         
         isInitialized = true;
-        console.log('FontSizer initialized - font sizing on tile renders only');
     }
      /**
      * Adjust font sizes for all tile headers and no-preview elements to prevent wrapping
@@ -101,20 +100,6 @@ const FontSizer = (function() {
             element.style.whiteSpace = 'nowrap';
         });
 
-        // Debug logging for specific elements if needed
-        let debugElement = null;
-        if (elementType === 'header') {
-            for (const element of elements) {
-                if (element.textContent && element.textContent.trim().toLowerCase() === 'absolute value') {
-                    debugElement = element;
-                    break;
-                }
-            }
-        } else if (elementType === 'no-preview') {
-            // Debug the first no-preview element
-            debugElement = elements[0];
-        }
-
         // Use different size ranges based on element type
         let low, high;
         if (elementType === 'no-preview') {
@@ -138,14 +123,6 @@ const FontSizer = (function() {
             const anyWraps = elements.some(element => {
                 return element.scrollWidth > element.clientWidth;
             });
-            
-            if (debugElement) {
-                const style = window.getComputedStyle(debugElement);
-                const rect = debugElement.getBoundingClientRect();
-                const text = debugElement.textContent;
-                const textLen = text ? text.length : 0;
-                console.log(`[FontSizer][${elementType.toUpperCase()}][DEBUG] fontSize: ${mid}px, text: '${text}', textLen: ${textLen}, clientWidth: ${debugElement.clientWidth}, scrollWidth: ${debugElement.scrollWidth}, clientHeight: ${debugElement.clientHeight}, scrollHeight: ${debugElement.scrollHeight}, boundingRect:`, rect, 'computedStyle:', style);
-            }
             
             if (!anyWraps) {
                 best = mid;
@@ -183,14 +160,6 @@ const FontSizer = (function() {
             }
         });
         
-        if (debugElement) {
-            const style = window.getComputedStyle(debugElement);
-            const rect = debugElement.getBoundingClientRect();
-            const text = debugElement.textContent;
-            const textLen = text ? text.length : 0;
-            console.log(`[FontSizer][${elementType.toUpperCase()}][FINAL][DEBUG] fontSize: ${best}px, text: '${text}', textLen: ${textLen}, clientWidth: ${debugElement.clientWidth}, scrollWidth: ${debugElement.scrollWidth}, clientHeight: ${debugElement.clientHeight}, scrollHeight: ${debugElement.scrollHeight}, boundingRect:`, rect, 'computedStyle:', style);
-        }
-
         // Restore original styling (except font size and optimized wrapping/padding)
         elements.forEach((element, i) => {
             if (elementType === 'header') {
@@ -218,7 +187,6 @@ const FontSizer = (function() {
         // No event listeners to remove since all font sizing is triggered by tile renders
         
         isInitialized = false;
-        console.log('FontSizer cleaned up');
     }
     
     // Public API
