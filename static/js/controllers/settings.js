@@ -117,10 +117,9 @@ const SettingsController = (function() {
         if (settingsModal) {
             settingsModal.style.display = 'block';
             loadCurrentSettings(); // Ensure settings are current when opening
-            // Add Autosave toggle if user has saved a file
-            const hasSaved = localStorage.getItem('mm_has_saved_file') === 'true';
+            // Add Autosave toggle - always available now since file save status is no longer tracked
             let autosaveRow = document.getElementById('autosave-toggle-row');
-            if (hasSaved && !autosaveRow) {
+            if (!autosaveRow) {
                 autosaveRow = document.createElement('div');
                 autosaveRow.className = 'settings-group';
                 autosaveRow.id = 'autosave-toggle-row';
@@ -140,8 +139,6 @@ const SettingsController = (function() {
                 document.getElementById('autosave-toggle').addEventListener('change', function(e) {
                     PreferencesClient.savePreferences({ autosave: e.target.checked });
                 });
-            } else if (!hasSaved && autosaveRow) {
-                autosaveRow.remove();
             }
         }
     }

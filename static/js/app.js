@@ -205,7 +205,7 @@ var App = (function() {
                 // Successfully saved to existing file
                 dirtySinceFileSave = false;
                 setSyncStatus('saved');
-                localStorage.setItem('mm_has_saved_file', 'true');
+                // File save status no longer tracked in localStorage
             } else {
                 // No previous save location, show Save As dialog
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
@@ -215,7 +215,7 @@ var App = (function() {
                 if (saveAsResult) {
                     dirtySinceFileSave = false;
                     setSyncStatus('saved');
-                    localStorage.setItem('mm_has_saved_file', 'true');
+                    // File save status no longer tracked in localStorage
                 } else {
                     // User cancelled Save As dialog
                     if (dirtySinceFileSave) {
@@ -246,7 +246,7 @@ var App = (function() {
             if (result) {
                 dirtySinceFileSave = false;
                 setSyncStatus('saved');
-                localStorage.setItem('mm_has_saved_file', 'true');
+                // File save status no longer tracked in localStorage
             } else {
                 // User cancelled Save As dialog
                 if (dirtySinceFileSave) {
@@ -302,8 +302,7 @@ var App = (function() {
                             console.log('Autosave successful'); // Debug logging
                             dirtySinceFileSave = false;
                             setSyncStatus('saved');
-                            // Set flag for autosave toggle
-                            localStorage.setItem('mm_has_saved_file', 'true');
+                            // File save status no longer tracked in localStorage
                         } else {
                             console.log('Autosave failed - no previous save location'); // Debug logging
                             // Autosave failed (no previous save location), show unsaved
@@ -484,8 +483,7 @@ var App = (function() {
                     
                     const saveResult = await FileManager.downloadUserData(filename);
                     if (saveResult) {
-                        // Set flag for autosave toggle
-                        localStorage.setItem('mm_has_saved_file', 'true');
+                        // File save status no longer tracked in localStorage
                         // No alert, just return
                         return;
                     } // else: user cancelled, do nothing
@@ -673,11 +671,8 @@ This will replace your current museum data. Continue?`;
             `;
         }
         
-        // Load saved museum name
-        const savedName = localStorage.getItem('mm_museum_name');
-        if (savedName) {
-            museumNameText.textContent = savedName;
-        }
+        // Museum name is no longer persisted - only stored in exported files
+        // Users need to set it fresh each session or import from a file
         
         // Event listeners
         museumNameText.addEventListener('keydown', (event) => {
@@ -1341,12 +1336,8 @@ This will replace your current museum data. Continue?`;
         }, 100);
         
         function saveMuseumName() {
-            const name = museumNameText.textContent.trim();
-            if (name) {
-                localStorage.setItem('mm_museum_name', name);
-            } else {
-                localStorage.removeItem('mm_museum_name');
-            }
+            // Museum name no longer saved to localStorage
+            // Only stored in exported files
         }
     }
     

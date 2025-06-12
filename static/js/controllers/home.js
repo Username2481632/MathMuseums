@@ -274,74 +274,11 @@ const HomeController = (function() {
      * @returns {Array} Array of concept objects
      */
     async function loadConcepts() {
-        // console.log('=== loadConcepts called ===');
-        let concepts = await StorageManager.getAllConcepts();
-        // console.log('Raw concepts from StorageManager:', concepts);
-        // console.log('Concepts count:', concepts ? concepts.length : 0);
-        if (concepts) {
-            // console.log('Concept details:', concepts.map(c => ({ id: c.id, displayName: c.displayName, type: typeof c.id })));
-            
-            // Log each concept's full structure for debugging - disabled for performance
-            /*
-            concepts.forEach((concept, index) => {
-                console.log(`Concept ${index} full structure:`, {
-                    id: concept.id,
-                    type: concept.type, 
-                    displayName: concept.displayName,
-                    hasCoordinates: !!concept.coordinates,
-                    hasPosition: !!concept.position,
-                    hasX: concept.x !== undefined,
-                    hasY: concept.y !== undefined,
-                    fullObject: concept
-                });
-            });
-            */
-        }
-        
-        // If no concepts found, create defaults
-        if (!concepts || concepts.length === 0) {
-            // console.log('No concepts found, creating defaults');
-            concepts = ConceptModel.createAllConcepts();
-            // console.log('Created default concepts:', concepts);
-            
-            // Save default concepts
-            for (const concept of concepts) {
-                await StorageManager.saveConcept(concept);
-            }
-        }
-        
-        // Validate and filter concepts to remove corrupted data
-        const validConcepts = concepts.filter(concept => {
-            const isValid = concept && 
-                           concept.id && 
-                           concept.displayName && 
-                           typeof concept.displayName === 'string' &&
-                           concept.displayName !== 'undefined';
-            
-            if (!isValid) {
-                console.warn('Filtering out invalid concept:', concept);
-            }
-            return isValid;
-        });
-        
-        if (validConcepts.length !== concepts.length) {
-            // console.log(`Filtered out ${concepts.length - validConcepts.length} invalid concepts`);
-            // console.log('Valid concepts:', validConcepts);
-            
-            // Clean up corrupted concepts from storage
-            const corruptedConcepts = concepts.filter(concept => !validConcepts.includes(concept));
-            for (const corruptedConcept of corruptedConcepts) {
-                // console.log('Removing corrupted concept from storage:', corruptedConcept);
-                try {
-                    await StorageManager.deleteConcept(corruptedConcept.id);
-                } catch (error) {
-                    console.error('Error removing corrupted concept:', error);
-                }
-            }
-        }
-        
-        console.log('Final loaded concepts:', validConcepts);
-        return validConcepts;
+        // Concepts are no longer stored in localStorage
+        // All concept data is now maintained only in exported files
+        // Users need to import a file to load their museum data
+        console.log('No concepts to load - data only stored in exported files');
+        return [];
     }
     
     /**

@@ -18,22 +18,14 @@ const FileManager = (function() {
      */
     async function createExportData() {
         try {
-            // Get all concept data from local storage
-            const concepts = await StorageManager.getAllConcepts();
+            // No concept data to export since we no longer store locally
+            // All data is now maintained only in exported files
+            const concepts = [];
             
-            // Get layout state if available
-            const layoutState = localStorage.getItem('mm_layout_state');
-            let parsedLayoutState = null;
-            if (layoutState) {
-                try {
-                    parsedLayoutState = JSON.parse(layoutState);
-                } catch (e) {
-                    console.warn('Failed to parse layout state:', e);
-                }
-            }
-            
-            // Get user's museum name
-            const userName = localStorage.getItem('mm_museum_name') || '';
+            // Layout state and museum name are no longer stored in localStorage
+            // They are only maintained in exported files
+            const parsedLayoutState = null;
+            const userName = '';
             
             const exportData = {
                 version: FILE_FORMAT_VERSION,
@@ -272,15 +264,9 @@ const FileManager = (function() {
                 }
             }
             
-            // Import layout state if available
-            if (importData.layoutState) {
-                localStorage.setItem('mm_layout_state', JSON.stringify(importData.layoutState));
-            }
-            
-            // Import user name if available
-            if (importData.userName) {
-                localStorage.setItem('mm_museum_name', importData.userName);
-            }
+            // Layout state and museum name are no longer stored in localStorage
+            // They are only maintained within exported files
+            // No need to restore to localStorage since we've moved away from persistent storage
             
             console.log('Import completed successfully');
         } catch (error) {

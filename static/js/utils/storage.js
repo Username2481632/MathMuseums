@@ -1,235 +1,85 @@
 /**
- * Storage Module - Local File Based
- * Handles data persistence using IndexedDB with localStorage fallback
- * Server sync functionality removed - data is now stored locally in files
+ * Storage Module - Preferences and Settings Only
+ * Handles user preferences and onboarding state
+ * Concept data is now stored only in exported files
  */
 const StorageManager = (function() {
-    const DB_NAME = 'MathMuseums';
-    const DB_VERSION = 1;
-    const STORE_NAME = 'concepts';
-    const LS_KEY_PREFIX = 'mm_concept_';
-    
-    // Private variables
-    let db = null;
-    let isDbAvailable = false;
-    
-    /**
-     * Initialize the IndexedDB database
-     * @returns {Promise} Resolves when DB is ready
-     */
-    async function initDatabase() {
-        return new Promise((resolve, reject) => {
-            if (!window.indexedDB) {
-                console.warn('IndexedDB not supported, using localStorage fallback');
-                isDbAvailable = false;
-                return resolve(false);
-            }
-            
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
-            
-            request.onerror = (event) => {
-                console.error('IndexedDB error:', event.target.error);
-                isDbAvailable = false;
-                resolve(false);
-            };
-            
-            request.onsuccess = (event) => {
-                db = event.target.result;
-                isDbAvailable = true;
-                console.log('IndexedDB connection established for local storage');
-                resolve(true);
-            };
-            
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
-                if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-                    store.createIndex('type', 'type', { unique: false });
-                    console.log('Object store created for local storage');
-                }
-            };
-        });
-    }
+    // All concept storage removed - data only stored in exported files
     
     /**
      * Initialize the storage manager
      * @returns {Promise} Resolves when storage is ready
      */
     async function init() {
-        // Clean up deprecated localStorage entries
-        localStorage.removeItem('mm_image_skill_shown');
+        // Clean up all deprecated and removed localStorage entries
+        const keysToRemove = [
+            'mm_image_skill_shown',  // deprecated
+            'mm_layout_state',       // removed - only in files now
+            'mm_museum_name',        // removed - only in files now  
+            'mm_has_saved_file'      // removed - file API doesn't persist
+        ];
         
-        return await initDatabase();
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        
+        // Also clean up any old concept data
+        const allKeys = Object.keys(localStorage);
+        allKeys.forEach(key => {
+            if (key.startsWith('mm_concept_')) {
+                localStorage.removeItem(key);
+            }
+        });
+        
+        console.log('Storage initialized - cleaned up concept data and deprecated entries');
+        return Promise.resolve(true);
     }
     
+    // Concept storage methods - now no-ops since data is only stored in files
+    
     /**
-     * Save concept to local storage
-     * @param {Object} concept - The concept data to save
-     * @returns {Promise<Object>} The saved concept
+     * Save concept (no-op - concepts no longer stored locally)
+     * @param {Object} concept - The concept data
+     * @returns {Promise<Object>} The concept (unchanged)
      */
     async function saveConcept(concept) {
-        const processedConcept = {
-            ...concept,
-            lastModified: new Date().toISOString()
-        };
-        
-        if (isDbAvailable && db) {
-            try {
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.put(processedConcept);
-                
-                await new Promise((resolve, reject) => {
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
-                
-                console.log('Concept saved to IndexedDB:', processedConcept.id);
-                return processedConcept;
-            } catch (error) {
-                console.error('Error saving to IndexedDB:', error);
-                // Fall back to localStorage
-            }
-        }
-        
-        // Use localStorage as fallback
-        const key = LS_KEY_PREFIX + processedConcept.id;
-        localStorage.setItem(key, JSON.stringify(processedConcept));
-        console.log('Concept saved to localStorage:', processedConcept.id);
-        return processedConcept;
+        console.log('Concept save ignored - data only stored in exported files');
+        return concept;
     }
     
     /**
-     * Get concept from local storage
+     * Get concept (no-op - concepts no longer stored locally)
      * @param {string} conceptId - The concept ID
-     * @returns {Promise<Object|null>} The concept data or null if not found
+     * @returns {Promise<null>} Always returns null
      */
     async function getConcept(conceptId) {
-        if (isDbAvailable && db) {
-            try {
-                const transaction = db.transaction([STORE_NAME], 'readonly');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.get(conceptId);
-                
-                const result = await new Promise((resolve, reject) => {
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
-                
-                if (result) {
-                    return result;
-                }
-            } catch (error) {
-                console.error('Error reading from IndexedDB:', error);
-                // Fall back to localStorage
-            }
-        }
-        
-        // Use localStorage as fallback
-        const key = LS_KEY_PREFIX + conceptId;
-        const stored = localStorage.getItem(key);
-        return stored ? JSON.parse(stored) : null;
+        console.log('Concept retrieval ignored - data only stored in exported files');
+        return null;
     }
     
     /**
-     * Get all concepts from local storage
-     * @returns {Promise<Array>} Array of all concepts
+     * Get all concepts (no-op - concepts no longer stored locally)
+     * @returns {Promise<Array>} Always returns empty array
      */
     async function getAllConcepts() {
-        if (isDbAvailable && db) {
-            try {
-                const transaction = db.transaction([STORE_NAME], 'readonly');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.getAll();
-                
-                const results = await new Promise((resolve, reject) => {
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
-                
-                return results || [];
-            } catch (error) {
-                console.error('Error reading all from IndexedDB:', error);
-                // Fall back to localStorage
-            }
-        }
-        
-        // Use localStorage as fallback
-        const concepts = [];
-        const keys = Object.keys(localStorage);
-        for (const key of keys) {
-            if (key.startsWith(LS_KEY_PREFIX)) {
-                try {
-                    const concept = JSON.parse(localStorage.getItem(key));
-                    concepts.push(concept);
-                } catch (error) {
-                    console.error('Error parsing concept from localStorage:', error);
-                }
-            }
-        }
-        return concepts;
+        console.log('Concept retrieval ignored - data only stored in exported files');
+        return [];
     }
     
     /**
-     * Delete concept from local storage
-     * @param {string} conceptId - The concept ID to delete
-     * @returns {Promise<boolean>} Success status
+     * Delete concept (no-op - concepts no longer stored locally)
+     * @param {string} conceptId - The concept ID
+     * @returns {Promise<boolean>} Always returns true
      */
     async function deleteConcept(conceptId) {
-        if (isDbAvailable && db) {
-            try {
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.delete(conceptId);
-                
-                await new Promise((resolve, reject) => {
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => reject(request.error);
-                });
-                
-                console.log('Concept deleted from IndexedDB:', conceptId);
-            } catch (error) {
-                console.error('Error deleting from IndexedDB:', error);
-                // Fall back to localStorage
-            }
-        }
-        
-        // Use localStorage as fallback
-        const key = LS_KEY_PREFIX + conceptId;
-        localStorage.removeItem(key);
-        console.log('Concept deleted from localStorage:', conceptId);
+        console.log('Concept deletion ignored - data only stored in exported files');
         return true;
     }
     
     /**
-     * Clear all concepts from storage
+     * Clear all concepts (no-op - concepts no longer stored locally)
      * @returns {Promise<void>}
      */
     async function clearAllConcepts() {
-        if (isDbAvailable && db) {
-            try {
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const store = transaction.objectStore(STORE_NAME);
-                await new Promise((resolve, reject) => {
-                    const request = store.clear();
-                    request.onsuccess = () => resolve();
-                    request.onerror = () => reject(request.error);
-                });
-                console.log('All concepts cleared from IndexedDB');
-            } catch (error) {
-                console.error('Error clearing concepts from IndexedDB:', error);
-                throw error;
-            }
-        } else {
-            // Clear from localStorage
-            const keys = Object.keys(localStorage);
-            for (const key of keys) {
-                if (key.startsWith(LS_KEY_PREFIX)) {
-                    localStorage.removeItem(key);
-                }
-            }
-            console.log('All concepts cleared from localStorage');
-        }
+        console.log('Concept clearing ignored - data only stored in exported files');
     }
     
     /**
@@ -276,7 +126,6 @@ const StorageManager = (function() {
     // Public API
     return {
         init,
-        initDatabase,
         saveConcept,
         getConcept,
         getAllConcepts,
