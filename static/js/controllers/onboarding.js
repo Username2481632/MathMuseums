@@ -5,6 +5,7 @@
 const OnboardingController = (function() {
     // Private variables
     let overlay;
+    let clickBlocker;
     let highlight;
     let arrow;
     let text;
@@ -89,7 +90,11 @@ const OnboardingController = (function() {
     function createOverlay() {
         // Clone the template
         const template = document.getElementById('onboarding-template');
-        overlay = template.content.cloneNode(true).querySelector('#onboarding-overlay');
+        const templateContent = template.content.cloneNode(true);
+        
+        // Get the click blocker and main overlay from the cloned content
+        clickBlocker = templateContent.querySelector('#onboarding-click-blocker');
+        overlay = templateContent.querySelector('#onboarding-overlay');
         
         // Get overlay elements
         highlight = overlay.querySelector('#onboarding-highlight');
@@ -113,8 +118,8 @@ const OnboardingController = (function() {
         // Always show "Never show again" button for all users
         neverButton.style.display = 'inline-block';
         
-        // Add the overlay to the body
-        document.body.appendChild(overlay);
+        // Add both the click blocker and overlay to the body
+        document.body.appendChild(templateContent);
         
         // Add class to body for styling
         document.body.classList.add('active-onboarding');
@@ -344,6 +349,57 @@ const OnboardingController = (function() {
         // Apply additional styles
         Object.assign(highlight.style, style);
     }
+
+    /**
+     * Update the click blocker to allow clicks only on the target element
+     * @param {HTMLElement} target - Target element to allow clicks on
+     */
+    function updateClickBlocker(target) {
+        if (!target || !clickBlocker) return;
+        
+        const rect = target.getBoundingClientRect();
+        const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Calculate the target element's position relative to the viewport
+        const targetLeft = rect.left + scrollX;
+        const targetTop = rect.top + scrollY;
+        const targetRight = targetLeft + rect.width;
+        const targetBottom = targetTop + rect.height;
+        
+        // Add some padding around the target to make it easier to click
+        const padding = 5;
+        const expandedLeft = Math.max(0, targetLeft - padding);
+        const expandedTop = Math.max(0, targetTop - padding);
+        const expandedRight = targetRight + padding;
+        const expandedBottom = targetBottom + padding;
+        
+        // Create a clip-path that covers the entire screen except for the target area
+        // This creates a "hole" in the click blocker allowing clicks through to the target
+        const clipPath = `polygon(
+            0% 0%, 
+            0% 100%, 
+            ${expandedLeft}px 100%, 
+            ${expandedLeft}px ${expandedTop}px, 
+            ${expandedRight}px ${expandedTop}px, 
+            ${expandedRight}px ${expandedBottom}px, 
+            ${expandedLeft}px ${expandedBottom}px, 
+            ${expandedLeft}px 100%, 
+            100% 100%, 
+            100% 0%
+        )`;
+        
+        clickBlocker.style.clipPath = clipPath;
+    }
+
+    /**
+     * Clear the click blocker (remove the hole, block all clicks)
+     */
+    function clearClickBlocker() {
+        if (clickBlocker) {
+            clickBlocker.style.clipPath = 'none';
+        }
+    }
     
     /**
      * Position the arrow relative to a target element
@@ -402,21 +458,26 @@ const OnboardingController = (function() {
             return new Promise(resolve => setTimeout(resolve, 500));
         }
     }
-    
-    /**
+     /**
      * Set the current target element for click forwarding
      * @param {HTMLElement} element - Target element
      */
     function setTargetElement(element) {
         currentTarget = element;
         console.log('Set target element for onboarding:', element);
+        
+        // Update the click blocker to allow clicks only on this target
+        updateClickBlocker(element);
     }
-    
+
     /**
      * Clear the current target element
      */
     function clearTargetElement() {
         currentTarget = null;
+        
+        // Clear the click blocker (block all clicks)
+        clearClickBlocker();
     }
 
     /**
@@ -425,7 +486,7 @@ const OnboardingController = (function() {
      */
     function handleClick(event) {
         // If not in onboarding, do nothing
-        if (!overlay || !overlay.parentNode) {
+        if (!overlay || !overlay.parentNode || !clickBlocker || !clickBlocker.parentNode) {
             return;
         }
         
@@ -532,7 +593,10 @@ const OnboardingController = (function() {
         // Remove event listeners
         document.removeEventListener('click', handleClick);
         
-        // Remove overlay
+        // Remove overlay elements
+        if (clickBlocker && clickBlocker.parentNode) {
+            clickBlocker.parentNode.removeChild(clickBlocker);
+        }
         if (overlay && overlay.parentNode) {
             overlay.parentNode.removeChild(overlay);
         }
@@ -645,6 +709,9 @@ const OnboardingController = (function() {
                     positionHighlight(target, step.highlightStyle);
                     positionArrow(target, step.arrowPosition);
                     positionText(target, step.textPosition);
+                    
+                    // Update click blocker to allow clicks only on the target
+                    updateClickBlocker(target);
                     
                     // Ensure target remains set (in case DOM has changed)
                     setTargetElement(target);
