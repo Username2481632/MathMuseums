@@ -22,6 +22,7 @@ const HomeController = (function() {
     let dragCooldownTimer = null; // Timer for drag cooldown
     let renderDebounceTimer = null; // Timer for debounced rendering
     let thumbnailQueue = new Set(); // Use Set for efficient lookups
+    let thumbnailGenerationState = new Map(); // Track generation state per concept
     let isResizing = false; // Track whether resizing is in progress
     let recentlyResized = false; // Track whether resizing just ended
     let resizingTile = null; // Track which tile is currently being resized
@@ -401,7 +402,7 @@ const HomeController = (function() {
                 thumbnailQueue.delete(concept.id);
                 return;
             }
-            // Only use calculator screenshot for thumbnail (no direct image URL logic)
+            // Use optimized DesmosUtils with caching
             DesmosUtils.generateThumbnail(concept.desmosState)
                 .then(dataUrl => {
                     thumbnailQueue.delete(concept.id);
@@ -439,7 +440,7 @@ const HomeController = (function() {
                         }
                     }
                 });
-        }, thumbnailQueue.size * 100);
+        }, thumbnailQueue.size * 50); // Reduced delay from 100ms to 50ms for faster generation
     }
     
     // --- FIT/FILL MODE LOGIC ---

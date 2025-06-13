@@ -414,6 +414,11 @@ var App = (function() {
             // Check if autosave warning should be shown
             checkAutosaveWarning();
 
+            // Initialize DesmosUtils for optimized thumbnail generation
+            if (window.DesmosUtils) {
+                console.log('DesmosUtils initialized with caching enabled');
+            }
+
             // Remove loading state
             const loading = document.getElementById('loading');
             if (loading) {
@@ -1378,3 +1383,10 @@ if (typeof window !== 'undefined') {
 
 // Initialize the application when the DOM is ready
 document.addEventListener('DOMContentLoaded', App.init);
+
+// Cleanup resources when the page unloads
+window.addEventListener('beforeunload', () => {
+    if (window.DesmosUtils) {
+        window.DesmosUtils.cleanup();
+    }
+});

@@ -191,6 +191,11 @@ const DetailController = (function() {
                 desmosState: stateString 
             });
             
+            // Clear thumbnail cache for this concept since state changed
+            if (window.DesmosUtils && window.DesmosUtils.clearCache) {
+                window.DesmosUtils.clearCache(currentConcept.id);
+            }
+            
             // Check if state has an image
             const hasImage = state && 
                              state.expressions && 
@@ -266,9 +271,6 @@ const DetailController = (function() {
             console.log('Onboarding is disabled or already shown in this session');
             return;
         }
-        
-        // Debug the Desmos DOM structure to help identify the correct selectors
-        debugDesmosDomStructure();
         
         // Check for any Desmos expression panel buttons which indicates the UI is loaded
         const calculatorContainer = document.getElementById('calculator-container');
