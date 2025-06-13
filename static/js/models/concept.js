@@ -11,7 +11,7 @@ const ConceptModel = (function() {
         'square-root',
         'cube-root',
         'absolute-value',
-        'inverse',
+        'rational',
         'exponential',
         'logarithmic',
         'trigonometric',
@@ -31,7 +31,7 @@ const ConceptModel = (function() {
             case 'square-root': return 'Square Root';
             case 'cube-root': return 'Cube Root';
             case 'absolute-value': return 'Absolute Value';
-            case 'inverse': return 'Inverse';
+            case 'rational': return 'Rational/Inverse';
             case 'exponential': return 'Exponential';
             case 'logarithmic': return 'Logarithmic';
             case 'trigonometric': return 'Trigonometric';
