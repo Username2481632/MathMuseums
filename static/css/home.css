@@ -34,6 +34,8 @@
     position: absolute; /* Always use absolute positioning */
     transition: box-shadow 0.2s;
     user-select: none;
+    display: flex;
+    flex-direction: column;
 }
 
 .concept-tile:hover {
@@ -135,15 +137,17 @@
     padding: var(--spacing-sm);
     text-align: center;
     font-weight: bold;
+    flex-shrink: 0; /* Prevent header from shrinking */
 }
 
 .tile-content {
     padding: var(--spacing-sm);
-    height: calc(100% - 36px);
+    flex: 1; /* Take up remaining space after header */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    min-height: 0; /* Allow flex item to shrink below content size */
 }
 
 .tile-preview {
