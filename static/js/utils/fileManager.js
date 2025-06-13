@@ -30,8 +30,7 @@ const FileManager = (function() {
                 concepts: concepts || [],
                 // layoutState removed - coordinates are stored in concepts themselves
                 metadata: {
-                    totalConcepts: (concepts || []).length,
-                    userName: userName
+                    totalConcepts: (concepts || []).length
                 }
             };
             
