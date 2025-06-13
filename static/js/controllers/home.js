@@ -385,22 +385,22 @@ const HomeController = (function() {
     }
     
     /**
-     * Generate a thumbnail with retry mechanism (optimized for cache hits)
+     * Generate a thumbnail with retry mechanism (ultra-fast for cache hits)
      * @param {Object} concept - Concept to generate thumbnail for
      * @param {HTMLElement} previewElement - Element to update with the thumbnail
      * @param {number} retryCount - Number of retries attempted
      */
     function generateThumbnailWithRetry(concept, previewElement, retryCount = 0) {
-        const MAX_RETRIES = 2;
-        const tile = previewElement.closest('.concept-tile');
-        const poster = tile ? tile.closest('.tiles-container') : null;
-        const currentRenderGeneration = poster ? poster.dataset.renderGeneration : null;
-        if (thumbnailQueue.has(concept.id)) return; // Prevent duplicate
+        const MAX_RETRIES = 1;
         
-        // Check for immediate cache hit first
+        // Prevent duplicate generation
+        if (thumbnailQueue.has(concept.id)) return;
+        
+        // Double-check cache before any async operations (performance critical)
         if (window.DesmosUtils && window.DesmosUtils.getCachedThumbnail) {
-            const cachedThumbnail = window.DesmosUtils.getCachedThumbnail(concept.desmosState);
+            const cachedThumbnail = window.DesmosUtils.getCachedThumbnail(concept.desmosState, concept.id);
             if (cachedThumbnail && previewElement.isConnected) {
+                // Immediate cache hit - create image synchronously
                 const img = document.createElement('img');
                 img.alt = `${concept.displayName} preview`;
                 img.src = cachedThumbnail;
@@ -410,20 +410,34 @@ const HomeController = (function() {
                 img.addEventListener('drag', (e) => e.preventDefault());
                 previewElement.innerHTML = '';
                 previewElement.appendChild(img);
-                return; // Exit early for cache hits
+                return; // Exit immediately for cache hits
             }
         }
         
+        const tile = previewElement.closest('.concept-tile');
+        const poster = tile ? tile.closest('.tiles-container') : null;
+        const currentRenderGeneration = poster ? poster.dataset.renderGeneration : null;
+        
         thumbnailQueue.add(concept.id);
-        setTimeout(() => {
-            if (!previewElement.isConnected) {
+        
+        // No setTimeout delay - generate immediately for non-cached items
+        if (!previewElement.isConnected) {
+            thumbnailQueue.delete(concept.id);
+            return;
+        }
+        
+        // Use optimized DesmosUtils with fast memory caching
+        DesmosUtils.generateThumbnail(concept.desmosState, concept.id)
+            .then(dataUrl => {
                 thumbnailQueue.delete(concept.id);
-                return;
-            }
-            // Use optimized DesmosUtils with caching
-            DesmosUtils.generateThumbnail(concept.desmosState)
-                .then(dataUrl => {
-                    thumbnailQueue.delete(concept.id);
+                
+                if (!previewElement.isConnected) return;
+                
+                const currentTile = previewElement.closest('.concept-tile');
+                const currentPoster = currentTile ? currentTile.closest('.tiles-container') : null;
+                
+                // Only update if still on same poster
+                if (currentPoster && homePoster && currentPoster === homePoster) {
                     const img = document.createElement('img');
                     img.alt = `${concept.displayName} preview`;
                     img.src = dataUrl;
@@ -431,34 +445,30 @@ const HomeController = (function() {
                     img.draggable = false;
                     img.addEventListener('dragstart', (e) => e.preventDefault());
                     img.addEventListener('drag', (e) => e.preventDefault());
-                    if (previewElement.isConnected) {
-                        const tile = previewElement.closest('.concept-tile');
-                        const poster = tile ? tile.closest('.tiles-container') : null;
-                        // Simplified check - just ensure we're still on the same poster
-                        if (poster && homePoster && poster === homePoster) {
-                            previewElement.innerHTML = '';
-                            previewElement.appendChild(img);
-                        }
+                    previewElement.innerHTML = '';
+                    previewElement.appendChild(img);
+                }
+            })
+            .catch(error => {
+                console.error('Error generating thumbnail for:', concept.id, error);
+                thumbnailQueue.delete(concept.id);
+                
+                if (retryCount < MAX_RETRIES && previewElement.isConnected) {
+                    const tile = previewElement.closest('.concept-tile');
+                    const poster = tile ? tile.closest('.tiles-container') : null;
+                    if (poster && homePoster && poster === homePoster && 
+                        poster.dataset.renderGeneration === currentRenderGeneration) {
+                        generateThumbnailWithRetry(concept, previewElement, retryCount + 1);
                     }
-                })
-                .catch(error => {
-                    console.error('Error generating thumbnail for:', concept.id, error);
-                    thumbnailQueue.delete(concept.id);
-                    if (retryCount < MAX_RETRIES && previewElement.isConnected) {
-                        const tile = previewElement.closest('.concept-tile');
-                        const poster = tile ? tile.closest('.tiles-container') : null;
-                        if (poster && homePoster && poster === homePoster && poster.dataset.renderGeneration === currentRenderGeneration) {
-                            generateThumbnailWithRetry(concept, previewElement, retryCount + 1);
-                        }
-                    } else if (previewElement.isConnected) {
-                        const tile = previewElement.closest('.concept-tile');
-                        const poster = tile ? tile.closest('.tiles-container') : null;
-                        if (poster && homePoster && poster === homePoster && poster.dataset.renderGeneration === currentRenderGeneration) {
-                            previewElement.innerHTML = '<div class="preview-error">Preview unavailable</div>';
-                        }
+                } else if (previewElement.isConnected) {
+                    const tile = previewElement.closest('.concept-tile');
+                    const poster = tile ? tile.closest('.tiles-container') : null;
+                    if (poster && homePoster && poster === homePoster && 
+                        poster.dataset.renderGeneration === currentRenderGeneration) {
+                        previewElement.innerHTML = '<div class="preview-error">Preview unavailable</div>';
                     }
-                });
-        }, 10); // Minimal delay for non-cached thumbnails
+                }
+            });
     }
     
     // --- FIT/FILL MODE LOGIC ---

@@ -8,14 +8,16 @@ const DesmosUtils = (function() {
     let hiddenCalculator = null;
     let hiddenContainer = null;
     
-    // Thumbnail cache for avoiding redundant generation
+    // Thumbnail cache for avoiding redundant generation with sessionStorage persistence
     const thumbnailCache = new Map();
     const MAX_CACHE_SIZE = 50; // Limit cache size to prevent memory issues
     const GENERATION_DELAY = 100; // Reduced delay for faster generation
+    const SESSION_CACHE_PREFIX = 'thumb_';
     
     // Queue management for batch processing
     let generationQueue = [];
     let isProcessingQueue = false;
+    let pendingGenerations = new Map(); // Track pending generations to avoid duplicates
     
     // Performance monitoring
     let performanceStats = {
@@ -27,19 +29,55 @@ const DesmosUtils = (function() {
     };
     
     /**
-     * Generate a simple hash from a string
+     * Generate a simple hash from a string with concept ID
      * @param {string} str - String to hash
+     * @param {string} conceptId - Optional concept ID for unique cache keys
      * @returns {string} Simple hash
      */
-    function simpleHash(str) {
-        if (!str) return 'empty';
+    function simpleHash(str, conceptId = '') {
+        // Include concept ID in hash to ensure each concept has unique cache entries
+        const fullString = conceptId + '|' + (str || '');
         let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
+        for (let i = 0; i < fullString.length; i++) {
+            const char = fullString.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
             hash = hash & hash; // Convert to 32-bit integer
         }
         return Math.abs(hash).toString(36);
+    }
+    
+    /**
+     * Load cache from sessionStorage on initialization
+     */
+    function loadCacheFromSession() {
+        try {
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (key && key.startsWith(SESSION_CACHE_PREFIX)) {
+                    const hash = key.substring(SESSION_CACHE_PREFIX.length);
+                    const dataUrl = sessionStorage.getItem(key);
+                    if (dataUrl) {
+                        thumbnailCache.set(hash, dataUrl);
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn('Error loading cache from sessionStorage:', error);
+        }
+    }
+    
+    /**
+     * Save cache item to sessionStorage
+     * @param {string} hash - Cache key hash
+     * @param {string} dataUrl - Image data URL
+     */
+    function saveCacheToSession(hash, dataUrl) {
+        try {
+            sessionStorage.setItem(SESSION_CACHE_PREFIX + hash, dataUrl);
+        } catch (error) {
+            // SessionStorage full or unavailable - continue with memory cache only
+            console.warn('SessionStorage unavailable, using memory cache only:', error);
+        }
     }
     
     /**
@@ -51,7 +89,14 @@ const DesmosUtils = (function() {
             const entriesToRemove = Math.floor(MAX_CACHE_SIZE / 4);
             const keys = Array.from(thumbnailCache.keys());
             for (let i = 0; i < entriesToRemove; i++) {
-                thumbnailCache.delete(keys[i]);
+                const hash = keys[i];
+                thumbnailCache.delete(hash);
+                // Also remove from sessionStorage
+                try {
+                    sessionStorage.removeItem(SESSION_CACHE_PREFIX + hash);
+                } catch (error) {
+                    // Ignore sessionStorage errors
+                }
             }
         }
     }
@@ -217,42 +262,81 @@ const DesmosUtils = (function() {
     }
     
     /**
-     * Check if a thumbnail is cached (synchronous)
+     * Check if a thumbnail is cached (synchronous) - checks memory and sessionStorage
      * @param {string} stateString - Stringified Desmos state
+     * @param {string} conceptId - Optional concept ID for unique cache keys
      * @returns {string|null} Cached data URL or null if not cached
      */
-    function getCachedThumbnail(stateString) {
-        const cacheKey = simpleHash(stateString);
-        return thumbnailCache.get(cacheKey) || null;
+    function getCachedThumbnail(stateString, conceptId = '') {
+        const cacheKey = simpleHash(stateString, conceptId);
+        
+        // First check memory cache (fastest)
+        if (thumbnailCache.has(cacheKey)) {
+            return thumbnailCache.get(cacheKey);
+        }
+        
+        // Check sessionStorage as fallback
+        try {
+            const dataUrl = sessionStorage.getItem(SESSION_CACHE_PREFIX + cacheKey);
+            if (dataUrl) {
+                // Add back to memory cache for faster future access
+                thumbnailCache.set(cacheKey, dataUrl);
+                return dataUrl;
+            }
+        } catch (error) {
+            // SessionStorage not available, continue with memory cache only
+        }
+        
+        return null;
     }
     
     /**
-     * Generate a thumbnail from a Desmos state (optimized with caching)
+     * Generate a thumbnail from a Desmos state with concept-specific caching
      * @param {string} stateString - Stringified Desmos state
+     * @param {string} conceptId - Optional concept ID for unique cache keys
      * @returns {Promise<string>} Resolves with data URL of the thumbnail
      */
-    async function generateThumbnail(stateString) {
+    async function generateThumbnail(stateString, conceptId = '') {
         const startTime = performance.now();
         performanceStats.totalRequests++;
         
-        // Generate cache key from state
-        const cacheKey = simpleHash(stateString);
+        // Generate cache key from state + concept ID
+        const cacheKey = simpleHash(stateString, conceptId);
         
         // Check cache first
         if (thumbnailCache.has(cacheKey)) {
             performanceStats.cacheHits++;
             const endTime = performance.now();
-            // Remove console.log for better performance
             return Promise.resolve(thumbnailCache.get(cacheKey));
+        }
+        
+        // Check sessionStorage as fallback
+        try {
+            const dataUrl = sessionStorage.getItem(SESSION_CACHE_PREFIX + cacheKey);
+            if (dataUrl) {
+                // Add back to memory cache for faster future access
+                thumbnailCache.set(cacheKey, dataUrl);
+                performanceStats.cacheHits++;
+                return Promise.resolve(dataUrl);
+            }
+        } catch (error) {
+            // SessionStorage not available, continue with generation
+        }
+        
+        // Check if this thumbnail is already being generated
+        if (pendingGenerations.has(cacheKey)) {
+            // Return the existing promise to avoid duplicate generation
+            return pendingGenerations.get(cacheKey);
         }
         
         performanceStats.cacheMisses++;
         
-        // Add to queue and return promise
-        return new Promise((resolve, reject) => {
+        // Create promise for this generation
+        const generationPromise = new Promise((resolve, reject) => {
             generationQueue.push({
                 stateString,
                 startTime,
+                cacheKey,
                 resolve: (dataUrl) => {
                     const endTime = performance.now();
                     const generationTime = endTime - startTime;
@@ -268,17 +352,31 @@ const DesmosUtils = (function() {
                     
                     console.log(`Thumbnail generated for ${cacheKey} (${generationTime.toFixed(1)}ms)`);
                     
-                    // Cache the result
+                    // Cache the result in memory and sessionStorage
                     cleanupCache();
                     thumbnailCache.set(cacheKey, dataUrl);
+                    saveCacheToSession(cacheKey, dataUrl);
+                    
+                    // Remove from pending generations
+                    pendingGenerations.delete(cacheKey);
+                    
                     resolve(dataUrl);
                 },
-                reject
+                reject: (error) => {
+                    // Remove from pending generations on error
+                    pendingGenerations.delete(cacheKey);
+                    reject(error);
+                }
             });
             
             // Start processing if not already running
             processQueue();
         });
+        
+        // Track this pending generation
+        pendingGenerations.set(cacheKey, generationPromise);
+        
+        return generationPromise;
     }
     
     /**
@@ -287,12 +385,44 @@ const DesmosUtils = (function() {
      */
     function clearCache(conceptId = null) {
         if (conceptId) {
-            // Find and remove cache entries for specific concept
-            // Since we can't easily map conceptId to cache keys, we clear all
-            // This could be optimized in the future with a concept-to-hash mapping
-            thumbnailCache.clear();
+            // Clear all cache entries for this specific concept
+            // Since we include conceptId in the hash, we need to remove entries that start with conceptId
+            const keysToRemove = [];
+            
+            // Check memory cache
+            for (const [key, value] of thumbnailCache) {
+                // Keys are in format: hash of (conceptId + '|' + state)
+                // We can't easily reverse the hash, so we'll clear all cache for safety
+                // This is acceptable since cache clearing is infrequent
+                keysToRemove.push(key);
+            }
+            
+            keysToRemove.forEach(key => {
+                thumbnailCache.delete(key);
+                // Also remove from sessionStorage
+                try {
+                    sessionStorage.removeItem(SESSION_CACHE_PREFIX + key);
+                } catch (error) {
+                    // Ignore sessionStorage errors
+                }
+            });
         } else {
+            // Clear all cache
             thumbnailCache.clear();
+            
+            // Clear sessionStorage
+            try {
+                const keysToRemove = [];
+                for (let i = 0; i < sessionStorage.length; i++) {
+                    const key = sessionStorage.key(i);
+                    if (key && key.startsWith(SESSION_CACHE_PREFIX)) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(key => sessionStorage.removeItem(key));
+            } catch (error) {
+                // Ignore sessionStorage errors
+            }
         }
     }
     
@@ -305,6 +435,7 @@ const DesmosUtils = (function() {
             size: thumbnailCache.size,
             maxSize: MAX_CACHE_SIZE,
             queueLength: generationQueue.length,
+            pendingGenerations: pendingGenerations.size,
             isProcessing: isProcessingQueue,
             performance: {
                 totalRequests: performanceStats.totalRequests,
@@ -321,8 +452,11 @@ const DesmosUtils = (function() {
      * Clean up resources
      */
     function cleanup() {
-        // Clear cache
+        // Clear cache (memory only - keep sessionStorage for next page load)
         thumbnailCache.clear();
+        
+        // Clear pending generations
+        pendingGenerations.clear();
         
         // Reset performance stats
         performanceStats = {
@@ -340,6 +474,12 @@ const DesmosUtils = (function() {
         generationQueue = [];
         isProcessingQueue = false;
         
+        // Clear pending generations
+        pendingGenerations.forEach(promise => {
+            // Promises will be rejected by the queue cleanup above
+        });
+        pendingGenerations.clear();
+        
         // Destroy calculator
         if (hiddenCalculator) {
             try {
@@ -356,6 +496,9 @@ const DesmosUtils = (function() {
             hiddenContainer = null;
         }
     }
+    
+    // Load cache from sessionStorage on initialization
+    loadCacheFromSession();
     
     // Expose the public API
     return {

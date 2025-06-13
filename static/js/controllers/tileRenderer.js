@@ -226,11 +226,11 @@ function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, g
     const preview = document.createElement('div');
     preview.className = 'tile-preview';
     
-    // Check for cached thumbnail first
-    const cachedThumbnail = window.DesmosUtils ? window.DesmosUtils.getCachedThumbnail(concept.desmosState) : null;
+    // Check for cached thumbnail first (fastest path)
+    const cachedThumbnail = window.DesmosUtils ? window.DesmosUtils.getCachedThumbnail(concept.desmosState, concept.id) : null;
     
     if (cachedThumbnail) {
-        // Use cached thumbnail immediately - no delay
+        // Use cached thumbnail immediately - no delay, no async calls
         const img = document.createElement('img');
         img.alt = `${concept.displayName} preview`;
         img.src = cachedThumbnail;
@@ -240,9 +240,11 @@ function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, g
         img.addEventListener('drag', (e) => e.preventDefault());
         preview.appendChild(img);
     } else {
-        // Show loading state and generate thumbnail
-        preview.innerHTML = '<div class="loading-preview"></div>';
-        generateThumbnailWithRetry(concept, preview);
+        // Keep blank until thumbnail is ready - no loading indicator
+        // Use requestAnimationFrame to defer generation and not block rendering
+        requestAnimationFrame(() => {
+            generateThumbnailWithRetry(concept, preview);
+        });
     }
     content.appendChild(preview);
     tile.appendChild(content);

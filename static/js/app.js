@@ -414,9 +414,9 @@ var App = (function() {
             // Check if autosave warning should be shown
             checkAutosaveWarning();
 
-            // Initialize DesmosUtils for optimized thumbnail generation
+            // Initialize DesmosUtils with sessionStorage persistence
             if (window.DesmosUtils) {
-                console.log('DesmosUtils initialized with caching enabled');
+                console.log('DesmosUtils initialized with sessionStorage persistence');
             }
 
             // Remove loading state
