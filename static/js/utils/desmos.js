@@ -2,6 +2,7 @@
  * Desmos Utilities
  * Provides utilities for working with Desmos calculator states and thumbnails
  */
+console.log('DesmosUtils module loading...');
 const DesmosUtils = (function() {
     // Private variables
     let hiddenCalculator = null;
@@ -28,6 +29,7 @@ const DesmosUtils = (function() {
                 if (!hiddenContainer) {
                     hiddenContainer = document.createElement('div');
                     hiddenContainer.style.position = 'absolute';
+                    hiddenContainer.style.opacity = '0';
                     hiddenContainer.style.visibility = 'hidden';
                     hiddenContainer.style.width = '300px';
                     hiddenContainer.style.height = '200px';
@@ -39,6 +41,7 @@ const DesmosUtils = (function() {
                 // Create a hidden calculator instance
                 hiddenCalculator = Desmos.GraphingCalculator(hiddenContainer, {
                     expressions: true, // must be true to render equations/images
+                    images: true,     // enable image rendering in state
                     settingsMenu: false,
                     zoomButtons: false,
                     expressionsTopbar: false,
@@ -47,6 +50,7 @@ const DesmosUtils = (function() {
                     autosize: false
                 });
                 
+                // DEBUG: unhide container for inspection
                 // Wait a bit to ensure it's fully initialized
                 setTimeout(() => {
                     resolve(hiddenCalculator);
@@ -65,7 +69,23 @@ const DesmosUtils = (function() {
      */
     async function generateThumbnail(stateString) {
         if (!stateString) {
-            throw new Error('Invalid state string');
+            // Create a blank state for preview
+            const blankState = {
+                version: 10,
+                randomSeed: "",
+                graph: {
+                    viewport: {
+                        xmin: -10,
+                        ymin: -10,
+                        xmax: 10,
+                        ymax: 10
+                    }
+                },
+                expressions: {
+                    list: []
+                }
+            };
+            stateString = JSON.stringify(blankState);
         }
         
         try {
@@ -94,7 +114,6 @@ const DesmosUtils = (function() {
             
             return dataUrl;
         } catch (error) {
-            console.error('Error generating thumbnail:', error);
             throw error;
         }
     }
@@ -124,3 +143,5 @@ const DesmosUtils = (function() {
         cleanup
     };
 })();
+
+window.DesmosUtils = DesmosUtils;

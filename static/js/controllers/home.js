@@ -400,7 +400,7 @@ const HomeController = (function() {
         if (thumbnailQueue.has(concept.id)) return; // Prevent duplicate
         thumbnailQueue.add(concept.id);
         setTimeout(() => {
-            if (!previewElement.isConnected || !thumbnailQueue.has(concept.id)) {
+            if (!previewElement.isConnected) {
                 thumbnailQueue.delete(concept.id);
                 return;
             }
@@ -418,13 +418,15 @@ const HomeController = (function() {
                     if (previewElement.isConnected) {
                         const tile = previewElement.closest('.concept-tile');
                         const poster = tile ? tile.closest('.tiles-container') : null;
-                        if (poster && homePoster && poster === homePoster && poster.dataset.renderGeneration === currentRenderGeneration) {
+                        // Simplified check - just ensure we're still on the same poster
+                        if (poster && homePoster && poster === homePoster) {
                             previewElement.innerHTML = '';
                             previewElement.appendChild(img);
                         }
                     }
                 })
                 .catch(error => {
+                    console.error('Error generating thumbnail for:', concept.id, error);
                     thumbnailQueue.delete(concept.id);
                     if (retryCount < MAX_RETRIES && previewElement.isConnected) {
                         const tile = previewElement.closest('.concept-tile');
