@@ -225,9 +225,25 @@ function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, g
     // Create the preview area
     const preview = document.createElement('div');
     preview.className = 'tile-preview';
-    // Always show a Desmos render (even if blank)
-    preview.innerHTML = '<div class="loading-preview"></div>';
-    generateThumbnailWithRetry(concept, preview);
+    
+    // Check for cached thumbnail first
+    const cachedThumbnail = window.DesmosUtils ? window.DesmosUtils.getCachedThumbnail(concept.desmosState) : null;
+    
+    if (cachedThumbnail) {
+        // Use cached thumbnail immediately - no delay
+        const img = document.createElement('img');
+        img.alt = `${concept.displayName} preview`;
+        img.src = cachedThumbnail;
+        img.className = 'preview-image';
+        img.draggable = false;
+        img.addEventListener('dragstart', (e) => e.preventDefault());
+        img.addEventListener('drag', (e) => e.preventDefault());
+        preview.appendChild(img);
+    } else {
+        // Show loading state and generate thumbnail
+        preview.innerHTML = '<div class="loading-preview"></div>';
+        generateThumbnailWithRetry(concept, preview);
+    }
     content.appendChild(preview);
     tile.appendChild(content);
     

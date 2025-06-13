@@ -385,7 +385,7 @@ const HomeController = (function() {
     }
     
     /**
-     * Generate a thumbnail with retry mechanism
+     * Generate a thumbnail with retry mechanism (optimized for cache hits)
      * @param {Object} concept - Concept to generate thumbnail for
      * @param {HTMLElement} previewElement - Element to update with the thumbnail
      * @param {number} retryCount - Number of retries attempted
@@ -396,6 +396,24 @@ const HomeController = (function() {
         const poster = tile ? tile.closest('.tiles-container') : null;
         const currentRenderGeneration = poster ? poster.dataset.renderGeneration : null;
         if (thumbnailQueue.has(concept.id)) return; // Prevent duplicate
+        
+        // Check for immediate cache hit first
+        if (window.DesmosUtils && window.DesmosUtils.getCachedThumbnail) {
+            const cachedThumbnail = window.DesmosUtils.getCachedThumbnail(concept.desmosState);
+            if (cachedThumbnail && previewElement.isConnected) {
+                const img = document.createElement('img');
+                img.alt = `${concept.displayName} preview`;
+                img.src = cachedThumbnail;
+                img.className = 'preview-image';
+                img.draggable = false;
+                img.addEventListener('dragstart', (e) => e.preventDefault());
+                img.addEventListener('drag', (e) => e.preventDefault());
+                previewElement.innerHTML = '';
+                previewElement.appendChild(img);
+                return; // Exit early for cache hits
+            }
+        }
+        
         thumbnailQueue.add(concept.id);
         setTimeout(() => {
             if (!previewElement.isConnected) {
@@ -440,7 +458,7 @@ const HomeController = (function() {
                         }
                     }
                 });
-        }, thumbnailQueue.size * 50); // Reduced delay from 100ms to 50ms for faster generation
+        }, 10); // Minimal delay for non-cached thumbnails
     }
     
     // --- FIT/FILL MODE LOGIC ---

@@ -217,6 +217,16 @@ const DesmosUtils = (function() {
     }
     
     /**
+     * Check if a thumbnail is cached (synchronous)
+     * @param {string} stateString - Stringified Desmos state
+     * @returns {string|null} Cached data URL or null if not cached
+     */
+    function getCachedThumbnail(stateString) {
+        const cacheKey = simpleHash(stateString);
+        return thumbnailCache.get(cacheKey) || null;
+    }
+    
+    /**
      * Generate a thumbnail from a Desmos state (optimized with caching)
      * @param {string} stateString - Stringified Desmos state
      * @returns {Promise<string>} Resolves with data URL of the thumbnail
@@ -232,7 +242,7 @@ const DesmosUtils = (function() {
         if (thumbnailCache.has(cacheKey)) {
             performanceStats.cacheHits++;
             const endTime = performance.now();
-            console.log(`Thumbnail cache hit for ${cacheKey} (${(endTime - startTime).toFixed(1)}ms)`);
+            // Remove console.log for better performance
             return Promise.resolve(thumbnailCache.get(cacheKey));
         }
         
@@ -350,6 +360,7 @@ const DesmosUtils = (function() {
     // Expose the public API
     return {
         generateThumbnail,
+        getCachedThumbnail,
         clearCache,
         getCacheStats,
         cleanup
