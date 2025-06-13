@@ -56,11 +56,6 @@ const ConceptModel = (function() {
             id: type,
             type: type,
             displayName: getDisplayName(type),
-            // No coordinates - let the grid layout position new concepts
-            // coordinates: undefined,
-            // Legacy pixel-based coordinates (for backward compatibility)
-            position: { x: 0, y: 0 },
-            size: { width: 250, height: 200 },
             description: '',
             desmosState: null,
             lastModified: Date.now()
@@ -111,94 +106,6 @@ const ConceptModel = (function() {
             console.error('Error parsing Desmos state:', error);
             return false;
         }
-    }
-    
-    /**
-     * Migrate a concept from pixel coordinates to percentage coordinates
-     * @param {Object} concept - Concept to migrate
-     * @param {number} containerWidth - Container width in pixels
-     * @param {number} containerHeight - Container height in pixels
-     * @returns {Object} Migrated concept
-     */
-    function migrateToPercentageCoordinates(concept, containerWidth, containerHeight) {
-        // If already has percentage coordinates with anchor points, return as-is
-        if (concept.coordinates && 
-            concept.coordinates.anchorX !== undefined && 
-            concept.coordinates.anchorY !== undefined) {
-            return concept;
-        }
-        
-        // If has old center-based coordinates, migrate them to anchor-based
-        if (concept.coordinates && 
-            concept.coordinates.centerX !== undefined && 
-            concept.coordinates.centerY !== undefined) {
-            return migrateCenterToAnchorCoordinates(concept, containerWidth, containerHeight);
-        }
-        
-        // Get pixel coordinates from either format
-        let pixelX, pixelY, pixelWidth, pixelHeight;
-        
-        if (concept.x !== undefined && concept.y !== undefined) {
-            pixelX = concept.x;
-            pixelY = concept.y;
-        } else if (concept.position) {
-            pixelX = concept.position.x || 0;
-            pixelY = concept.position.y || 0;
-        } else {
-            pixelX = 0;
-            pixelY = 0;
-        }
-        
-        if (concept.width !== undefined && concept.height !== undefined) {
-            pixelWidth = concept.width;
-            pixelHeight = concept.height;
-        } else if (concept.size) {
-            pixelWidth = concept.size.width || 250;
-            pixelHeight = concept.size.height || 200;
-        } else {
-            pixelWidth = 250;
-            pixelHeight = 200;
-        }
-        
-        // Convert to percentage coordinates
-        const percentageCoords = window.CoordinateUtils.pixelsToPercentage(
-            pixelX, pixelY, pixelWidth, pixelHeight, containerWidth, containerHeight
-        );
-        
-        return updateConcept(concept, {
-            coordinates: percentageCoords
-        });
-    }
-    
-    /**
-     * Migrate from center-based coordinates to anchor-based coordinates
-     * @param {Object} concept - Concept with center-based coordinates
-     * @param {number} containerWidth - Container width in pixels
-     * @param {number} containerHeight - Container height in pixels
-     * @returns {Object} Migrated concept with anchor-based coordinates
-     */
-    function migrateCenterToAnchorCoordinates(concept, containerWidth, containerHeight) {
-        const coords = concept.coordinates;
-        const baseSize = Math.max(containerWidth, containerHeight);
-        
-        // Convert to pixel coordinates first to determine the anchor point
-        const pixelWidth = (coords.width / 100) * baseSize;
-        const pixelHeight = (coords.height / 100) * baseSize;
-        const centerPixelX = (coords.centerX / 100) * containerWidth;
-        const centerPixelY = (coords.centerY / 100) * containerHeight;
-        
-        // Calculate top-left position
-        const pixelX = centerPixelX - (pixelWidth / 2);
-        const pixelY = centerPixelY - (pixelHeight / 2);
-        
-        // Now convert to anchor-based coordinates using the new system
-        const anchorCoords = window.CoordinateUtils.pixelsToPercentage(
-            pixelX, pixelY, pixelWidth, pixelHeight, containerWidth, containerHeight
-        );
-        
-        return updateConcept(concept, {
-            coordinates: anchorCoords
-        });
     }
     
     /**

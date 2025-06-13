@@ -19,7 +19,9 @@ const StorageManager = (function() {
             'mm_image_skill_shown',  // deprecated
             'mm_layout_state',       // removed - only in files now
             'mm_museum_name',        // removed - only in files now  
-            'mm_has_saved_file'      // removed - file API doesn't persist
+            'mm_has_saved_file',     // removed - file API doesn't persist
+            'mm_undoStack',          // removed - undo/redo now runtime only
+            'mm_redoStack'           // removed - undo/redo now runtime only
         ];
         
         keysToRemove.forEach(key => localStorage.removeItem(key));

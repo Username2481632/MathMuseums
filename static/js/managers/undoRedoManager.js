@@ -1,31 +1,10 @@
 // undoRedo.js
-// Provides undo/redo stack management for layout editing (with localStorage persistence)
+// Provides undo/redo stack management for layout editing (runtime data only)
 
-export function createUndoRedoManager({ getCurrentLayoutState, restoreLayoutState, stackLimit = 100, undoKey = 'mm_undoStack', redoKey = 'mm_redoStack' }) {
+export function createUndoRedoManager({ getCurrentLayoutState, restoreLayoutState, stackLimit = 100 }) {
     let undoStack = [];
     let redoStack = [];
     let isRestoring = false;
-
-    function saveStacks() {
-        try {
-            localStorage.setItem(undoKey, JSON.stringify(undoStack));
-            localStorage.setItem(redoKey, JSON.stringify(redoStack));
-        } catch (e) {
-            // Ignore quota errors
-        }
-    }
-
-    function loadStacks() {
-        try {
-            const u = localStorage.getItem(undoKey);
-            const r = localStorage.getItem(redoKey);
-            undoStack = u ? JSON.parse(u) : [];
-            redoStack = r ? JSON.parse(r) : [];
-        } catch (e) {
-            undoStack = [];
-            redoStack = [];
-        }
-    }
 
     function pushUndoState() {
         if (isRestoring) {
@@ -34,7 +13,6 @@ export function createUndoRedoManager({ getCurrentLayoutState, restoreLayoutStat
         undoStack.push(JSON.parse(JSON.stringify(getCurrentLayoutState())));
         if (undoStack.length > stackLimit) undoStack.shift();
         redoStack = [];
-        saveStacks();
     }
 
     function undoLayout() {
@@ -44,7 +22,6 @@ export function createUndoRedoManager({ getCurrentLayoutState, restoreLayoutStat
         const prev = undoStack.pop();
         restoreLayoutState(prev);
         isRestoring = false;
-        saveStacks();
     }
 
     function redoLayout() {
@@ -54,14 +31,25 @@ export function createUndoRedoManager({ getCurrentLayoutState, restoreLayoutStat
         const next = redoStack.pop();
         restoreLayoutState(next);
         isRestoring = false;
-        saveStacks();
+    }
+
+    function clearStacks() {
+        undoStack = [];
+        redoStack = [];
+    }
+
+    function getStackSizes() {
+        return {
+            undoCount: undoStack.length,
+            redoCount: redoStack.length
+        };
     }
 
     return {
         pushUndoState,
         undoLayout,
         redoLayout,
-        saveStacks,
-        loadStacks
+        clearStacks,
+        getStackSizes
     };
 } 

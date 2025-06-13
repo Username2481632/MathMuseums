@@ -246,9 +246,6 @@ const HomeController = (function() {
         // Force cleanup of any corrupted data first
         await forceCleanupCorruptedData();
         
-        // Restore undo/redo stacks from localStorage
-        undoRedoManager.loadStacks();
-        
         // Get concepts from storage
         concepts = await loadConcepts();
         
