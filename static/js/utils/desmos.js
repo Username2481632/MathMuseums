@@ -29,14 +29,13 @@ const DesmosUtils = (function() {
     };
     
     /**
-     * Generate a simple hash from a string with concept ID
+     * Generate a simple hash from a string
      * @param {string} str - String to hash
-     * @param {string} conceptId - Optional concept ID for unique cache keys
      * @returns {string} Simple hash
      */
-    function simpleHash(str, conceptId = '') {
-        // Include concept ID in hash to ensure each concept has unique cache entries
-        const fullString = conceptId + '|' + (str || '');
+    function simpleHash(str) {
+        // Hash only the state content - conceptId is irrelevant for caching
+        const fullString = str || '';
         let hash = 0;
         for (let i = 0; i < fullString.length; i++) {
             const char = fullString.charCodeAt(i);
@@ -91,6 +90,7 @@ const DesmosUtils = (function() {
             for (let i = 0; i < entriesToRemove; i++) {
                 const hash = keys[i];
                 thumbnailCache.delete(hash);
+                
                 // Also remove from sessionStorage
                 try {
                     sessionStorage.removeItem(SESSION_CACHE_PREFIX + hash);
@@ -353,11 +353,10 @@ const DesmosUtils = (function() {
     /**
      * Check if a thumbnail is cached (synchronous) - checks memory and sessionStorage
      * @param {string} stateString - Stringified Desmos state
-     * @param {string} conceptId - Optional concept ID for unique cache keys
      * @returns {string|null} Cached data URL or null if not cached
      */
-    function getCachedThumbnail(stateString, conceptId = '') {
-        const cacheKey = simpleHash(stateString, conceptId);
+    function getCachedThumbnail(stateString) {
+        const cacheKey = simpleHash(stateString);
         
         // First check memory cache (fastest)
         if (thumbnailCache.has(cacheKey)) {
@@ -393,16 +392,17 @@ const DesmosUtils = (function() {
             conceptId: conceptId,
             stateLength: stateString?.length || 0,
             timestamp: new Date().toISOString(),
-            cacheKey: simpleHash(stateString, conceptId)
+            cacheKey: simpleHash(stateString)
         });
         
-        // Generate cache key from state + concept ID
-        const cacheKey = simpleHash(stateString, conceptId);
+        // Generate cache key from state only (conceptId is irrelevant for caching)
+        const cacheKey = simpleHash(stateString);
         
         // Check cache first
         if (thumbnailCache.has(cacheKey)) {
             performanceStats.cacheHits++;
             const endTime = performance.now();
+            console.log('🎯 Cache hit for concept:', conceptId, 'in', (endTime - startTime).toFixed(2), 'ms');
             return Promise.resolve(thumbnailCache.get(cacheKey));
         }
         
@@ -413,6 +413,8 @@ const DesmosUtils = (function() {
                 // Add back to memory cache for faster future access
                 thumbnailCache.set(cacheKey, dataUrl);
                 performanceStats.cacheHits++;
+                const endTime = performance.now();
+                console.log('🎯 Session cache hit for concept:', conceptId, 'in', (endTime - startTime).toFixed(2), 'ms');
                 return Promise.resolve(dataUrl);
             }
         } catch (error) {
@@ -475,32 +477,16 @@ const DesmosUtils = (function() {
     
     /**
      * Clear thumbnail cache (useful when concepts are updated)
-     * @param {string} conceptId - Optional specific concept to clear
+     * @param {string} conceptId - Ignored - cache is now state-based only
      */
     function clearCache(conceptId = null) {
         if (conceptId) {
-            // Clear all cache entries for this specific concept
-            // Since we include conceptId in the hash, we need to remove entries that start with conceptId
-            const keysToRemove = [];
-            
-            // Check memory cache
-            for (const [key, value] of thumbnailCache) {
-                // Keys are in format: hash of (conceptId + '|' + state)
-                // We can't easily reverse the hash, so we'll clear all cache for safety
-                // This is acceptable since cache clearing is infrequent
-                keysToRemove.push(key);
-            }
-            
-            keysToRemove.forEach(key => {
-                thumbnailCache.delete(key);
-                // Also remove from sessionStorage
-                try {
-                    sessionStorage.removeItem(SESSION_CACHE_PREFIX + key);
-                } catch (error) {
-                    // Ignore sessionStorage errors
-                }
-            });
+            console.log('🧹 Concept-specific cache clearing is no longer needed - cache is state-based');
+            // No-op: since cache is now purely state-based, 
+            // we don't need concept-specific clearing anymore
+            return;
         } else {
+            console.log('🧹 Clearing ALL cache entries');
             // Clear all cache
             thumbnailCache.clear();
             

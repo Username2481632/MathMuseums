@@ -398,7 +398,7 @@ const HomeController = (function() {
         
         // Double-check cache before any async operations (performance critical)
         if (window.DesmosUtils && window.DesmosUtils.getCachedThumbnail) {
-            const cachedThumbnail = window.DesmosUtils.getCachedThumbnail(concept.desmosState, concept.id);
+            const cachedThumbnail = window.DesmosUtils.getCachedThumbnail(concept.desmosState);
             if (cachedThumbnail && previewElement.isConnected) {
                 // Immediate cache hit - create image synchronously
                 const img = document.createElement('img');

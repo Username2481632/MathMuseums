@@ -213,7 +213,7 @@ function createConceptTile(concept, handleResizeStart, handleTouchResizeStart, g
     preview.className = 'tile-preview';
     
     // Check for cached thumbnail first (fastest path)
-    const cachedThumbnail = window.DesmosUtils ? window.DesmosUtils.getCachedThumbnail(concept.desmosState, concept.id) : null;
+    const cachedThumbnail = window.DesmosUtils ? window.DesmosUtils.getCachedThumbnail(concept.desmosState) : null;
     
     if (cachedThumbnail) {
         // Use cached thumbnail immediately - no delay, no async calls

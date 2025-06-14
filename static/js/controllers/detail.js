@@ -253,11 +253,8 @@ const DetailController = (function() {
                 desmosState: stateString 
             });
             
-            // Clear thumbnail cache for this concept since state changed
-            if (window.DesmosUtils && window.DesmosUtils.clearCache) {
-                console.log('💾 Clearing thumbnail cache for concept:', currentConcept.id);
-                window.DesmosUtils.clearCache(currentConcept.id);
-            }
+            // Note: No need to clear cache anymore since cache is now state-based
+            // Identical states will automatically share the same cached thumbnail
             
             // Check if state has an image
             const hasImage = state && 
