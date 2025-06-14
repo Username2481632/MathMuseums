@@ -4,7 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Math Museums</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Create and explore interactive mathematical concepts in your personal math museum">
+    <meta name="theme-color" content="#2196F3">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Math Museums">
+    <meta name="msapplication-TileColor" content="#2196F3">
+    <meta name="msapplication-config" content="browserconfig.xml">
+    
+    <!-- Icons and Manifest -->
     <link rel="icon" href="static/img/favicon.svg" type="image/svg+xml">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="static/img/icon-192.png">
+    
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="static/css/styles.css">
     <link rel="stylesheet" href="static/css/home.css">
     <link rel="stylesheet" href="static/css/detail.css">
@@ -30,6 +46,7 @@
             </div>
         </div>
         <div class="header-right">
+            <button id="share-button" class="share-btn btn"><img src="static/img/share.svg" alt="Share Museum File" class="icon"></button>
             <button id="settings-button" class="settings-btn btn"><img src="static/img/settings.svg" alt="Settings" class="icon"></button>
         </div>
     </header>
@@ -150,6 +167,9 @@
     <script src="static/js/utils/fileManager.js"></script>
     <script src="static/js/utils/coordinates.js"></script>
     <script src="static/js/utils/fontSizer.js"></script>
+    <script src="static/js/utils/pwa.js"></script>
+    <script src="static/js/utils/share.js"></script>
+    <script src="static/js/utils/performance.js"></script>
     <script type="module" src="static/js/controllers/home.js"></script>
     <script src="static/js/utils/preferences.js"></script>
     <script src="static/js/utils/router.js"></script>

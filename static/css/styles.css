@@ -325,7 +325,8 @@ main {
 .header-controls .btn, 
 .header-controls label,
 .header-right .btn,
-.header-right label { /* Apply button-like styling to the label */
+.header-right label, 
+.header-right .share-btn { /* Apply button-like styling to the label */
     background: var(--secondary-color); /* Use theme color */
     color: #fff;
     border: none;
@@ -338,7 +339,8 @@ main {
 .header-controls .btn:hover,
 .header-controls label:hover,
 .header-right .btn:hover,
-.header-right label:hover {
+.header-right label:hover,
+.header-right .share-btn:hover:not(:disabled) {
     background: #2980b9; /* Darker shade of secondary color */
 }
 .header-controls input[type="checkbox"],
@@ -396,7 +398,8 @@ main {
 }
 
 .header-controls .settings-btn,
-.header-right .settings-btn {
+.header-right .settings-btn,
+.header-right .share-btn {
     background: transparent;
     color: white;
     border: none;
@@ -407,17 +410,29 @@ main {
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background-color 0.2s ease;
 }
 
 .header-controls .settings-btn .icon,
-.header-right .settings-btn .icon {
+.header-right .settings-btn .icon,
+.header-right .share-btn .icon {
     width: 2.5rem;
     height: 2.5rem;
 }
 
 .header-controls .settings-btn:hover,
-.header-right .settings-btn:hover {
+.header-right .settings-btn:hover,
+.header-right .share-btn:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.1);
+}
+
+.header-right .share-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.header-right .share-btn:disabled .icon {
+    filter: grayscale(100%);
 }
 
 
@@ -682,4 +697,188 @@ main {
     font-size: var(--font-size-xl);
     font-weight: bold;
     letter-spacing: -0.01em;
+}
+
+/* PWA Styles */
+.pwa-update-notification {
+    position: fixed !important;
+    top: 20px !important;
+    right: 20px !important;
+    background: var(--secondary-color) !important;
+    color: white !important;
+    padding: 16px !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    z-index: 10000 !important;
+    max-width: 320px !important;
+    animation: slideInRight 0.3s ease !important;
+}
+
+.pwa-notification-content {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+}
+
+.pwa-notification-content h3 {
+    margin: 0 !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+}
+
+.pwa-notification-content p {
+    margin: 0 !important;
+    font-size: 14px !important;
+    opacity: 0.9 !important;
+}
+
+.pwa-notification-content .btn {
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    border-radius: 4px !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.pwa-notification-content .btn-primary {
+    background: white !important;
+    color: var(--secondary-color) !important;
+}
+
+.pwa-notification-content .btn-secondary {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+}
+
+.pwa-welcome-notification {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    background: white !important;
+    padding: 24px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+    z-index: 10001 !important;
+    text-align: center !important;
+    max-width: 320px !important;
+    animation: fadeInScale 0.3s ease !important;
+}
+
+/* Standalone mode adjustments */
+.pwa-standalone header {
+    /* Add extra padding for devices with notches/safe areas */
+    padding-top: env(safe-area-inset-top, 0);
+}
+
+.pwa-standalone body {
+    /* Adjust for safe areas in standalone mode */
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* PWA Animations */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInScale {
+    from {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Adjustments for installed PWA */
+@media (display-mode: standalone) {
+    body {
+        /* Remove any browser-specific padding when in standalone mode */
+        user-select: none; /* Prevent text selection like a native app */
+    }
+    
+    /* Prevent pull-to-refresh on iOS */
+    body {
+        overscroll-behavior-y: contain;
+    }
+}
+
+/* PWA-specific loading states */
+.pwa-loading {
+    position: relative;
+    overflow: hidden;
+}
+
+.pwa-loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--secondary-color), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* Performance Optimizations */
+.low-end-device .concept-tile {
+    will-change: auto !important;
+    transform: translateZ(0); /* Force hardware acceleration */
+}
+
+.low-end-device .concept-tile:hover {
+    transition: transform 0.1s ease !important;
+}
+
+.pwa-loading::after {
+    display: none; /* Remove loading animations on low bandwidth */
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .concept-tile {
+        border: 2px solid var(--text-color);
+    }
+    
+    .pwa-install-button,
+    .pwa-update-notification {
+        border: 2px solid white;
+    }
+}
+
+/* Optimize for print */
+@media print {
+    .pwa-update-notification,
+    .share-btn {
+        display: none !important;
+    }
+    
+    .concept-tile {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
 }

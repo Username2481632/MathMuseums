@@ -2,7 +2,6 @@
  * Desmos Utilities - Optimized Thumbnail Generation
  * Provides utilities for working with Desmos calculator states and thumbnails
  */
-console.log('DesmosUtils module loading...');
 const DesmosUtils = (function() {
     // Private variables
     let hiddenCalculator = null;
@@ -350,8 +349,6 @@ const DesmosUtils = (function() {
                         performanceStats.generationTimes.reduce((a, b) => a + b, 0) / 
                         performanceStats.generationTimes.length;
                     
-                    console.log(`Thumbnail generated for ${cacheKey} (${generationTime.toFixed(1)}ms)`);
-                    
                     // Cache the result in memory and sessionStorage
                     cleanupCache();
                     thumbnailCache.set(cacheKey, dataUrl);
@@ -510,10 +507,7 @@ const DesmosUtils = (function() {
     };
 })();
 
-window.DesmosUtils = DesmosUtils;
-
-// Add a global debug function for easy console access
-window.debugThumbnails = function() {
-    console.log('=== Thumbnail Generation Debug Info ===');
-    console.log(DesmosUtils.getCacheStats());
-};
+window.DesmosUtils = DesmosUtils;    // Add a global debug function for easy console access
+    window.debugThumbnails = function() {
+        return DesmosUtils.getCacheStats();
+    };

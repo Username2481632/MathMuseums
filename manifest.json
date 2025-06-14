@@ -1,0 +1,77 @@
+{
+  "name": "Math Museums",
+  "short_name": "MathMuseums",
+  "description": "Create and explore interactive mathematical concepts in your personal math museum",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2196F3",
+  "orientation": "any",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["education", "utilities", "productivity"],
+  "icons": [
+    {
+      "src": "static/img/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "static/img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "static/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "static/img/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "static/img/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "static/img/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Math Museums home view with interactive tiles"
+    },
+    {
+      "src": "static/img/screenshot-narrow.png",
+      "sizes": "640x1136",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Math Museums detail view with Desmos calculator"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Create New Concept",
+      "short_name": "New Concept",
+      "description": "Create a new mathematical concept",
+      "url": "/#new-concept",
+      "icons": [
+        {
+          "src": "static/img/favicon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
+}

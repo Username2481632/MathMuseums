@@ -2,11 +2,6 @@
 // Handles rendering and creation of tiles on the home poster for the Math Museums home view.
 
 export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, handleTouchResizeStart, generateThumbnailWithRetry }) {
-    // console.log('=== renderTilesOnPoster called ===');
-    // console.log('Input concepts:', concepts);
-    // console.log('Concepts count:', concepts.length);
-    // console.log('Concepts details:', concepts.map(c => ({ id: c.id, displayName: c.displayName, type: typeof c.id })));
-    
     // AGGRESSIVE DATA VALIDATION - Filter out any corrupted concepts
     const validConcepts = concepts.filter(concept => {
         const isValid = concept && 
@@ -29,18 +24,15 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
     
     // Clear the home poster
     homePoster.innerHTML = '';
-    // console.log('Cleared homePoster innerHTML');
     
     // Clear any pending thumbnail generation to prevent ghost tiles
     if (window.HomeController && window.HomeController.clearThumbnailQueue) {
         window.HomeController.clearThumbnailQueue();
-        // console.log('Cleared thumbnail queue');
     }
     
     // Add a render generation ID to track this render cycle
     const renderGeneration = Date.now() + Math.random();
     homePoster.dataset.renderGeneration = renderGeneration;
-    // console.log('Set render generation:', renderGeneration);
     
     // Remove duplicates based on concept ID
     const uniqueConcepts = [];
@@ -49,14 +41,8 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
         if (!seenIds.has(concept.id)) {
             seenIds.add(concept.id);
             uniqueConcepts.push(concept);
-            // console.log('Added unique concept:', concept.id, concept.displayName);
-        } else {
-            // console.log('DUPLICATE DETECTED - Skipping concept:', concept.id, concept.displayName);
         }
     }
-    
-    // console.log('Original concepts:', concepts.length, 'Valid concepts:', validConcepts.length, 'Unique concepts:', uniqueConcepts.length);
-    // console.log('Seen IDs:', Array.from(seenIds));
     
     // Get the actual aspect-ratio container if present
     let container = homePoster;

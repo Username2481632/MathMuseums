@@ -416,15 +416,28 @@ var App = (function() {
 
             // Initialize DesmosUtils with sessionStorage persistence
             if (window.DesmosUtils) {
-                console.log('DesmosUtils initialized with sessionStorage persistence');
+                // DesmosUtils loaded
+            }
+
+            // Initialize PWA functionality
+            if (window.PWAManager) {
+                await PWAManager.init();
+            }
+
+            // Initialize share functionality
+            if (window.ShareManager) {
+                ShareManager.init();
+            }
+
+            // Initialize performance monitoring
+            if (window.PerformanceManager) {
+                PerformanceManager.init();
             }
 
             // Remove loading state
             const loading = document.getElementById('loading');
             if (loading) {
                 loading.remove();
-            } else {
-                console.warn('Loading element not found');
             }
             
         } catch (error) {
@@ -641,7 +654,33 @@ This will replace your current museum data. Continue?`;
                             importButton.click();
                         }
                         break;
+                        
+                    case 'h':
+                        // Share file shortcut (Ctrl+H)
+                        event.preventDefault();
+                        if (window.ShareManager) {
+                            ShareManager.shareExportedFile();
+                        }
+                        break;
                 }
+            }
+            
+            // PWA-specific shortcuts without modifier keys
+            switch (event.key) {
+                case 'F5':
+                    // Check for app updates
+                    event.preventDefault();
+                    if (window.PWAManager) {
+                        // Force service worker update check
+                        if ('serviceWorker' in navigator) {
+                            navigator.serviceWorker.getRegistrations().then(registrations => {
+                                registrations.forEach(registration => {
+                                    registration.update();
+                                });
+                            });
+                        }
+                    }
+                    break;
             }
         });
     }
