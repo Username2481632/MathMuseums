@@ -907,9 +907,9 @@ This will replace your current museum data. Continue?`;
             element.style.whiteSpace = originalWhiteSpace;
             
             // Calculate scale factor
-            const scaleFactor = naturalWidth > maxWidth && maxWidth > 100 
+            const scaleFactor = naturalWidth > maxWidth && maxWidth > 0  // Changed from 100 to 0
                 ? Math.max(minScaleFactor, Math.min(scaleThreshold, maxWidth / naturalWidth))
-                : 1.0;
+                : (maxWidth <= 0 ? minScaleFactor : 1.0); // Force minimum scale factor when no space available
             
             // Apply scaling
             if (scaleFactor < 1.0) {
