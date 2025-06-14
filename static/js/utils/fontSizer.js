@@ -59,7 +59,31 @@ const FontSizer = (function() {
     }
     
     /**
-     * Calculate and apply optimal font size using binary search
+     * Measure text width in an unconstrained environment (fixes layout interference)
+     */
+    function measureTextWidth(text, fontSize, fontFamily, fontWeight) {
+        const measurer = document.createElement('span');
+        measurer.style.cssText = `
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            white-space: nowrap;
+            font-size: ${fontSize}px;
+            font-family: ${fontFamily || 'inherit'};
+            font-weight: ${fontWeight || 'normal'};
+            visibility: hidden;
+            pointer-events: none;
+        `;
+        measurer.textContent = text;
+        document.body.appendChild(measurer);
+        
+        const width = measurer.offsetWidth;
+        document.body.removeChild(measurer);
+        return width;
+    }
+
+    /**
+     * Calculate and apply optimal font size using binary search with accurate text measurement
      * @param {HTMLElement[]} elements - Array of elements to resize
      * @param {string} elementType - Type of elements ('header' or 'no-preview')
      */
@@ -72,27 +96,11 @@ const FontSizer = (function() {
             return {
                 paddingLeft: style.paddingLeft,
                 fontSize: style.fontSize,
-                whiteSpace: style.whiteSpace
+                whiteSpace: style.whiteSpace,
+                fontFamily: style.fontFamily,
+                fontWeight: style.fontWeight
             };
         });
-
-        // Apply specific styling based on element type
-        if (elementType === 'header') {
-            // Double the left padding for headers before search
-            elements.forEach((element, i) => {
-                const orig = originalStyling[i].paddingLeft;
-                let px = parseFloat(orig);
-                if (!isNaN(px)) {
-                    element.style.paddingLeft = (2 * px) + 'px';
-                }
-            });
-        } else if (elementType === 'no-preview') {
-            // For no-preview elements, ensure they have some padding and center alignment
-            elements.forEach(element => {
-                element.style.padding = '8px';
-                element.style.textAlign = 'center';
-            });
-        }
 
         // Reset font size to a reasonable value before starting
         elements.forEach(element => {
@@ -100,35 +108,42 @@ const FontSizer = (function() {
             element.style.whiteSpace = 'nowrap';
         });
 
-        // Use different size ranges based on element type
-        let low, high;
-        if (elementType === 'no-preview') {
-            // Smaller range for no-preview elements since they're in a preview area
-            low = 8;
-            high = 32;
-        } else {
-            // Original range for headers
-            low = 4;
-            high = 64;
-        }
+        // Use proper binary search with NO artificial bounds
+        // Start from container-based reasonable range and let it find the true limits
+        const containerWidths = elements.map(el => el.clientWidth);
+        const minContainerWidth = Math.min(...containerWidths);
+        
+        // Dynamic range based on actual container - no arbitrary caps
+        let low = 4;  // Absolute minimum for any text
+        let high = Math.floor(minContainerWidth); // Could theoretically fit 1 character at container width
         
         let best = low;
+        
+        // Binary search to find largest font that fits
         while (low <= high) {
             const mid = Math.floor((low + high) / 2);
-            elements.forEach(element => {
-                element.style.fontSize = mid + 'px';
-            });
-            void elements[0].offsetWidth;
             
-            const anyWraps = elements.some(element => {
-                return element.scrollWidth > element.clientWidth;
+            const anyTooBig = elements.some(element => {
+                const text = element.textContent.trim();
+                if (!text) return false;
+                
+                const style = originalStyling[elements.indexOf(element)];
+                const textWidth = measureTextWidth(text, mid, style.fontFamily, style.fontWeight);
+                
+                // Get actual computed padding that scales with CSS variables and viewport
+                const computedStyle = window.getComputedStyle(element);
+                const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
+                const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
+                const availableWidth = element.clientWidth - paddingLeft - paddingRight;
+                
+                return textWidth > availableWidth;
             });
             
-            if (!anyWraps) {
+            if (!anyTooBig) {
                 best = mid;
-                low = mid + 1;
+                low = mid + 1;  // Try larger
             } else {
-                high = mid - 1;
+                high = mid - 1; // Try smaller
             }
         }
         
@@ -158,18 +173,6 @@ const FontSizer = (function() {
                 // For headers and larger no-preview elements, always prevent wrapping
                 element.style.whiteSpace = 'nowrap';
             }
-        });
-        
-        // Restore original styling (except font size and optimized wrapping/padding)
-        elements.forEach((element, i) => {
-            if (elementType === 'header') {
-                element.style.paddingLeft = originalStyling[i].paddingLeft;
-            }
-            // For no-preview elements, restore original padding if wrapping isn't enabled
-            if (elementType === 'no-preview' && element.style.whiteSpace === 'nowrap') {
-                element.style.padding = '8px'; // Restore original padding for larger tiles
-            }
-            // Keep the computed font size and whiteSpace settings
         });
     }
     
