@@ -29,8 +29,9 @@ const ShareManager = (function() {
             }
             
             const exportData = await window.FileManager.createExportData();
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            const filename = `math-museum-${timestamp}.mathmuseums`;
+            
+            // Get filename from preferences
+            const filename = window.PreferencesClient.getExportFilename();
             
             // Create blob for the file
             const jsonString = JSON.stringify(exportData, null, 2);
@@ -44,8 +45,9 @@ const ShareManager = (function() {
                     files: [new File([fileBlob], filename, { type: fileBlob.type })]
                 };
                 
-                if (navigator.canShare(shareData)) {                await navigator.share(shareData);
-                return true;
+                if (navigator.canShare(shareData)) {
+                    await navigator.share(shareData);
+                    return true;
                 }
             }
             

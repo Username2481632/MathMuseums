@@ -59,6 +59,9 @@ const SettingsController = (function() {
             addDigitOnlyValidation(aspectHeightInput);
         }
         
+        // Setup auto-sizing for export filename input
+        setupExportFilenameAutoSize();
+        
         // When clicking outside the modal, close it
         window.addEventListener('click', function(event) {
             if (event.target === settingsModal) {
@@ -111,6 +114,35 @@ const SettingsController = (function() {
                 input.value = '1';
             }
         });
+    }
+    
+    /**
+     * Setup auto-sizing for export filename input
+     */
+    function setupExportFilenameAutoSize() {
+        const input = document.getElementById('export-filename-input');
+        if (!input) return;
+
+        // Create hidden span to measure width
+        const span = document.createElement('span');
+        span.style.position = 'absolute';
+        span.style.visibility = 'hidden';
+        span.style.whiteSpace = 'pre';
+        span.style.fontSize = getComputedStyle(input).fontSize;
+        span.style.fontFamily = getComputedStyle(input).fontFamily;
+        document.body.appendChild(span);
+
+        const updateWidth = () => {
+            const value = input.value || input.placeholder || '';
+            span.textContent = value;
+            input.style.width = span.offsetWidth + 2 + 'px'; // +2px for padding/border buffer
+        };
+
+        input.addEventListener('input', updateWidth);
+        input.addEventListener('change', updateWidth);
+        input.addEventListener('focus', updateWidth);
+        window.addEventListener('load', updateWidth);
+        updateWidth(); // Initial sizing
     }
     
     /**
@@ -187,6 +219,18 @@ const SettingsController = (function() {
         if (autosaveToggle) {
             autosaveToggle.checked = !!preferences.autosave;
         }
+        
+        // Set export filename input
+        const exportFilenameInput = document.getElementById('export-filename-input');
+        if (exportFilenameInput) {
+            // Remove .mathmuseums extension for display
+            const filename = preferences.exportFilename || PreferencesClient.getDefaultExportFilename();
+            const filenameWithoutExt = filename.replace(/\.mathmuseums$/, '');
+            exportFilenameInput.value = filenameWithoutExt;
+            
+            // Trigger size update
+            exportFilenameInput.dispatchEvent(new Event('input'));
+        }
     }
     
     /**
@@ -197,6 +241,7 @@ const SettingsController = (function() {
         let aspectRatioHeight = 1; // Default
         let screenFit = 'fit'; // Default
         let autosave = false; // Default
+        let exportFilename = PreferencesClient.getDefaultExportFilename(); // Default
         
         // Get aspect ratio values
         if (aspectWidthInput && aspectHeightInput) {
@@ -218,12 +263,21 @@ const SettingsController = (function() {
             autosave = autosaveToggle.checked;
         }
         
+        // Get export filename setting
+        const exportFilenameInput = document.getElementById('export-filename-input');
+        if (exportFilenameInput) {
+            // Add .mathmuseums extension since it's shown separately in UI
+            const baseFilename = exportFilenameInput.value.trim() || PreferencesClient.getDefaultExportFilename().replace(/\.mathmuseums$/, '');
+            exportFilename = baseFilename + '.mathmuseums';
+        }
+        
         // Save new preferences
         PreferencesClient.savePreferences({
             aspectRatioWidth: aspectRatioWidth,
             aspectRatioHeight: aspectRatioHeight,
             screenFit: screenFit,
-            autosave: autosave
+            autosave: autosave,
+            exportFilename: exportFilename
         });
         
         // If user enabled autosave, check if warning should be shown

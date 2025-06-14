@@ -203,9 +203,7 @@ var App = (function() {
                 // File save status no longer tracked in localStorage
             } else {
                 // No previous save location, show Save As dialog
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-                const filename = `my-math-museum-${timestamp}.mathmuseums`;
-                const saveAsResult = await window.FileManager.downloadUserData(filename);
+                const saveAsResult = await window.FileManager.downloadUserData();
                 
                 if (saveAsResult) {
                     dirtySinceFileSave = false;
@@ -234,9 +232,7 @@ var App = (function() {
             setSyncStatus('saving');
             
             // Always show Save As dialog
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            const filename = `my-math-museum-${timestamp}.mathmuseums`;
-            const result = await window.FileManager.downloadUserData(filename);
+            const result = await window.FileManager.downloadUserData();
             
             if (result) {
                 dirtySinceFileSave = false;
@@ -536,10 +532,8 @@ var App = (function() {
                     const originalSrc = icon.src;
                     // You could create a loading SVG or just disable the button
                     
-                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-                    const filename = `my-math-museum-${timestamp}.mathmuseums`;
-                    
-                    const saveResult = await FileManager.downloadUserData(filename);
+                    // Use configurable filename from preferences
+                    const saveResult = await FileManager.downloadUserData();
                     if (saveResult) {
                         // File save status no longer tracked in localStorage
                         // No alert, just return

@@ -3,6 +3,9 @@
  * Handles user preferences across devices
  */
 const PreferencesClient = (function() {
+    // Constants
+    const DEFAULT_EXPORT_FILENAME = '{name} - Math Museum.mathmuseums';
+    
     // Private variables
     let preferences = {
         onboardingDisabled: false,
@@ -10,7 +13,8 @@ const PreferencesClient = (function() {
         aspectRatioWidth: 1, // Default aspect ratio 1:1
         aspectRatioHeight: 1,
         screenFit: 'fit', // Default screen fit mode (fit or fill) - stored in localStorage only
-        autosave: false // New: autosave preference
+        autosave: false, // New: autosave preference
+        exportFilename: DEFAULT_EXPORT_FILENAME // Default export filename template
     };
     let loaded = false;
     let originalContentBounds = null; // Store original content bounds for consistent scaling
@@ -472,7 +476,8 @@ const PreferencesClient = (function() {
                 aspectRatioWidth: parsed.aspectRatioWidth || 1,
                 aspectRatioHeight: parsed.aspectRatioHeight || 1,
                 screenFit: parsed.screenFit || 'fit',
-                autosave: parsed.autosave || false
+                autosave: parsed.autosave || false,
+                exportFilename: parsed.exportFilename || DEFAULT_EXPORT_FILENAME
             };
         } catch (error) {
             console.error('Error reading preferences from localStorage:', error);
@@ -481,7 +486,9 @@ const PreferencesClient = (function() {
                 theme: 'light', 
                 aspectRatioWidth: 1,
                 aspectRatioHeight: 1,
-                screenFit: 'fit'
+                screenFit: 'fit',
+                autosave: false,
+                exportFilename: DEFAULT_EXPORT_FILENAME
             }; // Return defaults on error
         }
     }
@@ -593,6 +600,43 @@ const PreferencesClient = (function() {
     }
     
     
+    /**
+     * Get the user's name from the museum name input or default
+     * @returns {string} User's name or default
+     */
+    function getUserName() {
+        const museumNameText = document.getElementById('museum-name-text');
+        if (museumNameText && museumNameText.textContent.trim()) {
+            return museumNameText.textContent.trim();
+        }
+        return 'Anonymous'; // Single source of truth for default name
+    }
+
+    /**
+     * Get formatted export filename with template substitution
+     * @returns {string} Export filename with placeholders replaced
+     */
+    function getExportFilename() {
+        const template = preferences?.exportFilename || DEFAULT_EXPORT_FILENAME;
+        const userName = document.getElementById('museum-name-text')?.textContent.trim() || 'Anonymous';
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const timeStr = now.toTimeString().slice(0, 8).replace(/:/g, '-');
+        
+        return template
+            .replace(/{name}/g, userName)
+            .replace(/{date}/g, dateStr)
+            .replace(/{time}/g, timeStr);
+    }
+
+    /**
+     * Get the default export filename template
+     * @returns {string} Export filename template with placeholders
+     */
+    function getDefaultExportFilename() {
+        return DEFAULT_EXPORT_FILENAME;
+    }
+
     // Public API
     return {
         init,
@@ -605,6 +649,9 @@ const PreferencesClient = (function() {
         getAspectRatioWidth,
         getAspectRatioHeight,
         getScreenFit,
+        getExportFilename,
+        getDefaultExportFilename,
+        getUserName,
         applyDisplaySettings,
         applyFitModeDisplayScaling,
         applyFillModeDisplayScaling,

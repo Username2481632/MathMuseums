@@ -17,7 +17,6 @@
 .settings-options {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-sm);
     margin: var(--spacing-md) 0;
 }
 
@@ -28,7 +27,7 @@
 }
 
 .settings-options input {
-    margin-right: var(--spacing-sm);
+    margin-right: 0;
 }
 
 .settings-actions {
@@ -252,4 +251,54 @@ input:checked + .slider:before {
     color: var(--text-color);
     margin: 0 10px;
     user-select: none;
+}
+
+/* Export filename input styling */
+.export-filename-container {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    max-width: 400px;
+}
+
+#export-filename-input {
+    border: 2px solid var(--border-color);
+    border-radius: 4px 0 0 4px;
+    padding: 8px;
+    font-size: 14px;
+    font-family: var(--font-family);
+    background: white;
+    color: var(--text-color);
+    transition: border-color 0.2s ease;
+    border-right: none;
+    box-sizing: content-box;
+    width: auto;
+    min-width: 8ch;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+#export-filename-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+#export-filename-input::placeholder {
+    color: #999;
+}
+
+/* Style the extension label to look connected to the input */
+.export-filename-extension {
+    border: 2px solid var(--border-color);
+    border-left: none;
+    border-radius: 0 4px 4px 0;
+    padding: 8px;
+    background: #f8f9fa;
+    font-size: 14px;
+    font-family: var(--font-family);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
 }

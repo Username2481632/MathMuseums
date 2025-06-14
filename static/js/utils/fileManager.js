@@ -6,7 +6,6 @@ const FileManager = (function() {
     
     // File format version for future compatibility
     const FILE_FORMAT_VERSION = '1.0';
-    const DEFAULT_FILENAME = 'my-math-museum.mathmuseums';
     
     // Track last saved file handle and filename for autosave
     let lastFileHandle = null;
@@ -42,11 +41,23 @@ const FileManager = (function() {
     }
     
     /**
+     * Get the default filename from preferences
+     * @returns {string} Export filename with placeholders substituted
+     */
+    function getDefaultFilename() {
+        return window.PreferencesClient?.getExportFilename();
+    }
+
+    /**
      * Download user data as a JSON file
      * @param {string} filename - Optional custom filename
      * @returns {Promise<boolean>} Success status
      */
-    async function downloadUserData(filename = DEFAULT_FILENAME) {
+    async function downloadUserData(filename) {
+        // Use preferences filename if no custom filename provided
+        if (!filename) {
+            filename = getDefaultFilename();
+        }
         try {
             const data = await createExportData();
             const jsonString = JSON.stringify(data, null, 2);
@@ -361,7 +372,6 @@ const FileManager = (function() {
         getFileInfo,
         createExportData,
         FILE_FORMAT_VERSION,
-        DEFAULT_FILENAME,
         autosaveUserData,
         canAutosave
     };
