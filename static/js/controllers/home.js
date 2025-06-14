@@ -604,8 +604,8 @@ const HomeController = (function() {
             // Clear thumbnail queue
             thumbnailQueue.clear();
             
-            // Clean up Desmos calculator resources
-            DesmosUtils.cleanup();
+            // Note: Don't cleanup DesmosUtils here as it's a shared global resource
+            // that may be used by other views. It will cleanup when the app unloads.
             
             // Clean up FontSizer
             if (window.FontSizer) {

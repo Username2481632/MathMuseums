@@ -526,6 +526,13 @@ const DesmosUtils = (function() {
         }
     }
     
+    /**
+     * Reset cleanup state (for development/testing)
+     */
+    function reset() {
+        isCleaningUp = false;
+    }
+    
     // Load cache from sessionStorage on initialization
     loadCacheFromSession();
     
@@ -535,7 +542,8 @@ const DesmosUtils = (function() {
         getCachedThumbnail,
         clearCache,
         getCacheStats,
-        cleanup
+        cleanup,
+        reset
     };
 })();
 
