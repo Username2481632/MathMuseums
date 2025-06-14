@@ -1,7 +1,12 @@
 /**
  * Performance Manager (Simplified for Static App)
- * Handles PWA performance optimizations without network dependencies
- */
+ * Handles PWA performance optimizations without netw    /**
+     * Optimize for slow LCP (Largest Contentful Paint)
+     */
+    function optimizeForSlowLCP() {
+        // Resources are already loaded via HTML <link> and <script> tags
+        // No additional preloading needed
+    }*/
 const PerformanceManager = (function() {
     
     let performanceObserver = null;
@@ -58,10 +63,7 @@ const PerformanceManager = (function() {
                         }
                         
                         if (entry.entryType === 'largest-contentful-paint') {
-                            // Optimize if LCP is slow
-                            if (entry.startTime > 2500) {
-                                optimizeForSlowLCP();
-                            }
+                            // Track LCP silently - no optimization needed since resources are preloaded in HTML
                         }
                     });
                 });
@@ -104,25 +106,6 @@ const PerformanceManager = (function() {
                 }
             }, 1000);
         }
-    }
-    
-    /**
-     * Optimize for slow LCP
-     */
-    function optimizeForSlowLCP() {
-        // Preload critical resources
-        const criticalResources = [
-            '/static/css/styles.css',
-            '/static/js/app.js'
-        ];
-        
-        criticalResources.forEach(resource => {
-            const link = document.createElement('link');
-            link.rel = 'preload';
-            link.href = resource;
-            link.as = resource.endsWith('.css') ? 'style' : 'script';
-            document.head.appendChild(link);
-        });
     }
     
     /**
