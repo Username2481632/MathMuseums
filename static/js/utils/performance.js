@@ -1,12 +1,7 @@
 /**
  * Performance Manager (Simplified for Static App)
- * Handles PWA performance optimizations without netw    /**
-     * Optimize for slow LCP (Largest Contentful Paint)
-     */
-    function optimizeForSlowLCP() {
-        // Resources are already loaded via HTML <link> and <script> tags
-        // No additional preloading needed
-    }*/
+ * Handles PWA performance optimizations without network dependencies
+ */
 const PerformanceManager = (function() {
     
     let performanceObserver = null;
@@ -56,13 +51,9 @@ const PerformanceManager = (function() {
                         // Track performance metrics silently
                         if (entry.entryType === 'navigation') {
                             // Navigation timing tracked silently
-                        }
-                        
-                        if (entry.entryType === 'paint') {
+                        } else if (entry.entryType === 'paint') {
                             // Track paint metrics silently
-                        }
-                        
-                        if (entry.entryType === 'largest-contentful-paint') {
+                        } else if (entry.entryType === 'largest-contentful-paint') {
                             // Track LCP silently - no optimization needed since resources are preloaded in HTML
                         }
                     });
@@ -74,9 +65,10 @@ const PerformanceManager = (function() {
                 } catch (e) {
                     // Fallback for browsers that don't support all entry types
                     performanceObserver.observe({ entryTypes: ['navigation'] });
-                }                } catch (error) {
-                    // PerformanceObserver not fully supported
                 }
+            } catch (error) {
+                // PerformanceObserver not fully supported
+            }
         }
     }
     
