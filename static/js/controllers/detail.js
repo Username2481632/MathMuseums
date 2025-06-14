@@ -250,9 +250,14 @@ const DetailController = (function() {
      * Start the idle timer for onboarding
      */
     function startIdleTimer() {
+        // Check if we're in calculator view
+        const detailContent = document.querySelector('.detail-content');
+        if (!detailContent || !detailContent.classList.contains('show-calculator')) {
+            return; // Only show onboarding in calculator view
+        }
+        
         // Check if onboarding is disabled or already shown in this session
-        const onboardingSession = StorageManager.getOnboardingSession();
-        if (isOnboardingDisabled || onboardingSession === true) {
+        if (isOnboardingDisabled || StorageManager.getOnboardingSession()) {
             return;
         }
         
@@ -274,7 +279,7 @@ const DetailController = (function() {
             if (!hasDesmosUI) {
                 // Try again in 2 seconds if UI not ready
                 const retryTimer = setTimeout(() => {
-                    if (!signal.aborted) {
+                    if (!signal.aborted && document.querySelector('.detail-content.show-calculator')) {
                         startOnboarding();
                     }
                 }, 2000);
@@ -286,7 +291,9 @@ const DetailController = (function() {
             
             // Start the actual idle timer
             const idleTimer = setTimeout(() => {
-                if (signal.aborted) return;
+                if (signal.aborted || !document.querySelector('.detail-content.show-calculator')) {
+                    return;
+                }
                 startOnboarding();
             }, 10000);
             
@@ -307,10 +314,8 @@ const DetailController = (function() {
     /**
      * Start the onboarding flow
      */
-    function startOnboarding() {
-        const onboardingSession = StorageManager.getOnboardingSession();
-        
-        if (isOnboardingDisabled || onboardingSession === true) {
+    function startOnboarding() {        
+        if (isOnboardingDisabled || StorageManager.getOnboardingSession()) {
             return;
         }
         
