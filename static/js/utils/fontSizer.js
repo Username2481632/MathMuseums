@@ -63,23 +63,28 @@ const FontSizer = (function() {
      */
     function measureTextWidth(text, fontSize, fontFamily, fontWeight) {
         const measurer = document.createElement('span');
-        measurer.style.cssText = `
-            position: absolute;
-            top: -9999px;
-            left: -9999px;
-            white-space: nowrap;
-            font-size: ${fontSize}px;
-            font-family: ${fontFamily || 'inherit'};
-            font-weight: ${fontWeight || 'normal'};
-            visibility: hidden;
-            pointer-events: none;
-        `;
+        // Set styles individually to ensure they apply properly
+        measurer.style.position = 'absolute';
+        measurer.style.top = '-9999px';
+        measurer.style.left = '-9999px';
+        measurer.style.whiteSpace = 'nowrap';
+        measurer.style.fontSize = fontSize + 'px';
+        measurer.style.fontFamily = fontFamily || 'inherit';
+        measurer.style.fontWeight = fontWeight || 'normal';
+        measurer.style.visibility = 'hidden';
+        measurer.style.pointerEvents = 'none';
         measurer.textContent = text;
         document.body.appendChild(measurer);
         
-        const width = measurer.offsetWidth;
-        document.body.removeChild(measurer);
-        return width;
+        try {
+            const width = measurer.offsetWidth;
+            return width;
+        } finally {
+            // Ensure cleanup happens even if there's an error
+            if (measurer.parentNode) {
+                document.body.removeChild(measurer);
+            }
+        }
     }
 
     /**

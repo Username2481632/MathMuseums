@@ -130,6 +130,8 @@ const SettingsController = (function() {
         span.style.whiteSpace = 'pre';
         span.style.fontSize = getComputedStyle(input).fontSize;
         span.style.fontFamily = getComputedStyle(input).fontFamily;
+        span.style.top = '-9999px'; // Move off-screen
+        span.style.left = '-9999px'; // Move off-screen
         document.body.appendChild(span);
 
         const updateWidth = () => {

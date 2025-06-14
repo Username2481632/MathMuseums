@@ -160,6 +160,9 @@ const DetailController = (function() {
             saveCalculatorState();
             Router.navigate('home');
         });
+
+        // Toggle button for switching between Desmos and notes
+        document.getElementById('detail-toggle-button').addEventListener('click', toggleView);
         
         // Description input
         conceptDescription.addEventListener('input', startIdleTimer);
@@ -170,6 +173,26 @@ const DetailController = (function() {
         window.addEventListener('keydown', startIdleTimer);
         window.addEventListener('click', startIdleTimer);
         window.addEventListener('touchstart', startIdleTimer);
+    }
+
+    /**
+     * Toggle between calculator and notes view
+     */
+    function toggleView() {
+        const detailContent = document.querySelector('.detail-content');
+        const toggleButton = document.getElementById('detail-toggle-button');
+        
+        if (detailContent.classList.contains('show-calculator')) {
+            // Switch to notes view
+            detailContent.classList.remove('show-calculator');
+            detailContent.classList.add('show-notes');
+            toggleButton.textContent = 'Show Desmos';
+        } else {
+            // Switch to calculator view
+            detailContent.classList.remove('show-notes');
+            detailContent.classList.add('show-calculator');
+            toggleButton.textContent = 'Show Notes';
+        }
     }
     
     /**
