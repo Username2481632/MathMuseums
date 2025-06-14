@@ -250,7 +250,6 @@ input:checked + .slider:before {
     font-weight: bold;
     color: var(--text-color);
     margin: 0 10px;
-    user-select: none;
 }
 
 /* Export filename input styling */

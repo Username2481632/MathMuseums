@@ -32,14 +32,10 @@
     cursor: pointer;
     position: absolute; /* Always use absolute positioning */
     transition: box-shadow 0.2s;
-    user-select: none;
     display: flex;
     flex-direction: column;
     
-    /* Disable Safari long-press actions */
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -webkit-tap-highlight-color: transparent;
+    /* Enable better touch interactions */
     touch-action: manipulation;
 }
 
@@ -143,11 +139,6 @@
     text-align: center;
     font-weight: bold;
     flex-shrink: 0; /* Prevent header from shrinking */
-    
-    /* Disable Safari long-press actions on header text */
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
 }
 
 .tile-content {
@@ -179,11 +170,6 @@
     -khtml-user-drag: none;
     -moz-user-drag: none;
     -o-user-drag: none;
-    
-    /* Disable Safari long-press actions on images */
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
     pointer-events: none;
 }
 
@@ -195,11 +181,6 @@
     justify-content: center;
     color: var(--text-color);
     font-weight: 500;
-    user-select: none;
     text-align: center; /* Ensure text is centered when wrapping */
     /* Font size will be set dynamically by FontSizer */
-    
-    /* Disable Safari long-press actions on text */
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
 }
