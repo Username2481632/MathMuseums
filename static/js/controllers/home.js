@@ -433,6 +433,12 @@ const HomeController = (function() {
                 
                 if (!previewElement.isConnected) return;
                 
+                // Validate dataUrl before using it
+                if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+                    console.warn('Invalid dataUrl received for concept:', concept.id);
+                    return;
+                }
+                
                 const currentTile = previewElement.closest('.concept-tile');
                 const currentPoster = currentTile ? currentTile.closest('.tiles-container') : null;
                 

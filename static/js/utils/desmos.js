@@ -17,6 +17,7 @@ const DesmosUtils = (function() {
     let generationQueue = [];
     let isProcessingQueue = false;
     let pendingGenerations = new Map(); // Track pending generations to avoid duplicates
+    let isCleaningUp = false; // Track cleanup state to prevent operations on destroyed calculator
     
     // Performance monitoring
     let performanceStats = {
@@ -207,6 +208,11 @@ const DesmosUtils = (function() {
      * @returns {Promise<string>} Resolves with data URL of the thumbnail
      */
     async function generateThumbnailDirect(stateString) {
+        // Check if DesmosUtils is being cleaned up
+        if (isCleaningUp) {
+            throw new Error('DesmosUtils is being cleaned up, cannot generate thumbnail');
+        }
+        
         if (!stateString) {
             // Create a blank state for preview
             const blankState = {
@@ -231,6 +237,11 @@ const DesmosUtils = (function() {
             // Initialize hidden calculator
             const calculator = await initHiddenCalculator();
             
+            // Check again if cleanup started while we were initializing
+            if (isCleaningUp) {
+                throw new Error('DesmosUtils cleanup started during initialization');
+            }
+            
             // Parse the state
             const state = JSON.parse(stateString);
             
@@ -240,19 +251,37 @@ const DesmosUtils = (function() {
             // Reduced wait time for better performance
             await new Promise(resolve => setTimeout(resolve, 150));
             
+            // Final check before screenshot
+            if (isCleaningUp) {
+                throw new Error('DesmosUtils cleanup started before screenshot');
+            }
+            
             // Capture the screenshot with optimized settings
-            const dataUrl = calculator.screenshot({
-                width: 250,
-                height: 200,
-                targetPixelRatio: 1.25, // Slightly reduced for better performance
-                preserveAxisNumbers: false,
-                mathBounds: {
-                    left: -10,
-                    right: 10,
-                    bottom: -10,
-                    top: 10
+            let dataUrl;
+            try {
+                dataUrl = calculator.screenshot({
+                    width: 250,
+                    height: 200,
+                    targetPixelRatio: 1.25, // Slightly reduced for better performance
+                    preserveAxisNumbers: false,
+                    mathBounds: {
+                        left: -10,
+                        right: 10,
+                        bottom: -10,
+                        top: 10
+                    }
+                });
+            } catch (screenshotError) {
+                if (screenshotError.message && screenshotError.message.includes('destroyed')) {
+                    throw new Error('Calculator instance was destroyed during screenshot');
                 }
-            });
+                throw screenshotError;
+            }
+            
+            // Validate the returned dataUrl
+            if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+                throw new Error('Invalid screenshot data returned from Desmos');
+            }
             
             return dataUrl;
         } catch (error) {
@@ -449,6 +478,9 @@ const DesmosUtils = (function() {
      * Clean up resources
      */
     function cleanup() {
+        // Set cleanup flag to prevent new operations
+        isCleaningUp = true;
+        
         // Clear cache (memory only - keep sessionStorage for next page load)
         thumbnailCache.clear();
         
