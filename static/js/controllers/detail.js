@@ -6,9 +6,9 @@ const DetailController = (function() {
     // Private variables
     let calculator = null;
     let currentConcept = null;
-    let idleTimer = null;
+    let isCalculatorReady = false;
     let isOnboardingDisabled = false;
-    let conceptDescription;
+    let abortController = new AbortController();
     
     /**
      * Initialize the detail controller
@@ -150,14 +150,14 @@ const DetailController = (function() {
         });
         
         // Description input
-        conceptDescription.addEventListener('input', resetIdleTimer);
+        conceptDescription.addEventListener('input', startIdleTimer);
         conceptDescription.addEventListener('blur', saveDescription);
         
         // Window events for idle detection
-        window.addEventListener('mousemove', resetIdleTimer);
-        window.addEventListener('keydown', resetIdleTimer);
-        window.addEventListener('click', resetIdleTimer);
-        window.addEventListener('touchstart', resetIdleTimer);
+        window.addEventListener('mousemove', startIdleTimer);
+        window.addEventListener('keydown', startIdleTimer);
+        window.addEventListener('click', startIdleTimer);
+        window.addEventListener('touchstart', startIdleTimer);
     }
     
     /**
@@ -222,63 +222,61 @@ const DetailController = (function() {
      * Start the idle timer for onboarding
      */
     function startIdleTimer() {
-        // Only start if not disabled and not already shown in this session
-        if (isOnboardingDisabled) {
+        if (isOnboardingDisabled || StorageManager.getOnboardingSession()) {
             return;
         }
         
-        if (StorageManager.getOnboardingSession()) {
-            return;
-        }
+        // Clear any existing timers
+        abortController.abort();
+        abortController = new AbortController();
+        const { signal } = abortController;
         
-        // Wait a bit to ensure Desmos is fully initialized
+        // Wait for Desmos to initialize
         setTimeout(() => {
-            resetIdleTimer();
+            if (signal.aborted) return;
+
+            
+            // Check for calculator container
+            const calculatorContainer = document.getElementById('calculator-container');
+            if (!calculatorContainer) return;
+            
+            // Check for Desmos UI elements
+            const hasDesmosUI = calculatorContainer.querySelector('.dcg-exppanel, button, [aria-label="Add Item"]');
+            if (!hasDesmosUI) {
+                // Try again in 2 seconds if UI not ready
+                const retryTimer = setTimeout(() => {
+                    if (!signal.aborted) {
+                        startOnboarding();
+                    }
+                }, 2000);
+                
+                // Clean up if aborted
+                signal.addEventListener('abort', () => clearTimeout(retryTimer));
+                return;
+            }
+            
+            // Start the actual idle timer
+            const idleTimer = setTimeout(() => {
+                if (signal.aborted) return;
+                startOnboarding();
+            }, 10000);
+            
+            // Clean up if aborted
+            signal.addEventListener('abort', () => clearTimeout(idleTimer));
+            
         }, 2000);
-    }
-    
-    /**
-     * Reset the idle timer
-     */
-    function resetIdleTimer() {
-        // Clear existing timer
-        clearTimeout(idleTimer);
-        
-        // Only restart if not disabled and not already shown in this session
-        if (isOnboardingDisabled) {
-            return;
-        }
-        
-        if (StorageManager.getOnboardingSession()) {
-            return;
-        }
-        
-        // Start new timer
-        idleTimer = setTimeout(() => {
-            // Start onboarding after idle period
-            startOnboarding();
-        }, 10000); // 10 seconds
     }
     
     /**
      * Start the onboarding flow
      */
     function startOnboarding() {
-        // Only start if not disabled and not already shown in this session
         if (isOnboardingDisabled || StorageManager.getOnboardingSession()) {
             return;
         }
         
-        // Check for any Desmos expression panel buttons which indicates the UI is loaded
         const calculatorContainer = document.getElementById('calculator-container');
-        const expressionPanel = calculatorContainer.querySelector('.dcg-exppanel');
-        const anyDesmosButton = calculatorContainer.querySelector('button');
-        const addItemButton = calculatorContainer.querySelector('[aria-label="Add Item"]');
-        
-        // If we don't see any Desmos UI elements yet, wait and try again
-        if (!expressionPanel && !anyDesmosButton && !addItemButton) {
-            // Try again in 2 seconds
-            setTimeout(startOnboarding, 2000);
+        if (!calculatorContainer) {
             return;
         }
         
@@ -308,14 +306,13 @@ const DetailController = (function() {
     return {
         init,
         render,
-        cleanup: function() {
-            // Clean up calculator instance
+        cleanup() {
+            // Clean up timers and async operations
+            abortController.abort();
+            
+            // Clean up calculator
             if (calculator) {
-                try {
-                    calculator.destroy();
-                } catch (error) {
-                    console.error('Error destroying calculator:', error);
-                }
+                calculator.destroy()?.catch(console.error);
                 calculator = null;
             }
             
@@ -325,8 +322,8 @@ const DetailController = (function() {
                 backButton.removeEventListener('click', handleBackClick);
             }
             
-            // Reset other variables
-            concept = null;
+            // Reset state
+            concept = currentConcept = null;
             isCalculatorReady = false;
         }
     };
