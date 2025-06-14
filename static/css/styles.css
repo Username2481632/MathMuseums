@@ -770,6 +770,41 @@ main {
     animation: fadeInScale 0.3s ease !important;
 }
 
+/* iOS Install Prompt */
+.ios-install-content {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 320px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.ios-install-content h3 {
+    margin: 0 0 16px 0;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+}
+
+.ios-install-content p {
+    margin: 0 0 20px 0;
+    color: var(--text-color);
+    line-height: 1.5;
+    font-size: 0.95rem;
+}
+
+.ios-install-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.ios-install-actions .btn {
+    flex: 1;
+    padding: 10px 16px;
+    font-size: 14px;
+}
+
 /* Standalone mode adjustments */
 .pwa-standalone header {
     /* Add extra padding for devices with notches/safe areas */
@@ -779,6 +814,39 @@ main {
 .pwa-standalone body {
     /* Adjust for safe areas in standalone mode */
     padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* iOS Safari minimal-ui behavior */
+@media (max-height: 500px) and (-webkit-min-device-pixel-ratio: 2) {
+    /* Detect when Safari is in minimal-ui mode (URL bar hidden) */
+    body {
+        /* Adjust layout when URL bar disappears */
+        transition: padding-top 0.3s ease;
+    }
+}
+
+/* Progressive enhancement for iOS Safari */
+@supports (-webkit-touch-callout: none) {
+    /* iOS-specific optimizations */
+    body {
+        /* Prevent rubber band scrolling */
+        overscroll-behavior: none;
+        /* Improve touch responsiveness */
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Hide address bar more aggressively */
+    html {
+        height: 100%;
+        overflow: hidden;
+    }
+    
+    body {
+        height: 100vh;
+        height: -webkit-fill-available; /* iOS Safari viewport fix */
+        height: calc(var(--vh, 1vh) * 100); /* Fallback with custom property */
+        overflow-y: auto;
+    }
 }
 
 /* PWA Animations */
@@ -814,6 +882,12 @@ main {
     /* Prevent pull-to-refresh on iOS */
     body {
         overscroll-behavior-y: contain;
+    }
+    
+    /* Full viewport height in standalone mode */
+    #app-container {
+        height: 100vh !important;
+        height: -webkit-fill-available !important;
     }
 }
 

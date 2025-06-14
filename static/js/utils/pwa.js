@@ -39,6 +39,12 @@ const PWAManager = (function() {
         
         // Check for display mode changes
         handleDisplayModeChange();
+        
+        // Show iOS install prompt if applicable
+        checkiOSInstallPrompt();
+        
+        // Initialize iOS Safari URL bar hiding
+        initIOSSafariOptimizations();
     }
     
     /**
@@ -166,6 +172,120 @@ const PWAManager = (function() {
             }
         }
         return false;
+    }
+    
+    /**
+     * Check and show iOS install prompt
+     */
+    function checkiOSInstallPrompt() {
+        // Check if we're on iOS Safari and not already in standalone mode
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        
+        if (isIOS && !isInStandaloneMode) {
+            // Check if user has already been prompted
+            const hasBeenPrompted = localStorage.getItem('ios-install-prompted');
+            
+            if (!hasBeenPrompted) {
+                // Show prompt after a short delay
+                setTimeout(() => {
+                    showIOSInstallPrompt();
+                }, 3000);
+            }
+        }
+    }
+    
+    /**
+     * Show iOS install prompt
+     */
+    function showIOSInstallPrompt() {
+        const prompt = document.createElement('div');
+        prompt.className = 'ios-install-prompt';
+        prompt.innerHTML = `
+            <div class="ios-install-content">
+                <h3>📱 Add to Home Screen</h3>
+                <p>Get the full app experience! Tap <strong>Share</strong> → <strong>Add to Home Screen</strong> to hide the address bar and use Math Museums like a native app.</p>
+                <div class="ios-install-actions">
+                    <button id="ios-install-dismiss" class="btn btn-secondary">Maybe Later</button>
+                    <button id="ios-install-understand" class="btn btn-primary">Got it!</button>
+                </div>
+            </div>
+        `;
+        
+        // Add styles
+        prompt.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10001;
+            padding: 20px;
+        `;
+        
+        document.body.appendChild(prompt);
+        
+        // Handle buttons
+        document.getElementById('ios-install-dismiss').addEventListener('click', () => {
+            prompt.remove();
+        });
+        
+        document.getElementById('ios-install-understand').addEventListener('click', () => {
+            localStorage.setItem('ios-install-prompted', 'true');
+            prompt.remove();
+        });
+        
+        // Close on background click
+        prompt.addEventListener('click', (e) => {
+            if (e.target === prompt) {
+                prompt.remove();
+            }
+        });
+    }
+    
+    /**
+     * Initialize iOS Safari optimizations for hiding URL bar
+     */
+    function initIOSSafariOptimizations() {
+        // Only run on iOS Safari
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        
+        if (isIOS && isSafari && !isInstalled()) {
+            // Force initial scroll to hide address bar
+            setTimeout(() => {
+                window.scrollTo(0, 1);
+            }, 100);
+            
+            // Listen for orientation changes to re-hide URL bar
+            window.addEventListener('orientationchange', () => {
+                setTimeout(() => {
+                    window.scrollTo(0, 1);
+                }, 100);
+            });
+            
+            // Hide URL bar on touch start (user interaction)
+            let hasScrolled = false;
+            document.addEventListener('touchstart', () => {
+                if (!hasScrolled) {
+                    window.scrollTo(0, 1);
+                    hasScrolled = true;
+                }
+            }, { once: true });
+            
+            // Update viewport height when URL bar appears/disappears
+            const updateViewportHeight = () => {
+                const vh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
+            };
+            
+            updateViewportHeight();
+            window.addEventListener('resize', updateViewportHeight);
+        }
     }
     
     /**
