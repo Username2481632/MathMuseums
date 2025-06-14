@@ -8,10 +8,11 @@ const ConceptModel = (function() {
         'linear',
         'quadratic',
         'cubic',
+        'polynomial',
         'square-root',
         'cube-root',
         'absolute-value',
-        'rational',
+        'inverse',
         'exponential',
         'logarithmic',
         'trigonometric',
@@ -28,10 +29,11 @@ const ConceptModel = (function() {
             case 'linear': return 'Linear';
             case 'quadratic': return 'Quadratic';
             case 'cubic': return 'Cubic';
+            case 'polynomial': return 'Polynomial';
             case 'square-root': return 'Square Root';
             case 'cube-root': return 'Cube Root';
             case 'absolute-value': return 'Absolute Value';
-            case 'rational': return 'Rational/Inverse';
+            case 'inverse': return 'Inverse';
             case 'exponential': return 'Exponential';
             case 'logarithmic': return 'Logarithmic';
             case 'trigonometric': return 'Trigonometric';
