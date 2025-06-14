@@ -48,13 +48,9 @@ const PerformanceManager = (function() {
                 performanceObserver = new PerformanceObserver((list) => {
                     const entries = list.getEntries();
                     entries.forEach(entry => {
-                        // Log performance metrics
+                        // Track performance metrics silently
                         if (entry.entryType === 'navigation') {
-                            console.log('Performance: Navigation timing:', {
-                                domContentLoaded: entry.domContentLoadedEventEnd - entry.domContentLoadedEventStart,
-                                loadComplete: entry.loadEventEnd - entry.loadEventStart,
-                                firstPaint: entry.responseEnd - entry.requestStart
-                            });
+                            // Navigation timing tracked silently
                         }
                         
                         if (entry.entryType === 'paint') {

@@ -273,11 +273,8 @@ const OnboardingController = (function() {
             }
         }
         
-        // If target not found, log and try again for first step or skip for other steps
+        // If target not found, try again for first step or skip for other steps
         if (!target) {
-            console.warn(`Target element not found. Tried selectors: ${step.selector}`);
-            logDesmosElements();
-            
             // For step 0 (first step), retry after a delay 
             // since Desmos UI might still be initializing
             if (stepIndex === 0) {
@@ -705,128 +702,6 @@ const OnboardingController = (function() {
                 }
             }
         }, 500); // Update every 500ms
-    }
-    
-    /**
-     * Log all possible Desmos UI elements for debugging
-     * Helpful for identifying correct selectors
-     */
-    function logDesmosElements() {
-        
-        // Get the calculator container to focus our search
-        const calculatorContainer = document.getElementById('calculator-container');
-        if (!calculatorContainer) {
-            return;
-        }
-        
-        const allElements = calculatorContainer.querySelectorAll('[class*="dcg-"]');
-        const buttonElements = calculatorContainer.querySelectorAll('button');
-        
-        
-        // Look specifically for the Add Item button
-        const addItemButton = calculatorContainer.querySelector('[aria-label="Add Item"]');
-        if (addItemButton) {
-                element: addItemButton,
-                classes: addItemButton.className,
-                ariaLabel: addItemButton.getAttribute('aria-label'),
-                ariaExpanded: addItemButton.getAttribute('aria-expanded')
-            });
-        }
-        
-        // Check for the dropdown specifically (v1.10 style)
-        const dropdowns = calculatorContainer.querySelectorAll('.dcg-add-expression-dropdown');
-        
-        if (dropdowns.length > 0) {
-            
-            // Log all elements in the dropdown
-            const dropdownElements = dropdowns[0].querySelectorAll('*');
-            
-            // Look for anything with "image" in its classes or text
-            let imageRelatedItems = [];
-            dropdownElements.forEach((el, index) => {
-                const classes = el.className || '';
-                const textContent = el.textContent || '';
-                const dataAction = el.getAttribute('data-action') || '';
-                
-                if (classes.includes('image') || 
-                    textContent.toLowerCase().includes('image') || 
-                    dataAction === 'image') {
-                    imageRelatedItems.push({
-                        element: el,
-                        index: index,
-                        classes: classes,
-                        textContent: textContent,
-                        dataAction: dataAction
-                    });
-                }
-            });
-            
-            imageRelatedItems.forEach((item, idx) => {
-            });
-        }
-        
-        // If we're on step 2, look for any open menus that might contain the image button
-        if (currentStep === 1) {
-            const menus = calculatorContainer.querySelectorAll('.dcg-popover, .dcg-menu, .dcg-options-menu');
-            
-            menus.forEach((menu, index) => {
-                
-                // Look for image-related items
-                const items = menu.querySelectorAll('.dcg-menu-item, [data-action="image"]');
-                
-                items.forEach((item, itemIndex) => {
-                        element: item,
-                        classes: item.className,
-                        dataAction: item.getAttribute('data-action'),
-                        ariaLabel: item.getAttribute('aria-label'),
-                        text: item.textContent.trim()
-                    });
-                });
-                
-                // Log ALL divs in the menu to find potential image items
-                const allDivs = menu.querySelectorAll('div');
-                
-                // Look through all divs for image-related content
-                let imageRelatedDivs = [];
-                allDivs.forEach((div, divIndex) => {
-                    if (div.textContent.toLowerCase().includes('image')) {
-                        imageRelatedDivs.push({
-                            element: div,
-                            index: divIndex,
-                            classes: div.className,
-                            text: div.textContent.trim()
-                        });
-                    }
-                });
-                
-                imageRelatedDivs.forEach((div, divIndex) => {
-                });
-            });
-        }
-        
-        // Check different selector variations for the "add item" button
-        const selectors = [
-            '[aria-label="Add Item"]',
-            '.dcg-action-add-expression',
-            '.dcg-add-expression-btn',
-            '.dcg-exppanel-btn',
-            '.dcg-btn-dropdown-toggle',
-            '.dcg-plus-circle'
-        ];
-        
-        selectors.forEach(selector => {
-            const elements = calculatorContainer.querySelectorAll(selector);
-            if (elements.length > 0) {
-            }
-        });
-        
-        const elementClasses = new Set();
-        allElements.forEach(el => {
-            Array.from(el.classList)
-                .filter(cls => cls.startsWith('dcg-'))
-                .forEach(cls => elementClasses.add(cls));
-        });
-        
     }
     
     // Public API
