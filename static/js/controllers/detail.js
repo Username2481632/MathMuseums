@@ -68,6 +68,62 @@ const DetailController = (function() {
         // Set description text
         conceptDescription = document.getElementById('concept-description');
         conceptDescription.value = currentConcept.description || '';
+        
+        // Set up responsive header behavior
+        setupResponsiveHeader();
+    }
+    
+    /**
+     * Setup responsive header behavior for narrow screens
+     */
+    function setupResponsiveHeader() {
+        function updateHeaderForScreenSize() {
+            const backButton = document.getElementById('back-button');
+            const toggleButton = document.getElementById('detail-toggle-button');
+            const conceptTitle = document.getElementById('concept-title');
+            
+            if (!backButton || !toggleButton || !conceptTitle) return;
+            
+            const screenWidth = window.innerWidth;
+            
+            // Store original text if not already stored
+            if (!backButton.dataset.originalText) {
+                backButton.dataset.originalText = backButton.textContent;
+            }
+            if (!toggleButton.dataset.originalTextShow) {
+                toggleButton.dataset.originalTextShow = 'Show Notes';
+                toggleButton.dataset.originalTextHide = 'Show Desmos';
+            }
+            
+            // Adjust button text based on screen width
+            if (screenWidth <= 320) {
+                // Very narrow screens - use minimal text
+                backButton.textContent = 'Back';
+                const isShowingNotes = document.querySelector('.detail-content.show-notes');
+                toggleButton.textContent = isShowingNotes ? 'Desmos' : 'Notes';
+            } else if (screenWidth <= 480) {
+                // Narrow screens - use shortened text
+                backButton.textContent = 'Back';
+                const isShowingNotes = document.querySelector('.detail-content.show-notes');
+                toggleButton.textContent = isShowingNotes ? 'Show Desmos' : 'Show Notes';
+            } else {
+                // Normal screens - use full text
+                backButton.textContent = backButton.dataset.originalText;
+                const isShowingNotes = document.querySelector('.detail-content.show-notes');
+                toggleButton.textContent = isShowingNotes ? 
+                    toggleButton.dataset.originalTextHide : 
+                    toggleButton.dataset.originalTextShow;
+            }
+        }
+        
+        // Initial call
+        updateHeaderForScreenSize();
+        
+        // Listen for window resize
+        window.addEventListener('resize', updateHeaderForScreenSize);
+        
+        // Store reference to update function for toggle view
+        window.updateDetailHeaderForScreenSize = updateHeaderForScreenSize;
     }
     
     /**
@@ -192,6 +248,11 @@ const DetailController = (function() {
             detailContent.classList.remove('show-notes');
             detailContent.classList.add('show-calculator');
             toggleButton.textContent = 'Show Notes';
+        }
+        
+        // Update header text for current screen size
+        if (window.updateDetailHeaderForScreenSize) {
+            setTimeout(window.updateDetailHeaderForScreenSize, 10);
         }
     }
     
