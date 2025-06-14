@@ -276,16 +276,35 @@ const PWAManager = (function() {
                     hasScrolled = true;
                 }
             }, { once: true });
-            
-            // Update viewport height when URL bar appears/disappears
-            const updateViewportHeight = () => {
-                const vh = window.innerHeight * 0.01;
-                document.documentElement.style.setProperty('--vh', `${vh}px`);
-            };
-            
-            updateViewportHeight();
-            window.addEventListener('resize', updateViewportHeight);
         }
+        
+        // Update viewport height when URL bar appears/disappears for ALL mobile browsers
+        updateViewportHeight();
+        window.addEventListener('resize', updateViewportHeight);
+        window.addEventListener('orientationchange', () => {
+            setTimeout(updateViewportHeight, 100);
+        });
+    }
+    
+    /**
+     * Update viewport height based on actual available space
+     */
+    function updateViewportHeight() {
+        // Get the actual available viewport height
+        const actualViewportHeight = window.innerHeight;
+        const documentHeight = document.documentElement.clientHeight;
+        
+        // Set CSS custom property for accurate viewport height
+        document.documentElement.style.setProperty('--actual-vh', `${actualViewportHeight}px`);
+        document.documentElement.style.setProperty('--actual-vh-unit', `${actualViewportHeight * 0.01}px`);
+        
+        // Dispatch event so other components can respond to viewport changes
+        window.dispatchEvent(new CustomEvent('viewportChanged', {
+            detail: {
+                height: actualViewportHeight,
+                width: window.innerWidth
+            }
+        }));
     }
     
     /**

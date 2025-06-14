@@ -141,10 +141,11 @@ const PreferencesClient = (function() {
 
         // Always set up the container with the correct aspect ratio
         if (aspectRatioContainer) {
-            // Calculate container dimensions based on current aspect ratio
-            const headerHeight = 70;
+            // Calculate container dimensions using actual measurements
+            const header = document.querySelector('header');
+            const actualHeaderHeight = header ? header.offsetHeight : 70;
             const availableWidth = window.innerWidth;
-            const availableHeight = window.innerHeight - headerHeight;
+            const availableHeight = window.innerHeight - actualHeaderHeight;
             const targetAspect = preferences.aspectRatioWidth / preferences.aspectRatioHeight;
             
             let containerWidth = availableWidth;
@@ -193,10 +194,11 @@ const PreferencesClient = (function() {
         const aspectRatioContainer = document.querySelector('#home-view .aspect-ratio-container');
         if (!homeView || !aspectRatioContainer || !homeView.classList.contains('screen-fit-mode')) return;
 
-        // Calculate available viewport dimensions (accounting for header)
-        const headerHeight = 70;
+        // Calculate available viewport dimensions using actual measurements
+        const header = document.querySelector('header');
+        const actualHeaderHeight = header ? header.offsetHeight : 70;
         const availableWidth = window.innerWidth;
-        const availableHeight = window.innerHeight - headerHeight;
+        const availableHeight = window.innerHeight - actualHeaderHeight;
         const targetAspectRatio = preferences.aspectRatioWidth / preferences.aspectRatioHeight;
 
         // Compute the largest size for the aspect ratio container that fits in the viewport
@@ -258,10 +260,11 @@ const PreferencesClient = (function() {
         const aspectRatioContainer = document.querySelector('#home-view .aspect-ratio-container');
         if (!homeView || !aspectRatioContainer || !homeView.classList.contains('screen-fill-mode')) return;
 
-        // Calculate available viewport dimensions (accounting for header)
-        const headerHeight = 70;
+        // Calculate available viewport dimensions using actual measurements
+        const header = document.querySelector('header');
+        const actualHeaderHeight = header ? header.offsetHeight : 70;
         const availableWidth = window.innerWidth;
-        const availableHeight = window.innerHeight - headerHeight;
+        const availableHeight = window.innerHeight - actualHeaderHeight;
         const targetAspectRatio = preferences.aspectRatioWidth / preferences.aspectRatioHeight;
 
         // Calculate dimensions for both scenarios:

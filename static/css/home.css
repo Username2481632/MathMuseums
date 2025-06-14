@@ -8,7 +8,7 @@
 .tiles-container {
     position: relative;
     width: 100%;
-    height: calc(100vh - var(--header-height, 70px));
+    height: calc(var(--actual-vh, 100vh) - var(--header-height, 70px));
     background-color: var(--bg-color);
     margin: 0;
     padding: 0;

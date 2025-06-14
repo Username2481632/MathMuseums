@@ -1294,6 +1294,9 @@ This will replace your current museum data. Continue?`;
             const viewportWidth = window.innerWidth;
             const containerHeight = viewportHeight - headerHeight;
             
+            // Update the actual viewport height CSS property
+            document.documentElement.style.setProperty('--actual-vh', `${viewportHeight}px`);
+            
             // Get containers that should fill the viewport height
             const appContainer = document.querySelector('#app-container');
             const homeView = document.querySelector('#home-view');

@@ -39,6 +39,7 @@ body {
     color: var(--text-color);
     background-color: var(--letterbox-color); /* DRY: Use consistent letterbox color */
     min-height: 100vh;
+    min-height: var(--actual-vh, 100vh); /* Use actual viewport height */
     padding-top: 70px; /* Only account for the fixed header */
     margin: 0;
     transition: padding-top 0.3s ease; /* Smooth padding transition */
@@ -844,7 +845,7 @@ main {
     body {
         height: 100vh;
         height: -webkit-fill-available; /* iOS Safari viewport fix */
-        height: calc(var(--vh, 1vh) * 100); /* Fallback with custom property */
+        height: var(--actual-vh, 100vh); /* Use actual measured viewport height */
         overflow-y: auto;
     }
 }

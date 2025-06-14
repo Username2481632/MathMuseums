@@ -122,6 +122,23 @@ const DetailController = (function() {
         // Listen for window resize
         window.addEventListener('resize', updateHeaderForScreenSize);
         
+        // Listen for viewport changes from PWA manager
+        window.addEventListener('viewportChanged', updateHeaderForScreenSize);
+        
+        // Listen for viewport changes to resize calculator
+        window.addEventListener('viewportChanged', () => {
+            if (calculator && isCalculatorReady) {
+                // Small delay to allow layout to settle
+                setTimeout(() => {
+                    try {
+                        calculator.resize();
+                    } catch (error) {
+                        console.warn('Calculator resize failed:', error);
+                    }
+                }, 100);
+            }
+        });
+        
         // Store reference to update function for toggle view
         window.updateDetailHeaderForScreenSize = updateHeaderForScreenSize;
     }

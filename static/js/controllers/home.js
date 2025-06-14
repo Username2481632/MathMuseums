@@ -545,6 +545,20 @@ const HomeController = (function() {
             immediateRenderTiles();
         }
     });
+    
+    // --- Listen for viewport changes from PWA manager ---
+    window.addEventListener('viewportChanged', function() {
+        if (homePoster && concepts.length > 0) {
+            // Re-apply display settings when viewport changes
+            if (window.PreferencesClient) {
+                window.PreferencesClient.applyDisplaySettings();
+            }
+            // Re-render tiles after viewport change
+            setTimeout(() => {
+                immediateRenderTiles();
+            }, 100);
+        }
+    });
 
     /**
      * Force cleanup of all corrupted data from storage
