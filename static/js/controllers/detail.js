@@ -75,7 +75,6 @@ const DetailController = (function() {
      */
     function ensureDesmosLoaded() {
         if (typeof Desmos === 'undefined') {
-            console.log('Desmos API not yet loaded, waiting...');
             const container = document.getElementById('calculator-container');
             container.innerHTML = '<div class="loading-message">Loading Desmos calculator...</div>';
             setTimeout(ensureDesmosLoaded, 500);
@@ -126,7 +125,6 @@ const DetailController = (function() {
             
             // Since the calculator is now confirmed to be loaded, 
             // we can start the idle timer for onboarding
-            console.log('Desmos calculator initialized successfully');
             startIdleTimer();
             
             // Listen for changes to detect image uploads
@@ -268,7 +266,6 @@ const DetailController = (function() {
     function startOnboarding() {
         // Only start if not disabled and not already shown in this session
         if (isOnboardingDisabled || StorageManager.getOnboardingSession()) {
-            console.log('Onboarding is disabled or already shown in this session');
             return;
         }
         
@@ -278,20 +275,13 @@ const DetailController = (function() {
         const anyDesmosButton = calculatorContainer.querySelector('button');
         const addItemButton = calculatorContainer.querySelector('[aria-label="Add Item"]');
         
-        // Log what we found for debugging
-        console.log('Expression panel found:', !!expressionPanel);
-        console.log('Any Desmos button found:', !!anyDesmosButton);
-        console.log('Add Item button found:', !!addItemButton);
-        
         // If we don't see any Desmos UI elements yet, wait and try again
         if (!expressionPanel && !anyDesmosButton && !addItemButton) {
-            console.log('Desmos UI not fully loaded yet, delaying onboarding');
             // Try again in 2 seconds
             setTimeout(startOnboarding, 2000);
             return;
         }
         
-        console.log('Desmos UI appears to be loaded, starting onboarding');
         OnboardingController.start();
     }
     

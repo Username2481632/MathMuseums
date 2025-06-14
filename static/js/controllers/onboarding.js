@@ -58,7 +58,6 @@ const OnboardingController = (function() {
     function start() {
         // Check if onboarding has already been shown in this session
         if (StorageManager.getOnboardingSession()) {
-            console.log('Onboarding already shown in this session, skipping');
             return;
         }
         
@@ -186,7 +185,7 @@ const OnboardingController = (function() {
         if (stepIndex === 0) {
             target = calculatorContainer.querySelector('[aria-label="Add Item"]');
             if (target) {
-                console.log('Found "Add Item" button using aria-label');
+                // Found Add Item button
             } else {
                 // Try alternative selectors for the add item button
                 const selectors = [
@@ -200,7 +199,6 @@ const OnboardingController = (function() {
                     const element = calculatorContainer.querySelector(selector);
                     if (element) {
                         target = element;
-                        console.log(`Found "Add Item" button using selector: ${selector}`);
                         break;
                     }
                 }
@@ -211,7 +209,6 @@ const OnboardingController = (function() {
             const dropdown = calculatorContainer.querySelector('.dcg-add-expression-dropdown');
             
             if (dropdown) {
-                console.log('Found open dropdown for image button search');
                 
                 // Look for items with image-related classes or icons in the dropdown
                 const imageItems = [
@@ -231,7 +228,6 @@ const OnboardingController = (function() {
                 
                 if (imageItems.length > 0) {
                     target = imageItems[0];
-                    console.log('Found image option in dropdown:', target);
                 }
             }
             
@@ -241,7 +237,6 @@ const OnboardingController = (function() {
                 const menus = calculatorContainer.querySelectorAll('.dcg-popover, .dcg-menu, .dcg-options-menu');
                 
                 if (menus.length > 0) {
-                    console.log('Found open menu for image button search');
                     
                     // Look in each menu for image-related items
                     for (let i = 0; i < menus.length; i++) {
@@ -253,7 +248,6 @@ const OnboardingController = (function() {
                             if (btn.textContent.toLowerCase().includes('image') || 
                                 btn.getAttribute('data-action') === 'image') {
                                 target = btn;
-                                console.log('Found image button in menu');
                                 break;
                             }
                         }
@@ -274,7 +268,6 @@ const OnboardingController = (function() {
                 const elements = calculatorContainer.querySelectorAll(selector);
                 if (elements.length > 0) {
                     target = elements[0];
-                    console.log(`Found target element using selector: ${selector}`);
                     break;
                 }
             }
@@ -288,7 +281,6 @@ const OnboardingController = (function() {
             // For step 0 (first step), retry after a delay 
             // since Desmos UI might still be initializing
             if (stepIndex === 0) {
-                console.log('Retrying first step after delay...');
                 setTimeout(() => showStep(stepIndex), 2000);
                 return;
             }
@@ -464,7 +456,6 @@ const OnboardingController = (function() {
      */
     function setTargetElement(element) {
         currentTarget = element;
-        console.log('Set target element for onboarding:', element);
         
         // Update the click blocker to allow clicks only on this target
         updateClickBlocker(element);
@@ -501,13 +492,11 @@ const OnboardingController = (function() {
         // Special case for first step: check for Add Item button by aria-label
         if (currentStep === 0) {
             if (event.target.closest('[aria-label="Add Item"]')) {
-                console.log('Matched click on Add Item button via aria-label');
                 matchFound = true;
             } else if (event.target.closest('.dcg-btn-dropdown-toggle') || 
                        event.target.closest('.dcg-exppanel-btn') ||
                        event.target.closest('.dcg-action-additem') ||
                        event.target.closest('.dcg-plus-circle')) {
-                console.log('Matched click on Add Item button via alternative selector');
                 matchFound = true;
             }
         } else if (currentStep === 1) {
@@ -536,7 +525,6 @@ const OnboardingController = (function() {
             });
             
             if (isImageElement) {
-                console.log('Matched click on image option');
                 matchFound = true;
                 
                 // Don't interfere with the image upload process
@@ -552,7 +540,6 @@ const OnboardingController = (function() {
             for (const selector of selectors) {
                 const target = event.target.closest(selector);
                 if (target) {
-                    console.log(`Matched click using selector: ${selector}`);
                     matchFound = true;
                     break;
                 }
@@ -725,26 +712,20 @@ const OnboardingController = (function() {
      * Helpful for identifying correct selectors
      */
     function logDesmosElements() {
-        console.log('Desmos UI Elements:');
         
         // Get the calculator container to focus our search
         const calculatorContainer = document.getElementById('calculator-container');
         if (!calculatorContainer) {
-            console.log('Calculator container not found');
             return;
         }
         
         const allElements = calculatorContainer.querySelectorAll('[class*="dcg-"]');
         const buttonElements = calculatorContainer.querySelectorAll('button');
         
-        console.log('All Desmos elements in calculator container:', allElements.length);
-        console.log('All buttons in calculator container:', buttonElements.length);
         
         // Look specifically for the Add Item button
         const addItemButton = calculatorContainer.querySelector('[aria-label="Add Item"]');
-        console.log('Add Item button found:', !!addItemButton);
         if (addItemButton) {
-            console.log('Add Item button details:', {
                 element: addItemButton,
                 classes: addItemButton.className,
                 ariaLabel: addItemButton.getAttribute('aria-label'),
@@ -754,14 +735,11 @@ const OnboardingController = (function() {
         
         // Check for the dropdown specifically (v1.10 style)
         const dropdowns = calculatorContainer.querySelectorAll('.dcg-add-expression-dropdown');
-        console.log('Expression dropdowns found:', dropdowns.length);
         
         if (dropdowns.length > 0) {
-            console.log('Expression dropdown details:', dropdowns[0]);
             
             // Log all elements in the dropdown
             const dropdownElements = dropdowns[0].querySelectorAll('*');
-            console.log('Dropdown child elements:', dropdownElements.length);
             
             // Look for anything with "image" in its classes or text
             let imageRelatedItems = [];
@@ -783,26 +761,20 @@ const OnboardingController = (function() {
                 }
             });
             
-            console.log('Image-related elements in dropdown:', imageRelatedItems.length);
             imageRelatedItems.forEach((item, idx) => {
-                console.log(`Image item ${idx}:`, item);
             });
         }
         
         // If we're on step 2, look for any open menus that might contain the image button
         if (currentStep === 1) {
             const menus = calculatorContainer.querySelectorAll('.dcg-popover, .dcg-menu, .dcg-options-menu');
-            console.log('Open menus found:', menus.length);
             
             menus.forEach((menu, index) => {
-                console.log(`Menu ${index} contents:`, menu);
                 
                 // Look for image-related items
                 const items = menu.querySelectorAll('.dcg-menu-item, [data-action="image"]');
-                console.log(`  Menu items found: ${items.length}`);
                 
                 items.forEach((item, itemIndex) => {
-                    console.log(`  Item ${itemIndex}:`, {
                         element: item,
                         classes: item.className,
                         dataAction: item.getAttribute('data-action'),
@@ -813,7 +785,6 @@ const OnboardingController = (function() {
                 
                 // Log ALL divs in the menu to find potential image items
                 const allDivs = menu.querySelectorAll('div');
-                console.log(`  All divs in menu: ${allDivs.length}`);
                 
                 // Look through all divs for image-related content
                 let imageRelatedDivs = [];
@@ -828,9 +799,7 @@ const OnboardingController = (function() {
                     }
                 });
                 
-                console.log(`  Divs containing 'image' text: ${imageRelatedDivs.length}`);
                 imageRelatedDivs.forEach((div, divIndex) => {
-                    console.log(`    Image div ${divIndex}:`, div);
                 });
             });
         }
@@ -847,9 +816,7 @@ const OnboardingController = (function() {
         
         selectors.forEach(selector => {
             const elements = calculatorContainer.querySelectorAll(selector);
-            console.log(`Elements matching "${selector}":`, elements.length);
             if (elements.length > 0) {
-                console.log('First element:', elements[0]);
             }
         });
         
@@ -860,7 +827,6 @@ const OnboardingController = (function() {
                 .forEach(cls => elementClasses.add(cls));
         });
         
-        console.log('Desmos classes:', Array.from(elementClasses).sort());
     }
     
     // Public API
