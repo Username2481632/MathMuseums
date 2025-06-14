@@ -132,23 +132,8 @@ const DetailController = (function() {
             calculator.observeEvent('change', () => {
                 resetIdleTimer();
                 
-                // DEBUG: Log real-time state changes
-                const state = calculator.getState();
-                const expressions = state?.expressions?.list || [];
-                const latexExpressions = expressions
-                    .filter(expr => expr.type === 'expression' && expr.latex)
-                    .map(expr => expr.latex);
-                
-                console.log('🔄 Desmos Change Event:', {
-                    timestamp: new Date().toISOString(),
-                    conceptId: currentConcept?.id,
-                    expressionCount: expressions.length,
-                    latexExpressions: latexExpressions,
-                    hasLatex: latexExpressions.length > 0,
-                    firstExpression: latexExpressions[0] || 'none'
-                });
-                
                 // Check if state has an image for onboarding purposes
+                const state = calculator.getState();
                 const hasImage = state && 
                                  state.expressions && 
                                  state.expressions.list && 
@@ -172,16 +157,7 @@ const DetailController = (function() {
     function setupEventListeners() {
         // Back button - save state synchronously before navigation
         document.getElementById('back-button').addEventListener('click', () => {
-            console.log('🔙 Back button clicked at:', new Date().toISOString());
-            console.log('🔙 Current concept before save:', {
-                id: currentConcept?.id,
-                name: currentConcept?.displayName,
-                currentStateLength: currentConcept?.desmosState?.length || 0
-            });
-            
             saveCalculatorState();
-            
-            console.log('🔙 Navigation to home starting...');
             Router.navigate('home');
         });
         
@@ -215,46 +191,14 @@ const DetailController = (function() {
     function saveCalculatorState() {
         if (!calculator) return;
         
-        console.log('💾 saveCalculatorState() called at:', new Date().toISOString());
-        
         const state = calculator.getState();
-        
-        // DEBUG: Log detailed state information
-        const expressions = state?.expressions?.list || [];
-        const latexExpressions = expressions
-            .filter(expr => expr.type === 'expression' && expr.latex)
-            .map(expr => expr.latex);
-        
-        console.log('💾 Current Desmos State:', {
-            conceptId: currentConcept?.id,
-            conceptName: currentConcept?.displayName,
-            expressionCount: expressions.length,
-            latexExpressions: latexExpressions,
-            hasLatex: latexExpressions.length > 0,
-            previousStateLength: currentConcept?.desmosState?.length || 0,
-            viewport: state?.graph?.viewport || null
-        });
-        
-        // Check if state has changed
         const stateString = JSON.stringify(state);
         
-        console.log('💾 State comparison:', {
-            newStateLength: stateString.length,
-            previousStateLength: currentConcept?.desmosState?.length || 0,
-            statesMatch: stateString === currentConcept.desmosState,
-            newStateHash: stateString.substring(0, 100) + '...'
-        });
-        
         if (stateString !== currentConcept.desmosState) {
-            console.log('💾 State changed - updating concept');
-            
             // Update the concept
             currentConcept = ConceptModel.updateConcept(currentConcept, { 
                 desmosState: stateString 
             });
-            
-            // Note: No need to clear cache anymore since cache is now state-based
-            // Identical states will automatically share the same cached thumbnail
             
             // Check if state has an image
             const hasImage = state && 
@@ -264,20 +208,11 @@ const DetailController = (function() {
             
             // If an image was detected, stop onboarding if in progress
             if (hasImage) {
-                // Stop onboarding if in progress
                 OnboardingController.stop();
             }
             
             // Save the changes
             saveChanges();
-            
-            console.log('💾 State saved successfully:', {
-                conceptId: currentConcept.id,
-                newStateLength: stateString.length,
-                timestamp: new Date().toISOString()
-            });
-        } else {
-            console.log('💾 No state changes detected - skipping save');
         }
     }
     
@@ -385,11 +320,8 @@ const DetailController = (function() {
         init,
         render,
         cleanup() {
-            console.log('🧹 DetailController cleanup called at:', new Date().toISOString());
-            
             // Save calculator state before cleanup (handles browser back button)
             if (calculator && currentConcept) {
-                console.log('🧹 Saving state before cleanup for concept:', currentConcept.id);
                 saveCalculatorState();
             }
             

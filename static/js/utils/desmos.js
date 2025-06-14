@@ -209,15 +209,12 @@ const DesmosUtils = (function() {
      * @returns {Promise<string>} Resolves with data URL of the thumbnail
      */
     async function generateThumbnailDirect(stateString) {
-        console.log('🖼️ generateThumbnailDirect() called at:', new Date().toISOString());
-        
         // Check if DesmosUtils is being cleaned up
         if (isCleaningUp) {
             throw new Error('DesmosUtils is being cleaned up, cannot generate thumbnail');
         }
         
         if (!stateString) {
-            console.log('🖼️ No state string provided - creating blank state');
             // Create a blank state for preview
             const blankState = {
                 version: 10,
@@ -238,21 +235,8 @@ const DesmosUtils = (function() {
         }
         
         try {
-            // Parse and log the state being used for thumbnail generation
+            // Parse the state for thumbnail generation
             const parsedState = JSON.parse(stateString);
-            const expressions = parsedState?.expressions?.list || [];
-            const latexExpressions = expressions
-                .filter(expr => expr.type === 'expression' && expr.latex)
-                .map(expr => expr.latex);
-            
-            console.log('🖼️ Thumbnail generation state analysis:', {
-                stateLength: stateString.length,
-                expressionCount: expressions.length,
-                latexExpressions: latexExpressions,
-                hasLatex: latexExpressions.length > 0,
-                firstExpression: latexExpressions[0] || 'none',
-                viewport: parsedState?.graph?.viewport || null
-            });
             
             // Initialize hidden calculator
             const calculator = await initHiddenCalculator();
@@ -261,8 +245,6 @@ const DesmosUtils = (function() {
             if (isCleaningUp) {
                 throw new Error('DesmosUtils cleanup started during initialization');
             }
-            
-            console.log('🖼️ Setting calculator state...');
             
             // Clear any existing state first to prevent contamination
             calculator.setState({
@@ -278,22 +260,7 @@ const DesmosUtils = (function() {
             // Set the actual calculator state
             calculator.setState(parsedState);
             
-            // Log the state that was actually set
-            const actualSetState = calculator.getState();
-            const actualExpressions = actualSetState?.expressions?.list || [];
-            const actualLatexExpressions = actualExpressions
-                .filter(expr => expr.type === 'expression' && expr.latex)
-                .map(expr => expr.latex);
-            
-            console.log('🖼️ State verification after setState():', {
-                actualExpressionCount: actualExpressions.length,
-                actualLatexExpressions: actualLatexExpressions,
-                stateMatches: JSON.stringify(actualSetState) === stateString,
-                actualFirstExpression: actualLatexExpressions[0] || 'none'
-            });
-            
-            // Increased wait time to ensure calculator fully processes the new state
-            console.log('🖼️ Waiting 300ms for calculator to settle...');
+            // Wait for calculator to process the new state
             await new Promise(resolve => setTimeout(resolve, 300));
             
             // Final check before screenshot
@@ -301,15 +268,13 @@ const DesmosUtils = (function() {
                 throw new Error('DesmosUtils cleanup started before screenshot');
             }
             
-            console.log('🖼️ Taking screenshot...');
-            
             // Capture the screenshot with optimized settings
             let dataUrl;
             try {
                 dataUrl = calculator.screenshot({
                     width: 250,
                     height: 200,
-                    targetPixelRatio: 1.25, // Slightly reduced for better performance
+                    targetPixelRatio: 1.25,
                     preserveAxisNumbers: false,
                     mathBounds: {
                         left: -10,
@@ -318,14 +283,8 @@ const DesmosUtils = (function() {
                         top: 10
                     }
                 });
-                
-                console.log('🖼️ Screenshot captured successfully:', {
-                    dataUrlLength: dataUrl?.length || 0,
-                    isValidDataUrl: dataUrl?.startsWith('data:') || false,
-                    timestamp: new Date().toISOString()
-                });
             } catch (screenshotError) {
-                console.error('🖼️ Screenshot error:', screenshotError);
+                console.error('Screenshot error:', screenshotError);
                 if (screenshotError.message && screenshotError.message.includes('destroyed')) {
                     throw new Error('Calculator instance was destroyed during screenshot');
                 }
@@ -334,18 +293,12 @@ const DesmosUtils = (function() {
             
             // Validate the returned dataUrl
             if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
-                console.error('🖼️ Invalid screenshot data returned:', {
-                    dataUrl: dataUrl,
-                    type: typeof dataUrl,
-                    length: dataUrl?.length || 0
-                });
                 throw new Error('Invalid screenshot data returned from Desmos');
             }
             
-            console.log('🖼️ Thumbnail generation completed successfully');
             return dataUrl;
         } catch (error) {
-            console.error('🖼️ Thumbnail generation failed:', error);
+            console.error('Thumbnail generation failed:', error);
             throw error;
         }
     }

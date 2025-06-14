@@ -427,24 +427,9 @@ const HomeController = (function() {
         }
         
         // Use optimized DesmosUtils with fast memory caching
-        console.log('🏠 Home requesting thumbnail generation:', {
-            conceptId: concept.id,
-            conceptName: concept.displayName,
-            stateLength: concept.desmosState?.length || 0,
-            timestamp: new Date().toISOString()
-        });
-        
         DesmosUtils.generateThumbnail(concept.desmosState, concept.id)
             .then(dataUrl => {
                 thumbnailQueue.delete(concept.id);
-                
-                console.log('🏠 Thumbnail generation completed:', {
-                    conceptId: concept.id,
-                    conceptName: concept.displayName,
-                    dataUrlLength: dataUrl?.length || 0,
-                    isValidDataUrl: dataUrl?.startsWith('data:') || false,
-                    timestamp: new Date().toISOString()
-                });
                 
                 if (!previewElement.isConnected) return;
                 
