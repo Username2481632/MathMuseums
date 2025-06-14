@@ -131,11 +131,11 @@ const StorageManager = (function() {
     
     /**
      * Get onboarding session state
-     * @returns {boolean} Whether onboarding was shown in this session
+     * @returns {boolean|null} Whether onboarding was shown in this session, or null if not set
      */
     function getOnboardingSession() {
         const stored = sessionStorage.getItem('mm_onboarding_shown');
-        return stored === 'true';
+        return stored === null ? null : stored === 'true';
     }
     
     /**

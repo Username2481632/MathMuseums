@@ -57,7 +57,9 @@ const OnboardingController = (function() {
      */
     function start() {
         // Check if onboarding has already been shown in this session
-        if (StorageManager.getOnboardingSession()) {
+        const onboardingSession = StorageManager.getOnboardingSession();
+        
+        if (onboardingSession === true) {
             return;
         }
         

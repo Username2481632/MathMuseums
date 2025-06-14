@@ -385,9 +385,11 @@ var App = (function() {
             
             // Sync client removed - using local file storage instead
             
-            // Reset onboarding session flag on new app start
-            // This allows onboarding to show on new page visits, but not within the same session
-            StorageManager.saveOnboardingSession(false);
+            // Initialize onboarding session flag if not already set
+            // This ensures onboarding shows only once per session
+            if (StorageManager.getOnboardingSession() === null) {
+                StorageManager.saveOnboardingSession(false);
+            }
             
             // Set up routes
             Router.init({

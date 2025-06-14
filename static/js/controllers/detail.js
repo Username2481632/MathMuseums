@@ -250,7 +250,9 @@ const DetailController = (function() {
      * Start the idle timer for onboarding
      */
     function startIdleTimer() {
-        if (isOnboardingDisabled || StorageManager.getOnboardingSession()) {
+        // Check if onboarding is disabled or already shown in this session
+        const onboardingSession = StorageManager.getOnboardingSession();
+        if (isOnboardingDisabled || onboardingSession === true) {
             return;
         }
         
@@ -263,7 +265,6 @@ const DetailController = (function() {
         setTimeout(() => {
             if (signal.aborted) return;
 
-            
             // Check for calculator container
             const calculatorContainer = document.getElementById('calculator-container');
             if (!calculatorContainer) return;
@@ -307,7 +308,9 @@ const DetailController = (function() {
      * Start the onboarding flow
      */
     function startOnboarding() {
-        if (isOnboardingDisabled || StorageManager.getOnboardingSession()) {
+        const onboardingSession = StorageManager.getOnboardingSession();
+        
+        if (isOnboardingDisabled || onboardingSession === true) {
             return;
         }
         
