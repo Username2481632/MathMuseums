@@ -1,7 +1,9 @@
 // Service Worker for Math Museums PWA
-const CACHE_NAME = 'math-museums-v2';
-const STATIC_CACHE_NAME = 'math-museums-static-v2';
-const DYNAMIC_CACHE_NAME = 'math-museums-dynamic-v2';
+// Update version numbers when deploying changes to force cache refresh
+const CACHE_VERSION = '0.1.0';
+const CACHE_NAME = `math-museums-v${CACHE_VERSION}`;
+const STATIC_CACHE_NAME = `math-museums-static-v${CACHE_VERSION}`;
+const DYNAMIC_CACHE_NAME = `math-museums-dynamic-v${CACHE_VERSION}`;
 
 // Resources to cache immediately
 const STATIC_ASSETS = [
