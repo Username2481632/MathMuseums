@@ -17,7 +17,7 @@ const FileManager = (function() {
      */
     async function createExportData() {
         try {
-            // Get current session concept data for export (includes coordinates)
+            // Get current session concept data for export (includes coordinates and z-index)
             const concepts = await StorageManager.getAllConcepts();
             
             const userName = '';
@@ -26,7 +26,7 @@ const FileManager = (function() {
                 version: FILE_FORMAT_VERSION,
                 exportDate: new Date().toISOString(),
                 userName: userName,
-                concepts: concepts || [],
+                concepts: concepts || [], // Each concept includes position, size, z-index if set
                 // layoutState removed - coordinates are stored in concepts themselves
                 metadata: {
                     totalConcepts: (concepts || []).length
@@ -229,6 +229,14 @@ const FileManager = (function() {
                     delete concept.coordinates;
                 }
             }
+            
+            // Validate z-index if present
+            if (concept.zIndex !== undefined) {
+                if (typeof concept.zIndex !== 'number' || !Number.isInteger(concept.zIndex) || concept.zIndex < 0) {
+                    console.warn(`Concept ${concept.id} has invalid z-index value - will be removed`);
+                    delete concept.zIndex;
+                }
+            }
         });
         
         return data;
@@ -299,6 +307,12 @@ const FileManager = (function() {
                 } catch (error) {
                     console.warn(`Failed to import concept ${concept.id}:`, error);
                 }
+            }
+            
+            // Reinitialize z-index counter based on imported concepts
+            if (window.ZIndexManager) {
+                const allConcepts = await StorageManager.getAllConcepts();
+                window.ZIndexManager.initializeZIndexCounter(allConcepts);
             }
             
             // No need to handle layoutState separately since coordinates are in concepts
