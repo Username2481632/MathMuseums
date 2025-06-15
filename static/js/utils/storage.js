@@ -60,6 +60,12 @@ const StorageManager = (function() {
     async function saveConcept(concept) {
         initializeDefaultConcepts();
         sessionConcepts[concept.id] = concept;
+        
+        // Mark as dirty if App is available and initialized, but not during undo/redo restoration
+        if (window.App && window.App.markDirty && !window.App.isRestoring) {
+            window.App.markDirty();
+        }
+        
         return concept;
     }
     

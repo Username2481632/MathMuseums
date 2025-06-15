@@ -35,8 +35,13 @@
     display: flex;
     flex-direction: column;
     
-    /* Enable better touch interactions */
+    /* Prevent context menu and improve touch interactions */
     touch-action: manipulation;
+    -webkit-touch-callout: none; /* Prevents callout (long press menu) on iOS Safari */
+    -webkit-user-select: none;   /* Prevents text selection */
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .concept-tile:hover {

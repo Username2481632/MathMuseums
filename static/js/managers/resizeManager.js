@@ -1,7 +1,7 @@
 // resizeManager.js
 // Encapsulates resize logic for concept tiles
 
-export function createResizeManager({ onStart, onUpdate, onFinish, getTileById, pushUndoState, constrainDimensions }) {
+export function createResizeManager({ onStart, onUpdate, onFinish, getTileById, pushUndoState, constrainDimensions, dragManager }) {
     let isResizing = false;
     let resizingTile = null;
     let resizeHandle = null;
@@ -181,8 +181,14 @@ export function createResizeManager({ onStart, onUpdate, onFinish, getTileById, 
     }
 
     function handleTouchResizeEnd() {
-        pushUndoState && pushUndoState();
+        // Don't handle resize end if dragging is active or recently ended
+        if (dragManager && (dragManager.isDragging() || dragManager.recentlyDragged())) {
+            return;
+        }
+        
         if (!isResizing || !resizingTile) return;
+        
+        pushUndoState && pushUndoState();
         resizingTile.classList.remove('resizing');
         resizingTile.style.zIndex = '1';
         if (resizingTile.dataset.resizing) delete resizingTile.dataset.resizing;

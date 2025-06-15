@@ -24,6 +24,10 @@ export function createDragManager({ onStart, onUpdate, onFinish, getTileById, pu
     function handleTileTouchStart(event) {
         const tile = event.target.closest('.concept-tile');
         if (!tile) return;
+        
+        // Prevent default behavior to avoid context menu and other browser interactions
+        event.preventDefault();
+        
         const longPressTimer = setTimeout(() => {
             const conceptId = tile.dataset.id;
             const concept = getTileById(conceptId);

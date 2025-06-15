@@ -63,6 +63,11 @@ const PreferencesClient = (function() {
             savePreferencesToLocalStorage(preferences);
             
             applyPreferences();
+            
+            // Mark as dirty if App is available and initialized
+            if (window.App && window.App.markDirty) {
+                window.App.markDirty();
+            }
         } catch (error) {
             console.error('Error saving preferences:', error);
         }

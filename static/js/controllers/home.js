@@ -170,7 +170,8 @@ const HomeController = (function() {
         },
         getTileById: id => concepts.find(c => c.id === id),
         pushUndoState: safePushUndoState,
-        constrainDimensions: constrainResizeDimensions
+        constrainDimensions: constrainResizeDimensions,
+        dragManager: dragManager  // Pass drag manager so resize manager can check drag state
     });
 
     // Debounced render function to prevent multiple rapid renders
@@ -201,6 +202,36 @@ const HomeController = (function() {
         }
     }
     
+    // Update existing tiles in place without rebuilding (for undo operations)
+    function updateTilesInPlace() {
+        if (!homePoster || concepts.length === 0) return;
+        
+        const containerWidth = homePoster.offsetWidth;
+        const containerHeight = homePoster.offsetHeight;
+        
+        concepts.forEach(concept => {
+            const tile = homePoster.querySelector(`[data-id="${concept.id}"]`);
+            if (!tile) return; // Skip if tile doesn't exist
+            
+            const coords = ConceptModel.getCoordinates(concept);
+            const pixelCoords = window.CoordinateUtils.percentageToPixels(
+                coords.centerX, coords.centerY, coords.width, coords.height,
+                containerWidth, containerHeight
+            );
+            
+            // Update tile position and size
+            tile.style.left = `${pixelCoords.x}px`;
+            tile.style.top = `${pixelCoords.y}px`;
+            tile.style.width = `${pixelCoords.width}px`;
+            tile.style.height = `${pixelCoords.height}px`;
+        });
+        
+        // Only call FontSizer once after all tiles are updated
+        if (window.FontSizer) {
+            window.FontSizer.forceAdjustment();
+        }
+    }
+    
     // Helper: Get current layout state (center-based coordinates)
     function getCurrentLayoutState() {
         const state = concepts.map(concept => {
@@ -221,7 +252,10 @@ const HomeController = (function() {
     
     // Helper: Restore layout state (center-based coordinates)
     function restoreLayoutState(state) {
-        if (!Array.isArray(state)) return;
+        if (!Array.isArray(state)) {
+            return;
+        }
+        
         for (const s of state) {
             const conceptIndex = concepts.findIndex(c => c.id === s.id);
             if (conceptIndex !== -1) {
@@ -237,7 +271,9 @@ const HomeController = (function() {
                 StorageManager.saveConcept(updatedConcept);
             }
         }
-        debouncedRenderTiles();
+        
+        // Update existing tiles in place to prevent font flash (no DOM clearing/rebuilding)
+        updateTilesInPlace();
     }
     
     /**
@@ -332,6 +368,16 @@ const HomeController = (function() {
         homePoster.addEventListener('click', handleTileClick);
         homePoster.addEventListener('mousedown', dragManager.handleTileMouseDown);
         homePoster.addEventListener('touchstart', dragManager.handleTileTouchStart);
+        
+        // Prevent context menu on tiles
+        homePoster.addEventListener('contextmenu', (e) => {
+            if (e.target.closest('.concept-tile')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+        
         document.addEventListener('mousemove', dragManager.handleMouseMove);
         document.addEventListener('mouseup', dragManager.handleMouseUp);
         document.addEventListener('touchmove', dragManager.handleTouchMove, { passive: false });

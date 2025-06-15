@@ -83,6 +83,12 @@ const FileManager = (function() {
                     lastFileHandle = fileHandle;
                     lastFilename = filename;
                     
+                    // Reset dirty flag and update sync status if App is available
+                    if (window.App && window.App.resetDirtyFlag && window.App.setSyncStatus) {
+                        window.App.resetDirtyFlag();
+                        window.App.setSyncStatus('saved');
+                    }
+                    
                     return true;
                 } catch (fsError) {
                     // If user cancels, error has name 'AbortError' or 'AbortError' in message
@@ -111,6 +117,12 @@ const FileManager = (function() {
 
             // Store filename for autosave
             lastFilename = filename;
+
+            // Reset dirty flag and update sync status if App is available
+            if (window.App && window.App.resetDirtyFlag && window.App.setSyncStatus) {
+                window.App.resetDirtyFlag();
+                window.App.setSyncStatus('saved');
+            }
 
             return true;
         } catch (error) {

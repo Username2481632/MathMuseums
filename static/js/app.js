@@ -292,62 +292,18 @@ var App = (function() {
         }
     }
 
-    window.addEventListener('input', markDirty, true);
-    window.addEventListener('change', markDirty, true);
-
-    // Patch StorageManager.saveConcept to mark as unsaved (not saved!)
-    if (window.StorageManager) {
-        const origSaveConcept = window.StorageManager.saveConcept;
-        window.StorageManager.saveConcept = async function(...args) {
-            const result = await origSaveConcept.apply(this, args);
-            markDirty();
-            return result;
-        };
-    }
-
-    // Patch undo/redo to mark as unsaved
-    if (window.createUndoRedoManager) {
-        const origCreateUndoRedoManager = window.createUndoRedoManager;
-        window.createUndoRedoManager = function(opts) {
-            const mgr = origCreateUndoRedoManager(opts);
-            const origUndo = mgr.undoLayout;
-            const origRedo = mgr.redoLayout;
-            mgr.undoLayout = function(...args) {
-                markDirty();
-                return origUndo.apply(this, args);
-            };
-            mgr.redoLayout = function(...args) {
-                markDirty();
-                return origRedo.apply(this, args);
-            };
-            return mgr;
-        };
-    }
-
-    // Patch settings save to mark as unsaved
-    if (window.PreferencesClient) {
-        const origSavePreferences = window.PreferencesClient.savePreferences;
-        window.PreferencesClient.savePreferences = async function(...args) {
-            const result = await origSavePreferences.apply(this, args);
-            markDirty();
-            return result;
-        };
-    }
-
-    // Patch FileManager.downloadUserData to mark as saving/saved (file save resets dirty flag)
-    if (window.FileManager) {
-        const origDownloadUserData = window.FileManager.downloadUserData;
-        window.FileManager.downloadUserData = async function(...args) {
-            setSyncStatus('saving');
-            const result = await origDownloadUserData.apply(this, args);
-            if (result) {
-                dirtySinceFileSave = false;
-                setSyncStatus('saved');
-            } else if (dirtySinceFileSave) {
-                setSyncStatus('unsaved');
-            }
-            return result;
-        };
+    // Setup dirty state tracking - called after initialization is complete
+    function setupDirtyStateTracking() {
+        // Add event listeners for user interactions
+        window.addEventListener('input', markDirty, true);
+        window.addEventListener('change', markDirty, true);
+        
+        // Expose markDirty function globally so other modules can call it
+        window.App = window.App || {};
+        window.App.markDirty = markDirty;
+        window.App.setSyncStatus = setSyncStatus;
+        window.App.resetDirtyFlag = () => { dirtySinceFileSave = false; };
+        window.App.isRestoring = false; // Flag to track undo/redo restoration state
     }
 
     // Initialize the application
@@ -437,6 +393,9 @@ var App = (function() {
             if (loading) {
                 loading.remove();
             }
+            
+            // Setup dirty state tracking after initialization is complete
+            setupDirtyStateTracking();
             
         } catch (error) {
             console.error('Error initializing application:', error);
@@ -566,28 +525,41 @@ var App = (function() {
                     const importData = await FileManager.loadUserDataFromFile(file);
                     const fileInfo = FileManager.getFileInfo(importData);
                     
-                    // Show confirmation dialog
-                    const shouldImport = await showImportConfirmation(fileInfo);
-                    if (!shouldImport) {
-                        return;
-                    }
-                    
-                    // Get import options
+                    // Get import options (no confirmation dialog)
                     const options = await FileManager.showImportDialog();
                     
                     // Import the data
                     await FileManager.importUserData(importData, options);
+                    
+                    // Reset dirty flag since we just imported new data
+                    dirtySinceFileSave = false;
                     
                     // Refresh the display
                     if (window.HomeController && window.HomeController.refresh) {
                         await window.HomeController.refresh();
                     }
                     
-                    showNotification(`Successfully imported ${fileInfo.totalConcepts} concepts!`, 'success');
+                    // Show simple notification with museum name
+                    const userName = fileInfo.userName && fileInfo.userName !== 'Unknown' ? fileInfo.userName : 'Anonymous';
+                    
+                    // Clear existing notifications and show import success
+                    if (syncNotificationTimeout) {
+                        clearTimeout(syncNotificationTimeout);
+                        syncNotificationTimeout = null;
+                    }
+                    
+                    syncStatusEl.classList.remove('saving', 'saved', 'unsaved');
+                    syncStatusEl.textContent = `${userName}'s Math Museum Loaded`;
+                    syncStatusEl.classList.add('saved', 'show');
+                    
+                    // Update notification position
+                    updateNotificationPosition();
                     
                 } catch (error) {
                     console.error('Error importing file:', error);
-                    showNotification('Failed to import file: ' + error.message, 'error');
+                    syncStatusEl.textContent = 'Import failed';
+                    syncStatusEl.classList.remove('saving', 'saved');
+                    syncStatusEl.classList.add('unsaved', 'show');
                 } finally {
                     importFileButton.disabled = false;
                     // Icon returns to normal when button is re-enabled
@@ -599,30 +571,16 @@ var App = (function() {
             
             // Trigger file input when button is clicked
             importFileButton.addEventListener('click', () => {
+                // Check for unsaved changes first
+                if (dirtySinceFileSave) {
+                    const shouldContinue = confirm("You have unsaved changes. Importing a file will replace your current museum data. Continue anyway?");
+                    if (!shouldContinue) {
+                        return;
+                    }
+                }
                 fileInput.click();
             });
         }
-    }
-    
-    /**
-     * Show import confirmation dialog
-     * @param {Object} fileInfo - Information about the file to import
-     * @returns {Promise<boolean>} Whether to proceed with import
-     */
-    async function showImportConfirmation(fileInfo) {
-        const userNameDisplay = fileInfo.userName !== 'Unknown' ? `${fileInfo.userName}'s Math Museum` : 'Unknown User';
-        const layoutInfo = fileInfo.hasLayoutData ? '\n• Tile positions included' : '\n• Tile positions will use default layout';
-        const message = `Import museum data from file?
-        
-File contains:
-• Museum: ${userNameDisplay}
-• ${fileInfo.totalConcepts} concepts
-• Export date: ${new Date(fileInfo.exportDate).toLocaleDateString()}
-• Version: ${fileInfo.version}${layoutInfo}
-
-This will replace your current museum data. Continue?`;
-        
-        return confirm(message);
     }
     
     /**
