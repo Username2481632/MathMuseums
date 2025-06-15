@@ -64,10 +64,8 @@ const PreferencesClient = (function() {
             
             applyPreferences();
             
-            // Mark as dirty if App is available and initialized
-            if (window.App && window.App.markDirty) {
-                window.App.markDirty();
-            }
+            // Don't mark as dirty for preference changes that only affect localStorage
+            // File status is managed separately from preferences
         } catch (error) {
             console.error('Error saving preferences:', error);
         }

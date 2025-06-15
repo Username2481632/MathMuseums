@@ -228,10 +228,17 @@ const SettingsController = (function() {
             // Remove .mathmuseums extension for display
             const filename = preferences.exportFilename || PreferencesClient.getDefaultExportFilename();
             const filenameWithoutExt = filename.replace(/\.mathmuseums$/, '');
+            
+            // Set value directly - the input event will be ignored by our document listener
             exportFilenameInput.value = filenameWithoutExt;
             
-            // Trigger size update
-            exportFilenameInput.dispatchEvent(new Event('input'));
+            // Update width using the span that's already set up for measurement
+            const span = exportFilenameInput.previousElementSibling;
+            if (span && span.style.visibility === 'hidden') {
+                const value = filenameWithoutExt || exportFilenameInput.placeholder || '';
+                span.textContent = value;
+                exportFilenameInput.style.width = (span.offsetWidth + 2) + 'px';
+            }
         }
     }
     

@@ -297,7 +297,6 @@ var App = (function() {
                         console.error('Autosave failed:', error);
                         setSyncStatus('unsaved');
                     }
-                } else {
                 }
                 autosaveTimeout = null;
             }, 2000);
@@ -306,9 +305,22 @@ var App = (function() {
 
     // Setup dirty state tracking - called after initialization is complete
     function setupDirtyStateTracking() {
-        // Add event listeners for user interactions
-        window.addEventListener('input', markDirty, true);
-        window.addEventListener('change', markDirty, true);
+        // Mark as dirty on any input or change, except within settings modal
+        window.addEventListener('input', (e) => {
+            // Skip if the input is inside the settings modal
+            if (e.target.closest('#settings-modal')) {
+                return;
+            }
+            markDirty();
+        }, true);
+        
+        window.addEventListener('change', (e) => {
+            // Skip if the change is inside the settings modal
+            if (e.target.closest('#settings-modal')) {
+                return;
+            }
+            markDirty();
+        }, true);
         
         // Expose markDirty function globally so other modules can call it
         window.App = window.App || {};
