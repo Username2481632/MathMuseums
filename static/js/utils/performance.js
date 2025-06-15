@@ -80,10 +80,6 @@ const PerformanceManager = (function() {
             // Reduce animations
             const style = document.createElement('style');
             style.textContent = `
-                .low-end-device * {
-                    animation-duration: 0.1s !important;
-                    transition-duration: 0.1s !important;
-                }
                 .low-end-device .concept-tile {
                     will-change: auto !important;
                 }
