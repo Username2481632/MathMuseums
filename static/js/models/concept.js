@@ -113,7 +113,7 @@ const ConceptModel = (function() {
     /**
      * Get simple center-based coordinates for a concept
      * @param {Object} concept - Concept object
-     * @returns {Object} Simple center-based coordinates {centerX, centerY, width, height} as percentages (0-100)
+     * @returns {Object} Simple center-based coordinates {centerX, centerY, width, height, zIndex} as percentages (0-100) and zIndex
      */
     function getCoordinates(concept) {
         // Return simple center-based coordinates or defaults
@@ -124,7 +124,8 @@ const ConceptModel = (function() {
                 centerX: concept.coordinates.centerX || 50,  // Default to center
                 centerY: concept.coordinates.centerY || 50,  // Default to center
                 width: concept.coordinates.width || 25,     // Default to 25% width
-                height: concept.coordinates.height || 20    // Default to 20% height
+                height: concept.coordinates.height || 20,   // Default to 20% height
+                zIndex: concept.zIndex || undefined         // Include z-index if set
             };
         }
         
@@ -133,7 +134,8 @@ const ConceptModel = (function() {
             centerX: 50,    // 50% = center horizontally
             centerY: 50,    // 50% = center vertically
             width: 25,      // 25% of container width
-            height: 20      // 20% of container height
+            height: 20,     // 20% of container height
+            zIndex: concept.zIndex || undefined  // Include z-index if set
         };
     }
     
@@ -144,14 +146,23 @@ const ConceptModel = (function() {
      * @returns {Object} Updated concept
      */
     function updateCoordinates(concept, coordinates) {
-        return updateConcept(concept, {
+        const updates = {
             coordinates: {
                 centerX: coordinates.centerX,
                 centerY: coordinates.centerY,
                 width: coordinates.width,
                 height: coordinates.height
             }
-        });
+        };
+        
+        // Include z-index if provided, or preserve existing one
+        if (coordinates.zIndex !== undefined) {
+            updates.zIndex = coordinates.zIndex;
+        } else if (concept.zIndex !== undefined) {
+            updates.zIndex = concept.zIndex;
+        }
+        
+        return updateConcept(concept, updates);
     }
 
     // Public API

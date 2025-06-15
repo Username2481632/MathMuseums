@@ -182,7 +182,11 @@ export function renderTilesOnPoster(homePoster, concepts, { handleResizeStart, h
         }
     });
     
-    // After rendering all tiles, use FontSizer for immediate optimal font sizing
+    // After rendering all tiles, apply z-index and use FontSizer for immediate optimal font sizing
+    if (window.ZIndexManager) {
+        window.ZIndexManager.applyZIndexToTiles(homePoster, uniqueConcepts);
+    }
+    
     if (window.FontSizer) {
         window.FontSizer.forceAdjustment();
     }

@@ -25,21 +25,50 @@ export function createDragManager({ onStart, onUpdate, onFinish, getTileById, pu
         const tile = event.target.closest('.concept-tile');
         if (!tile) return;
         
-        // Prevent default behavior to avoid context menu and other browser interactions
-        event.preventDefault();
+        // Skip if touching resize handle
+        if (event.target.classList.contains('resize-handle')) {
+            return;
+        }
+        
+        // Stop event propagation to prevent conflicts with global touch tracking
+        event.stopPropagation();
+        
+        // Don't prevent default here - let the touch end handler decide
+        
+        let longPressTriggered = false;
         
         const longPressTimer = setTimeout(() => {
+            longPressTriggered = true;
             const conceptId = tile.dataset.id;
             const concept = getTileById(conceptId);
             if (!concept) return;
+            
+            // Prevent default here to stop click events after long press
+            event.preventDefault();
             startDragging(tile, event.touches[0].clientX, event.touches[0].clientY);
         }, 500);
-        tile.addEventListener('touchend', () => clearTimeout(longPressTimer), { once: true });
-        tile.addEventListener('touchcancel', () => clearTimeout(longPressTimer), { once: true });
+        
+        // Add cleanup listeners with proper event handling
+        const cleanup = () => {
+            clearTimeout(longPressTimer);
+        };
+        
+        const handleTouchEnd = () => {
+            clearTimeout(longPressTimer);
+            // If long press was triggered, prevent the click
+            if (longPressTriggered) {
+                event.preventDefault();
+            }
+        };
+        
+        tile.addEventListener('touchend', handleTouchEnd, { once: true });
+        tile.addEventListener('touchcancel', cleanup, { once: true });
+        tile.addEventListener('touchmove', cleanup, { once: true }); // Cancel on move
     }
 
     function startDragging(tile, clientX, clientY) {
         pushUndoState && pushUndoState();
+        onStart && onStart(tile);
         isDragging = true;
         draggedTile = tile;
         draggedTile.classList.add('dragging');
@@ -72,6 +101,7 @@ export function createDragManager({ onStart, onUpdate, onFinish, getTileById, pu
     function handleTouchMove(event) {
         if (!isDragging) return;
         event.preventDefault();
+        event.stopPropagation(); // Prevent interference with global touch tracking
         updateTilePosition(event.touches[0].clientX, event.touches[0].clientY);
     }
 
@@ -87,6 +117,10 @@ export function createDragManager({ onStart, onUpdate, onFinish, getTileById, pu
 
     function handleTouchEnd() {
         if (!isDragging) return;
+        
+        // Stop propagation to prevent conflicts
+        event && event.stopPropagation();
+        
         finishDragging();
     }
 

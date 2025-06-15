@@ -105,10 +105,12 @@ export function createResizeManager({ onStart, onUpdate, onFinish, getTileById, 
     function handleTouchResizeStart(event) {
         if (!event.target.classList.contains('resize-handle')) return;
         event.preventDefault();
-        event.stopPropagation();
+        event.stopPropagation(); // Prevent conflicts with global touch tracking
+        
         resizeHandle = event.target;
         resizingTile = resizeHandle.closest('.concept-tile');
         if (!resizingTile) return;
+        
         pushUndoState && pushUndoState();
         isResizing = true;
         resizingTile.classList.add('resizing');

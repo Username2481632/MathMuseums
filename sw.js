@@ -26,6 +26,7 @@ const STATIC_ASSETS = [
   '/static/js/utils/fileManager.js',
   '/static/js/utils/coordinates.js',
   '/static/js/utils/fontSizer.js',
+  '/static/js/utils/zIndex.js',
   '/static/js/utils/preferences.js',
   '/static/js/utils/router.js',
   '/static/js/utils/desmos.js',

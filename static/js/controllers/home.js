@@ -42,7 +42,9 @@ const HomeController = (function() {
 
     // Drag manager with constrained coordinates
     const dragManager = createDragManager({
-        onStart: () => {},
+        onStart: (tile) => {
+            // Just start dragging without z-index changes
+        },
         onUpdate: (tile, clientX, clientY, dragOffset) => {
             // Calculate new position relative to container using consistent offsetWidth/offsetHeight
             const containerRect = homePoster.getBoundingClientRect();
@@ -99,7 +101,29 @@ const HomeController = (function() {
             const updatedConcept = ConceptModel.updateCoordinates(concept, constrainedCoords);
             const index = concepts.findIndex(c => c.id === conceptId);
             if (index !== -1) concepts[index] = updatedConcept;
-            StorageManager.saveConcept(updatedConcept);
+            
+            // Check for overlaps and bring tile to front if needed (after drag completes)
+            if (window.ZIndexManager) {
+                const wasChanged = window.ZIndexManager.bringConceptToFront(
+                    conceptId, concepts, containerWidth, containerHeight
+                );
+                
+                if (wasChanged) {
+                    // Update the concept with new z-index
+                    const conceptIndex = concepts.findIndex(c => c.id === conceptId);
+                    if (conceptIndex !== -1) {
+                        // Apply z-index to the tile immediately
+                        const zIndex = window.ZIndexManager.getConceptZIndex(concepts[conceptIndex]);
+                        tile.style.zIndex = zIndex.toString();
+                    }
+                }
+            }
+            
+            // Save the concept once with both position and z-index changes
+            const finalIndex = concepts.findIndex(c => c.id === conceptId);
+            if (finalIndex !== -1) {
+                StorageManager.saveConcept(concepts[finalIndex]);
+            }
         },
         getTileById: id => concepts.find(c => c.id === id),
         pushUndoState: safePushUndoState,
@@ -108,7 +132,7 @@ const HomeController = (function() {
 
     // Resize manager
     const resizeManager = createResizeManager({
-        onStart: () => {
+        onStart: (tile) => {
             isResizing = true;
             recentlyResized = false;
         },
@@ -166,7 +190,29 @@ const HomeController = (function() {
             const updatedConcept = ConceptModel.updateCoordinates(concept, constrainedCoords);
             const index = concepts.findIndex(c => c.id === conceptId);
             if (index !== -1) concepts[index] = updatedConcept;
-            StorageManager.saveConcept(updatedConcept);
+            
+            // Check for overlaps and bring tile to front if needed (after resize completes)
+            if (window.ZIndexManager) {
+                const wasChanged = window.ZIndexManager.bringConceptToFront(
+                    conceptId, concepts, containerWidth, containerHeight
+                );
+                
+                if (wasChanged) {
+                    // Update the concept with new z-index
+                    const conceptIndex = concepts.findIndex(c => c.id === conceptId);
+                    if (conceptIndex !== -1) {
+                        // Apply z-index to the tile immediately
+                        const zIndex = window.ZIndexManager.getConceptZIndex(concepts[conceptIndex]);
+                        tile.style.zIndex = zIndex.toString();
+                    }
+                }
+            }
+            
+            // Save the concept once with both size/position and z-index changes
+            const finalIndex = concepts.findIndex(c => c.id === conceptId);
+            if (finalIndex !== -1) {
+                StorageManager.saveConcept(concepts[finalIndex]);
+            }
         },
         getTileById: id => concepts.find(c => c.id === id),
         pushUndoState: safePushUndoState,
@@ -224,6 +270,13 @@ const HomeController = (function() {
             tile.style.top = `${pixelCoords.y}px`;
             tile.style.width = `${pixelCoords.width}px`;
             tile.style.height = `${pixelCoords.height}px`;
+            
+            // Update z-index based on concept's z-index value
+            if (concept.zIndex !== undefined) {
+                tile.style.zIndex = concept.zIndex.toString();
+            } else {
+                tile.style.zIndex = 'auto';
+            }
         });
         
         // Only call FontSizer once after all tiles are updated
@@ -236,7 +289,7 @@ const HomeController = (function() {
     function getCurrentLayoutState() {
         const state = concepts.map(concept => {
             const coords = ConceptModel.getCoordinates(concept);
-            return {
+            const layoutState = {
                 id: concept.id,
                 coordinates: {
                     centerX: coords.centerX,
@@ -245,6 +298,13 @@ const HomeController = (function() {
                     height: coords.height
                 }
             };
+            
+            // Include z-index if the concept has one
+            if (concept.zIndex !== undefined) {
+                layoutState.zIndex = concept.zIndex;
+            }
+            
+            return layoutState;
         });
         
         return state;
@@ -261,19 +321,41 @@ const HomeController = (function() {
             if (conceptIndex !== -1) {
                 const concept = concepts[conceptIndex];
                 
-                // Update using center-based coordinates
-                const updatedConcept = ConceptModel.updateCoordinates(concept, s.coordinates);
+                // Prepare coordinates with z-index handling
+                const coordinatesWithZIndex = { ...s.coordinates };
                 
-                // Update the concept in the array
-                concepts[conceptIndex] = updatedConcept;
+                // Always handle z-index explicitly - either set it or remove it
+                if (s.zIndex !== undefined) {
+                    coordinatesWithZIndex.zIndex = s.zIndex;
+                } else {
+                    // If the restored state has no z-index, explicitly remove it
+                    coordinatesWithZIndex.zIndex = undefined;
+                }
                 
-                // Save to storage to maintain persistence
-                StorageManager.saveConcept(updatedConcept);
+                // Update using center-based coordinates and z-index
+                const updatedConcept = ConceptModel.updateCoordinates(concept, coordinatesWithZIndex);
+                
+                // Ensure the z-index is properly handled in the concept
+                if (s.zIndex === undefined && updatedConcept.zIndex !== undefined) {
+                    // Remove z-index from the updated concept
+                    const { zIndex, ...conceptWithoutZIndex } = updatedConcept;
+                    concepts[conceptIndex] = conceptWithoutZIndex;
+                    StorageManager.saveConcept(conceptWithoutZIndex);
+                } else {
+                    // Update the concept in the array
+                    concepts[conceptIndex] = updatedConcept;
+                    StorageManager.saveConcept(updatedConcept);
+                }
             }
         }
         
         // Update existing tiles in place to prevent font flash (no DOM clearing/rebuilding)
         updateTilesInPlace();
+        
+        // Apply z-index to all tiles after undo/redo
+        if (window.ZIndexManager) {
+            window.ZIndexManager.applyZIndexToTiles(homePoster, concepts);
+        }
     }
     
     /**
@@ -285,6 +367,11 @@ const HomeController = (function() {
         
         // Get concepts from storage
         concepts = await loadConcepts();
+        
+        // Initialize z-index counter based on existing concepts
+        if (window.ZIndexManager) {
+            window.ZIndexManager.initializeZIndexCounter(concepts);
+        }
         
         // Render the home view
         render();
@@ -369,6 +456,9 @@ const HomeController = (function() {
         homePoster.addEventListener('mousedown', dragManager.handleTileMouseDown);
         homePoster.addEventListener('touchstart', dragManager.handleTileTouchStart);
         
+        // Add touch-specific click handling for better touchscreen support
+        homePoster.addEventListener('touchend', handleTileTouchEnd);
+        
         // Prevent context menu on tiles
         homePoster.addEventListener('contextmenu', (e) => {
             if (e.target.closest('.concept-tile')) {
@@ -428,6 +518,45 @@ const HomeController = (function() {
         const conceptId = tile.dataset.id;
         // Navigate to the detail view
         Router.navigate('detail', { id: conceptId });
+    }
+    
+    /**
+     * Handle tile touch end (for touchscreen click detection)
+     * @param {TouchEvent} event - Touch end event
+     */
+    function handleTileTouchEnd(event) {
+        // Only handle if this is a simple tap (not part of drag/resize)
+        if (dragManager.isDragging() || dragManager.recentlyDragged()) {
+            return;
+        }
+        if (isResizing || recentlyResized) {
+            return;
+        }
+        
+        // Check if this is a tile touch
+        const tile = event.target.closest('.concept-tile');
+        if (!tile) {
+            return;
+        }
+        
+        // Skip if touching resize handle
+        if (event.target.classList.contains('resize-handle')) {
+            return;
+        }
+        
+        // Skip if tile is in resizing state
+        if (tile.dataset.resizing === 'true') {
+            return;
+        }
+        
+        // Prevent the click event from also firing
+        event.preventDefault();
+        
+        // Get the concept ID and navigate
+        const conceptId = tile.dataset.id;
+        if (conceptId) {
+            Router.navigate('detail', { id: conceptId });
+        }
     }
     
     /**

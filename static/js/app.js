@@ -96,8 +96,14 @@ var App = (function() {
         document.addEventListener('click', trackInteraction, { passive: true });
         document.addEventListener('mousedown', trackInteraction, { passive: true });
         
-        // Track touch events for mobile
+        // Track touch events for mobile (but avoid interfering with tile interactions)
         document.addEventListener('touchstart', (event) => {
+            // Skip tracking if this touch event is on a concept tile or resize handle
+            const target = event.target;
+            if (target.closest('.concept-tile') || target.classList.contains('resize-handle')) {
+                return; // Let tile-specific handlers manage these
+            }
+            
             if (event.touches && event.touches[0]) {
                 trackInteraction({
                     clientX: event.touches[0].clientX,
@@ -107,6 +113,12 @@ var App = (function() {
         }, { passive: true });
         
         document.addEventListener('touchmove', (event) => {
+            // Skip tracking if this touch event is on a concept tile or resize handle
+            const target = event.target;
+            if (target.closest('.concept-tile') || target.classList.contains('resize-handle')) {
+                return; // Let tile-specific handlers manage these
+            }
+            
             if (event.touches && event.touches[0]) {
                 trackInteraction({
                     clientX: event.touches[0].clientX,
