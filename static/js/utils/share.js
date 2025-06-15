@@ -40,8 +40,6 @@ const ShareManager = (function() {
             // Try Web Share API with file
             if (isFileShareSupported()) {
                 const shareData = {
-                    title: 'Math Museum Export',
-                    text: 'My Math Museum data export',
                     files: [new File([fileBlob], filename, { type: fileBlob.type })]
                 };
                 
