@@ -341,12 +341,6 @@ const DesmosUtils = (function() {
         const startTime = performance.now();
         performanceStats.totalRequests++;
         
-        console.log('🎯 generateThumbnail() called:', {
-            conceptId: conceptId,
-            stateLength: stateString?.length || 0,
-            timestamp: new Date().toISOString(),
-            cacheKey: simpleHash(stateString)
-        });
         
         // Generate cache key from state only (conceptId is irrelevant for caching)
         const cacheKey = simpleHash(stateString);

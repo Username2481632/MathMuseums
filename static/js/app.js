@@ -558,9 +558,40 @@ var App = (function() {
                     // Reset dirty flag since we just imported new data
                     dirtySinceFileSave = false;
                     
-                    // Refresh the display
-                    if (window.HomeController && window.HomeController.refresh) {
-                        await window.HomeController.refresh();
+                    // Smart navigation: stay on current page if current concept exists in imported data
+                    const currentRoute = Router.getCurrentRoute();
+                    const currentParams = Router.getCurrentParams();
+                    let shouldNavigateHome = false;
+                    
+                    if (currentRoute === 'detail' && currentParams.id) {
+                        // Check if current concept exists in imported data
+                        const currentConcept = await StorageManager.getConcept(currentParams.id);
+                        
+                        if (!currentConcept) {
+                            // Current concept doesn't exist in imported data, go to home
+                            shouldNavigateHome = true;
+                        } else {
+                            // Current concept exists, refresh the detail view
+                            if (window.DetailController && window.DetailController.refresh) {
+                                await window.DetailController.refresh();
+                            }
+                            // Skip HomeController refresh to avoid DOM conflicts
+                        }
+                    } else {
+                        // Not on detail page, go to home
+                        shouldNavigateHome = true;
+                    }
+                    
+                    if (shouldNavigateHome) {
+                        // Navigate to home page first, then refresh the display
+                        Router.navigate('home');
+                        
+                        // Wait a brief moment for navigation to complete, then refresh
+                        setTimeout(async () => {
+                            if (window.HomeController && window.HomeController.refresh) {
+                                await window.HomeController.refresh();
+                            }
+                        }, 100);
                     }
                     
                     // Show simple notification with museum name

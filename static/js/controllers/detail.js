@@ -430,6 +430,32 @@ const DetailController = (function() {
         init,
         render,
         saveCalculatorState,
+        refresh: async function() {
+            // Refresh current concept data and re-render if we have a current concept
+            if (currentConcept) {
+                const refreshedConcept = await StorageManager.getConcept(currentConcept.id);
+                
+                if (refreshedConcept) {
+                    currentConcept = refreshedConcept;
+                    
+                    // Clean up existing calculator before re-render
+                    if (calculator) {
+                        calculator.destroy()?.catch(console.error);
+                        calculator = null;
+                    }
+                    
+                    // Re-render the view with updated concept data
+                    render();
+                    
+                    // Re-setup event listeners after render
+                    setupEventListeners();
+                    
+                    // Re-initialize Desmos calculator
+                    ensureDesmosLoaded();
+                    
+                }
+            }
+        },
         cleanup() {
             // Save calculator state before cleanup (handles browser back button)
             if (calculator && currentConcept) {

@@ -20,7 +20,6 @@ const HomeController = (function() {
     let saveTimeout;
     let recentlyDragged = false; // Track whether dragging just ended
     let dragCooldownTimer = null; // Timer for drag cooldown
-    let renderDebounceTimer = null; // Timer for debounced rendering
     let thumbnailQueue = new Set(); // Use Set for efficient lookups
     let thumbnailGenerationState = new Map(); // Track generation state per concept
     let isResizing = false; // Track whether resizing is in progress
@@ -220,23 +219,6 @@ const HomeController = (function() {
         dragManager: dragManager  // Pass drag manager so resize manager can check drag state
     });
 
-    // Debounced render function to prevent multiple rapid renders
-    function debouncedRenderTiles() {
-        if (renderDebounceTimer) {
-            clearTimeout(renderDebounceTimer);
-        }
-        renderDebounceTimer = setTimeout(() => {
-            if (homePoster && concepts.length > 0) {
-                renderTilesOnPoster(homePoster, concepts, {
-                    handleResizeStart: resizeManager.handleResizeStart,
-                    handleTouchResizeStart: resizeManager.handleTouchResizeStart,
-                    generateThumbnailWithRetry: generateThumbnailWithRetry
-                });
-            }
-            renderDebounceTimer = null;
-        }, 50); // Wait 50ms before rendering
-    }
-    
     // Immediate render function for window resize events
     function immediateRenderTiles() {
         if (homePoster && concepts.length > 0) {
@@ -520,11 +502,21 @@ const HomeController = (function() {
         Router.navigate('detail', { id: conceptId });
     }
     
+    // Private variables for touch debouncing
+    let lastTouchNavigationTime = 0;
+    const TOUCH_NAVIGATION_DEBOUNCE = 500; // 500ms debounce
+    
     /**
      * Handle tile touch end (for touchscreen click detection)
      * @param {TouchEvent} event - Touch end event
      */
     function handleTileTouchEnd(event) {
+        // Debounce touch navigation to prevent rapid duplicate events
+        const now = Date.now();
+        if (now - lastTouchNavigationTime < TOUCH_NAVIGATION_DEBOUNCE) {
+            return;
+        }
+        
         // Only handle if this is a simple tap (not part of drag/resize)
         if (dragManager.isDragging() || dragManager.recentlyDragged()) {
             return;
@@ -555,6 +547,7 @@ const HomeController = (function() {
         // Get the concept ID and navigate
         const conceptId = tile.dataset.id;
         if (conceptId) {
+            lastTouchNavigationTime = Date.now();
             Router.navigate('detail', { id: conceptId });
         }
     }
@@ -631,7 +624,13 @@ const HomeController = (function() {
                 }
             })
             .catch(error => {
-                console.error('Error generating thumbnail for:', concept.id, error);
+                console.error('Error generating thumbnail for:', concept.id, error, {
+                    stack: error.stack,
+                    desmosUtilsState: typeof window.DesmosUtils !== 'undefined' ? 'present' : 'undefined',
+                    calledDuring: document.visibilityState,
+                    renderGeneration: currentRenderGeneration,
+                    previewElementConnected: previewElement.isConnected
+                });
                 thumbnailQueue.delete(concept.id);
                 
                 if (retryCount < MAX_RETRIES && previewElement.isConnected) {
@@ -772,7 +771,8 @@ const HomeController = (function() {
             concepts = await loadConcepts();
             render();
             setupEventListeners();
-            debouncedRenderTiles();
+            // Use immediate render for refresh to avoid timing issues after import
+            immediateRenderTiles();
         },
         clearThumbnailQueue: function() {
             thumbnailQueue.clear();
@@ -782,12 +782,6 @@ const HomeController = (function() {
             if (dragCooldownTimer) {
                 clearTimeout(dragCooldownTimer);
                 dragCooldownTimer = null;
-            }
-            
-            // Clear render debounce timer
-            if (renderDebounceTimer) {
-                clearTimeout(renderDebounceTimer);
-                renderDebounceTimer = null;
             }
             
             // Clear thumbnail queue

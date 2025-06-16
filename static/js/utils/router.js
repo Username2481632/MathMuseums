@@ -110,6 +110,11 @@ const Router = (function() {
             url += `/${params.id}`;
         }
         
+        // Prevent duplicate navigation to the same route
+        if (window.location.hash === url) {
+            return;
+        }
+        
         // Update the URL hash
         window.location.hash = url;
     }
