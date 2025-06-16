@@ -816,10 +816,9 @@ const HomeController = (function() {
         StorageManager.saveConcept(updatedConcept1);
         StorageManager.saveConcept(updatedConcept2);
         
-        // Clear thumbnails for both concepts so they regenerate with new content
+        // Clear all thumbnails since we're using state-based caching
         if (window.DesmosUtils) {
-            window.DesmosUtils.clearCache(concept1.id);
-            window.DesmosUtils.clearCache(concept2.id);
+            window.DesmosUtils.clearCache();
         }
         
         // Find and update the tiles

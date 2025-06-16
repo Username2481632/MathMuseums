@@ -423,33 +423,25 @@ const DesmosUtils = (function() {
     }
     
     /**
-     * Clear thumbnail cache (useful when concepts are updated)
-     * @param {string} conceptId - Ignored - cache is now state-based only
+     * Clear thumbnail cache
      */
-    function clearCache(conceptId = null) {
-        if (conceptId) {
-            console.log('🧹 Concept-specific cache clearing is no longer needed - cache is state-based');
-            // No-op: since cache is now purely state-based, 
-            // we don't need concept-specific clearing anymore
-            return;
-        } else {
-            console.log('🧹 Clearing ALL cache entries');
-            // Clear all cache
-            thumbnailCache.clear();
-            
-            // Clear sessionStorage
-            try {
-                const keysToRemove = [];
-                for (let i = 0; i < sessionStorage.length; i++) {
-                    const key = sessionStorage.key(i);
-                    if (key && key.startsWith(SESSION_CACHE_PREFIX)) {
-                        keysToRemove.push(key);
-                    }
+    function clearCache() {
+        console.log('🧹 Clearing ALL cache entries');
+        // Clear all cache
+        thumbnailCache.clear();
+        
+        // Clear sessionStorage
+        try {
+            const keysToRemove = [];
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (key && key.startsWith(SESSION_CACHE_PREFIX)) {
+                    keysToRemove.push(key);
                 }
-                keysToRemove.forEach(key => sessionStorage.removeItem(key));
-            } catch (error) {
-                // Ignore sessionStorage errors
             }
+            keysToRemove.forEach(key => sessionStorage.removeItem(key));
+        } catch (error) {
+            // Ignore sessionStorage errors
         }
     }
     
