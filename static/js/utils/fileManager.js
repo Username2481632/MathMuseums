@@ -25,7 +25,8 @@ const FileManager = (function() {
             // Get current session concept data for export (includes coordinates and z-index)
             const concepts = await StorageManager.getAllConcepts();
             
-            const userName = '';
+            // Get user name from preferences
+            const userName = window.PreferencesClient ? window.PreferencesClient.getUserName() : 'Anonymous';
             
             const exportData = {
                 version: FILE_FORMAT_VERSION,
