@@ -27,6 +27,11 @@ const HomeController = (function() {
     let resizingTile = null; // Track which tile is currently being resized
     let resizeHandle = null; // Track the resize handle being used
 
+    // Swap mode state
+    let isSwapModeActive = false;
+    let selectedTileForSwap = null;
+    let swapInstructionElement = null;
+
     // Undo/Redo manager for layout editing
     const undoRedoManager = createUndoRedoManager({
         getCurrentLayoutState,
@@ -342,8 +347,9 @@ const HomeController = (function() {
     
     /**
      * Initialize the home controller
+     * @param {Object} params - URL parameters, may include swap mode
      */
-    async function init() {
+    async function init(params = {}) {
         // Force cleanup of any corrupted data first
         await forceCleanupCorruptedData();
         
@@ -364,6 +370,12 @@ const HomeController = (function() {
         // Initialize FontSizer for real-time font resizing
         if (window.FontSizer) {
             window.FontSizer.init();
+        }
+        
+        // Check if we should start in swap mode
+        if (params.swapMode && params.conceptId) {
+            // Start swap mode with the specified concept pre-selected
+            startSwapModeWithConcept(params.conceptId);
         }
     }
     
@@ -458,6 +470,20 @@ const HomeController = (function() {
         document.addEventListener('mouseup', resizeManager.handleResizeEnd);
         document.addEventListener('touchmove', (e) => resizeManager.handleTouchResizeMove(e, { width: homePoster.offsetWidth, height: homePoster.offsetHeight }), { passive: false });
         document.addEventListener('touchend', resizeManager.handleTouchResizeEnd);
+        
+        // Exit swap mode when clicking outside tiles
+        document.addEventListener('click', (e) => {
+            if (isSwapModeActive && !e.target.closest('.concept-tile')) {
+                exitSwapMode();
+            }
+        });
+        
+        // Exit swap mode with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isSwapModeActive) {
+                exitSwapMode();
+            }
+        });
     }
     
     /**
@@ -496,6 +522,17 @@ const HomeController = (function() {
         if (!tile) {
             return;
         }
+        
+        // Check if we're in swap mode first
+        if (isSwapModeActive) {
+            const handled = handleSwapTileClick(tile);
+            if (handled) {
+                event.stopPropagation();
+                event.preventDefault();
+                return;
+            }
+        }
+        
         // Get the concept ID
         const conceptId = tile.dataset.id;
         // Navigate to the detail view
@@ -672,23 +709,181 @@ const HomeController = (function() {
         localStorage.setItem('screen-fit-mode', mode);
     }
 
-    function setupScreenFitListeners() {
-        const fitRadio = document.getElementById('screen-fit-radio-fit');
-        const fillRadio = document.getElementById('screen-fit-radio-fill');
-        if (!fitRadio || !fillRadio) return;
-        [fitRadio, fillRadio].forEach(radio => {
-            radio.addEventListener('change', () => {
-                if (fitRadio.checked) {
-                    applyScreenFitMode('fit');
-                    saveScreenFitMode('fit');
-                } else if (fillRadio.checked) {
-                    applyScreenFitMode('fill');
-                    saveScreenFitMode('fill');
-                }
-            });
+    // --- SWAP MODE LOGIC ---
+    function exitSwapMode() {
+        isSwapModeActive = false;
+        selectedTileForSwap = null;
+        
+        // Remove visual states from all tiles
+        const allTiles = homePoster.querySelectorAll('.concept-tile');
+        allTiles.forEach(tile => {
+            tile.classList.remove('swap-selected', 'swap-target');
         });
+        
+        // Remove instruction
+        hideSwapInstruction();
     }
 
+    function showSwapInstruction(text) {
+        hideSwapInstruction(); // Remove any existing instruction
+        
+        swapInstructionElement = document.createElement('div');
+        swapInstructionElement.className = 'swap-instruction';
+        swapInstructionElement.textContent = text;
+        document.body.appendChild(swapInstructionElement);
+    }
+
+    function hideSwapInstruction() {
+        if (swapInstructionElement && swapInstructionElement.parentNode) {
+            swapInstructionElement.parentNode.removeChild(swapInstructionElement);
+            swapInstructionElement = null;
+        }
+    }
+
+    function handleSwapTileClick(tile) {
+        if (!isSwapModeActive) return false;
+        
+        const tileId = tile.dataset.id;
+        const concept = concepts.find(c => c.id === tileId);
+        if (!concept) return false;
+        
+        if (!selectedTileForSwap) {
+            // First tile selection
+            selectedTileForSwap = { tile, concept };
+            tile.classList.add('swap-selected');
+            showSwapInstruction('Now click on the second tile to swap content with');
+            
+            // Add visual indication to other tiles
+            const allTiles = homePoster.querySelectorAll('.concept-tile');
+            allTiles.forEach(otherTile => {
+                if (otherTile !== tile) {
+                    otherTile.classList.add('swap-target');
+                }
+            });
+        } else if (selectedTileForSwap.tile === tile) {
+            // Clicking the same tile - deselect
+            selectedTileForSwap = null;
+            tile.classList.remove('swap-selected');
+            showSwapInstruction('Click on the first tile to select it for swapping');
+            
+            // Remove target states
+            const allTiles = homePoster.querySelectorAll('.concept-tile');
+            allTiles.forEach(otherTile => {
+                otherTile.classList.remove('swap-target');
+            });
+        } else {
+            // Second tile selection - perform swap
+            const destinationConcept = performContentSwap(selectedTileForSwap.concept, concept);
+            exitSwapMode();
+            
+            // Navigate to the destination concept (where the original content now lives)
+            setTimeout(() => {
+                Router.navigate('detail', { id: destinationConcept.id });
+            }, 1000); // Wait for success message to show
+        }
+        
+        return true; // Indicate that we handled the click
+    }
+
+    function performContentSwap(concept1, concept2) {
+        // Push undo state before making changes
+        safePushUndoState();
+        
+        // Swap the desmos states and descriptions
+        const tempDesmosState = concept1.desmosState;
+        const tempDescription = concept1.description;
+        
+        // Update concept 1 with concept 2's content
+        const updatedConcept1 = ConceptModel.updateConcept(concept1, {
+            desmosState: concept2.desmosState,
+            description: concept2.description
+        });
+        
+        // Update concept 2 with concept 1's content  
+        const updatedConcept2 = ConceptModel.updateConcept(concept2, {
+            desmosState: tempDesmosState,
+            description: tempDescription
+        });
+        
+        // Update concepts array
+        const index1 = concepts.findIndex(c => c.id === concept1.id);
+        const index2 = concepts.findIndex(c => c.id === concept2.id);
+        
+        if (index1 !== -1) concepts[index1] = updatedConcept1;
+        if (index2 !== -1) concepts[index2] = updatedConcept2;
+        
+        // Save the updated concepts
+        StorageManager.saveConcept(updatedConcept1);
+        StorageManager.saveConcept(updatedConcept2);
+        
+        // Clear thumbnails for both concepts so they regenerate with new content
+        if (window.DesmosUtils) {
+            window.DesmosUtils.clearCache(concept1.id);
+            window.DesmosUtils.clearCache(concept2.id);
+        }
+        
+        // Find and update the tiles
+        const tile1 = homePoster.querySelector(`[data-id="${concept1.id}"]`);
+        const tile2 = homePoster.querySelector(`[data-id="${concept2.id}"]`);
+        
+        if (tile1 && tile2) {
+            // Update thumbnails for both tiles
+            const preview1 = tile1.querySelector('.tile-preview');
+            const preview2 = tile2.querySelector('.tile-preview');
+            
+            if (preview1) {
+                preview1.innerHTML = ''; // Clear existing preview
+                requestAnimationFrame(() => {
+                    generateThumbnailWithRetry(updatedConcept1, preview1);
+                });
+            }
+            
+            if (preview2) {
+                preview2.innerHTML = ''; // Clear existing preview
+                requestAnimationFrame(() => {
+                    generateThumbnailWithRetry(updatedConcept2, preview2);
+                });
+            }
+        }
+        
+        // Show success message
+        showSwapInstruction(`✓ Content swapped between ${concept1.displayName} and ${concept2.displayName}`);
+        setTimeout(() => {
+            hideSwapInstruction();
+        }, 3000);
+        
+        // Return the destination concept (where the original content now lives)
+        return updatedConcept2;
+    }
+    
+    function startSwapModeWithConcept(conceptId) {
+        // Wait a moment for the view to render, then start swap mode
+        setTimeout(() => {
+            const sourceTile = homePoster.querySelector(`[data-id="${conceptId}"]`);
+            const sourceConcept = concepts.find(c => c.id === conceptId);
+            
+            if (sourceTile && sourceConcept) {
+                // Enter swap mode
+                isSwapModeActive = true;
+                
+                // Pre-select the source tile
+                selectedTileForSwap = { tile: sourceTile, concept: sourceConcept };
+                sourceTile.classList.add('swap-selected');
+                
+                // Show instruction for selecting target
+                showSwapInstruction(`Select where to move "${sourceConcept.displayName}" content`);
+                
+                // Add target state to other tiles
+                const allTiles = homePoster.querySelectorAll('.concept-tile');
+                allTiles.forEach(otherTile => {
+                    if (otherTile !== sourceTile) {
+                        otherTile.classList.add('swap-target');
+                    }
+                });
+            }
+        }, 100);
+    }
+    
     // Patch render to apply mode and listeners after rendering
     const origRender = render;
     render = function() {
@@ -799,6 +994,11 @@ const HomeController = (function() {
             isResizing = false;
             resizingTile = null;
             resizeHandle = null;
+            
+            // Clean up swap mode
+            exitSwapMode();
+            isSwapModeActive = false;
+            selectedTileForSwap = null;
             
             // Remove event listeners
             if (homePoster) {

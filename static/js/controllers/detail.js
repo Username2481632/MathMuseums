@@ -238,6 +238,12 @@ const DetailController = (function() {
         // Toggle button for switching between Desmos and notes
         document.getElementById('detail-toggle-button').addEventListener('click', toggleView);
         
+        // Swap button click for swap mode
+        const swapButton = document.getElementById('swap-content-button');
+        if (swapButton) {
+            swapButton.addEventListener('click', handleSwapButtonClick);
+        }
+        
         // Description input
         conceptDescription.addEventListener('input', startIdleTimer);
         conceptDescription.addEventListener('blur', saveDescription);
@@ -247,6 +253,23 @@ const DetailController = (function() {
         window.addEventListener('keydown', startIdleTimer);
         window.addEventListener('click', startIdleTimer);
         window.addEventListener('touchstart', startIdleTimer);
+    }
+
+    /**
+     * Handle swap button click to initiate swap mode
+     */
+    function handleSwapButtonClick() {
+        if (!currentConcept) return;
+        
+        // Save current state before navigating
+        saveCalculatorState();
+        saveDescription();
+        
+        // Navigate to home view in swap mode with this concept pre-selected
+        Router.navigate('home', { 
+            swapMode: true, 
+            conceptId: currentConcept.id 
+        });
     }
 
     /**

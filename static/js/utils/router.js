@@ -77,7 +77,7 @@ const Router = (function() {
     
     /**
      * Parse a route into path and parameters
-     * @param {string} route - Route string (e.g., "detail/linear")
+     * @param {string} route - Route string (e.g., "detail/linear?swapMode=true")
      * @returns {Array} Array with [path, params]
      */
     function parseRoute(route) {
@@ -85,13 +85,26 @@ const Router = (function() {
             return [defaultRoute, {}];
         }
         
-        const parts = route.split('/');
+        // Split by query parameters first
+        const [pathPart, queryPart] = route.split('?');
+        const parts = pathPart.split('/');
         const path = parts[0];
         const params = {};
         
-        // Extract parameters if any
+        // Extract ID parameter from path if any
         if (parts.length > 1 && parts[1]) {
             params.id = parts[1];
+        }
+        
+        // Extract query parameters
+        if (queryPart) {
+            const queryParams = queryPart.split('&');
+            queryParams.forEach(param => {
+                const [key, value] = param.split('=');
+                if (key && value) {
+                    params[key] = decodeURIComponent(value);
+                }
+            });
         }
         
         return [path, params];
@@ -108,6 +121,18 @@ const Router = (function() {
         // Add parameters to the URL if provided
         if (params.id) {
             url += `/${params.id}`;
+        }
+        
+        // Add additional query parameters
+        const queryParams = [];
+        Object.keys(params).forEach(key => {
+            if (key !== 'id') {
+                queryParams.push(`${key}=${encodeURIComponent(params[key])}`);
+            }
+        });
+        
+        if (queryParams.length > 0) {
+            url += `?${queryParams.join('&')}`;
         }
         
         // Prevent duplicate navigation to the same route

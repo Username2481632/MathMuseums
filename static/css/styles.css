@@ -480,6 +480,44 @@ main {
     filter: grayscale(100%);
 }
 
+/* Tile selection states for swap mode */
+.concept-tile.swap-selected {
+    border: 3px solid #f39c12;
+    box-shadow: 0 0 15px rgba(243, 156, 18, 0.6);
+    transform: scale(1.02);
+}
+
+.concept-tile.swap-target {
+    border: 3px dashed #e74c3c;
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
+}
+
+/* Swap mode overlay instruction */
+.swap-instruction {
+    position: fixed;
+    top: calc(var(--header-height, 70px) + 20px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(52, 152, 219, 0.95);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    animation: slideInDown 0.3s ease-out;
+}
+
+@keyframes slideInDown {
+    from {
+        transform: translate(-50%, -20px);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}
 
 /* Modal Styles (Moved from inline styles in index.html) */
 .modal {

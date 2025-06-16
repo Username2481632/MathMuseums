@@ -146,12 +146,56 @@
     font-weight: 600;
     margin: 0;
     text-align: center;
-    flex: 1;
     min-width: 0; /* Allow title to shrink */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     padding: 0 clamp(0.25rem, 1vw, 0.5rem); /* Small padding on sides */
+}
+
+/* Title with swap button */
+.title-with-swap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+    justify-content: center;
+}
+
+.swap-btn {
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    padding: 0.4rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.swap-btn:hover {
+    background: #f8f9fa;
+    border-color: #bbb;
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.swap-btn:active {
+    transform: scale(0.95);
+    background: #e9ecef;
+}
+
+.swap-btn .swap-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    filter: brightness(0) saturate(100%) invert(45%) sepia(0%) saturate(0%) hue-rotate(180deg); /* Dark gray icon */
+    transition: all 0.2s ease;
 }
 
 /* Responsive breakpoints for extra narrow screens */
