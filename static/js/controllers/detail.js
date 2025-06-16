@@ -201,7 +201,8 @@ const DetailController = (function() {
             startIdleTimer();
             
             // Listen for changes only for idle timer reset and onboarding
-            // State saving is now handled synchronously on navigation
+            // State saving is now handled synchronously
+            // On navigation and on file export
             calculator.observeEvent('change', () => {
                 resetIdleTimer();
                 
@@ -428,6 +429,7 @@ const DetailController = (function() {
     return {
         init,
         render,
+        saveCalculatorState,
         cleanup() {
             // Save calculator state before cleanup (handles browser back button)
             if (calculator && currentConcept) {
@@ -443,15 +445,14 @@ const DetailController = (function() {
                 calculator = null;
             }
             
-            // Clean up event listeners
-            const backButton = document.getElementById('back-button');
-            if (backButton) {
-                backButton.removeEventListener('click', handleBackClick);
-            }
-            
             // Reset state
             concept = currentConcept = null;
             isCalculatorReady = false;
         }
     };
 })();
+
+// Expose DetailController globally for access from other modules
+if (typeof window !== 'undefined') {
+    window.DetailController = DetailController;
+}

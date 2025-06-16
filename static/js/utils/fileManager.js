@@ -17,6 +17,11 @@ const FileManager = (function() {
      */
     async function createExportData() {
         try {
+            // Save current calculator state if in detail view (same as back navigation)
+            if (window.DetailController && typeof window.DetailController.saveCalculatorState === 'function') {
+                window.DetailController.saveCalculatorState();
+            }
+            
             // Get current session concept data for export (includes coordinates and z-index)
             const concepts = await StorageManager.getAllConcepts();
             
@@ -32,7 +37,7 @@ const FileManager = (function() {
                     totalConcepts: (concepts || []).length
                 }
             };
-            
+
             return exportData;
         } catch (error) {
             console.error('Error creating export data:', error);
