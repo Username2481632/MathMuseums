@@ -247,8 +247,4 @@
         padding-left: 2rem;
         padding-right: 2rem;
     }
-    
-    #concept-title {
-        max-width: 60%; /* Prevent title from taking up too much space on wide screens */
-    }
 }
