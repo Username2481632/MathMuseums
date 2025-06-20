@@ -307,6 +307,11 @@ const DetailController = (function() {
      * Save description when changed
      */
     function saveDescription() {
+        // Only save if we have a valid conceptDescription element (i.e., we're in detail view)
+        if (!conceptDescription) {
+            return;
+        }
+        
         const description = conceptDescription.value;
         
         // Only update if changed
