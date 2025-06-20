@@ -597,6 +597,14 @@ var App = (function() {
                     // Show simple notification with museum name
                     const userName = fileInfo.userName && fileInfo.userName !== 'Unknown' ? fileInfo.userName : 'Anonymous';
                     
+                    // Update the museum name in the UI with the imported userName
+                    const museumNameText = document.getElementById('museum-name-text');
+                    if (museumNameText && userName) {
+                        museumNameText.textContent = userName;
+                        // Trigger input event to update header size
+                        museumNameText.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                    
                     // Clear existing notifications and show import success
                     if (syncNotificationTimeout) {
                         clearTimeout(syncNotificationTimeout);
