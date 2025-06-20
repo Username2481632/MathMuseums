@@ -308,7 +308,7 @@ const DetailController = (function() {
      */
     function saveDescription() {
         // Only save if we have a valid conceptDescription element (i.e., we're in detail view)
-        if (!conceptDescription) {
+        if (typeof conceptDescription === 'undefined' || !conceptDescription) {
             return;
         }
         
