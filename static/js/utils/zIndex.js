@@ -120,30 +120,23 @@ const ZIndexManager = (function() {
      * @returns {boolean} True if z-index was actually changed (visual change occurred)
      */
     function bringConceptToFront(conceptId, allConcepts, containerWidth, containerHeight) {
-        console.log('[ZIndex Debug] Bringing to front:', conceptId);
-        
         // Find the concept
         const conceptIndex = allConcepts.findIndex(c => c.id === conceptId);
         if (conceptIndex === -1) {
-            console.log('[ZIndex Debug] Concept not found');
             return false;
         }
         
         const concept = allConcepts[conceptIndex];
-        console.log('[ZIndex Debug] Current concept z-index:', concept.zIndex);
         
         // Find overlapping concepts
         const overlappingIds = findOverlappingConcepts(conceptId, allConcepts, containerWidth, containerHeight);
-        console.log('[ZIndex Debug] Overlapping concepts:', overlappingIds);
         
         // If no overlaps, ensure this concept has no z-index (auto layering)
         if (overlappingIds.length === 0) {
             if (concept.zIndex !== undefined) {
                 delete allConcepts[conceptIndex].zIndex;
-                console.log('[ZIndex Debug] Removed z-index (no overlaps)');
                 return true; // Visual change occurred (removed explicit z-index)
             }
-            console.log('[ZIndex Debug] No overlaps, no change needed');
             return false;
         }
         
@@ -156,9 +149,22 @@ const ZIndexManager = (function() {
             }
         });
         
+        // Ensure overlapping concepts without z-index get one
+        // This is crucial for proper undo behavior
+        overlappingIds.forEach(id => {
+            const overlapIndex = allConcepts.findIndex(c => c.id === id);
+            if (overlapIndex !== -1 && allConcepts[overlapIndex].zIndex === undefined) {
+                // Give this overlapped concept a z-index if it doesn't have one
+                maxZIndex += 1;
+                allConcepts[overlapIndex] = {
+                    ...allConcepts[overlapIndex],
+                    zIndex: maxZIndex
+                };
+            }
+        });
+        
         // Assign this concept a z-index higher than the max
         const newZIndex = maxZIndex + 1;
-        console.log('[ZIndex Debug] Assigning z-index:', newZIndex);
         
         allConcepts[conceptIndex] = {
             ...allConcepts[conceptIndex],
@@ -167,11 +173,9 @@ const ZIndexManager = (function() {
         
         // Clean up and compact z-indexes periodically
         if (newZIndex > 10) {
-            console.log('[ZIndex Debug] Compacting z-indexes');
             cleanupZIndexes(allConcepts, containerWidth, containerHeight);
         }
         
-        console.log('[ZIndex Debug] Updated concept:', allConcepts[conceptIndex]);
         return true; // Visual change occurred
     }
     

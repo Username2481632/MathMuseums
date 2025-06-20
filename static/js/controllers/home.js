@@ -84,16 +84,31 @@ const HomeController = (function() {
             const tileRect = tile.getBoundingClientRect();
             const containerRect = homePoster.getBoundingClientRect();
             
-            const pixelX = tileRect.left - containerRect.left;
-            const pixelY = tileRect.top - containerRect.top;
-            const pixelWidth = tileRect.width;
-            const pixelHeight = tileRect.height;
+            const currentPixelX = tileRect.left - containerRect.left;
+            const currentPixelY = tileRect.top - containerRect.top;
+            const currentPixelWidth = tileRect.width;
+            const currentPixelHeight = tileRect.height;
             
-            // Convert to simple center-based coordinates
+            // Get original pixel position for comparison
+            const originalCoords = ConceptModel.getCoordinates(concept);
             const containerWidth = homePoster.offsetWidth;
             const containerHeight = homePoster.offsetHeight;
+            const originalPixelCoords = window.CoordinateUtils.percentageToPixels(
+                originalCoords.centerX, originalCoords.centerY, originalCoords.width, originalCoords.height,
+                containerWidth, containerHeight
+            );
+            
+            // Check if position actually changed at pixel level (with small tolerance for rounding)
+            const positionChanged = (
+                Math.abs(currentPixelX - originalPixelCoords.x) > 1 ||
+                Math.abs(currentPixelY - originalPixelCoords.y) > 1 ||
+                Math.abs(currentPixelWidth - originalPixelCoords.width) > 1 ||
+                Math.abs(currentPixelHeight - originalPixelCoords.height) > 1
+            );
+            
+            // Convert to simple center-based coordinates
             const centerCoords = window.CoordinateUtils.pixelsToPercentage(
-                pixelX, pixelY, pixelWidth, pixelHeight, containerWidth, containerHeight
+                currentPixelX, currentPixelY, currentPixelWidth, currentPixelHeight, containerWidth, containerHeight
             );
             
             // Constrain coordinates to keep tile within bounds
@@ -101,32 +116,97 @@ const HomeController = (function() {
                 centerCoords.centerX, centerCoords.centerY, centerCoords.width, centerCoords.height
             );
             
-            // Update with constrained center coordinates
+            // PHASE 1: Update position only and check if z-index changes will be needed
             const updatedConcept = ConceptModel.updateCoordinates(concept, constrainedCoords);
             const index = concepts.findIndex(c => c.id === conceptId);
             if (index !== -1) concepts[index] = updatedConcept;
             
-            // Check for overlaps and bring tile to front if needed (after drag completes)
+            // Check if z-index changes will be needed (before applying them)
+            let willChangeZIndex = false;
+            if (window.ZIndexManager) {
+                // Check for overlaps to determine if z-index changes are needed
+                const overlappingIds = window.ZIndexManager.findOverlappingConcepts(
+                    conceptId, concepts, containerWidth, containerHeight
+                );
+                
+                if (overlappingIds.length > 0) {
+                    // There are overlaps, so z-index will likely change
+                    const currentConcept = concepts.find(c => c.id === conceptId);
+                    const currentZIndex = currentConcept ? currentConcept.zIndex : undefined;
+                    
+                    // Find max z-index among overlapping concepts
+                    let maxZIndex = 0;
+                    overlappingIds.forEach(id => {
+                        const overlapConcept = concepts.find(c => c.id === id);
+                        if (overlapConcept && overlapConcept.zIndex && overlapConcept.zIndex > maxZIndex) {
+                            maxZIndex = overlapConcept.zIndex;
+                        }
+                    });
+                    
+                    const expectedNewZIndex = maxZIndex + 1;
+                    willChangeZIndex = currentZIndex !== expectedNewZIndex;
+                } else if (concepts.find(c => c.id === conceptId)?.zIndex !== undefined) {
+                    // No overlaps but concept has z-index, so it will be removed
+                    willChangeZIndex = true;
+                }
+            }
+            
+            // Save the concept with new position but old z-index
+            StorageManager.saveConcept(concepts[index]);
+            
+            // PHASE 2: Now apply z-index changes
             if (window.ZIndexManager) {
                 const wasChanged = window.ZIndexManager.bringConceptToFront(
                     conceptId, concepts, containerWidth, containerHeight
                 );
                 
                 if (wasChanged) {
-                    // Update the concept with new z-index
-                    const conceptIndex = concepts.findIndex(c => c.id === conceptId);
-                    if (conceptIndex !== -1) {
-                        // Apply z-index to the tile immediately
-                        const zIndex = window.ZIndexManager.getConceptZIndex(concepts[conceptIndex]);
-                        tile.style.zIndex = zIndex.toString();
+                    // Push intermediate undo state AFTER z-index changes to concepts but BEFORE DOM/storage updates
+                    // This captures the state with new position AND the overlapped tile having proper z-index
+                    // Only create intermediate state if BOTH position and z-index changed
+                    if (willChangeZIndex && positionChanged) {
+                        // Temporarily revert the moved tile's z-index for the intermediate state
+                        const movedConcept = concepts.find(c => c.id === conceptId);
+                        const originalZIndex = movedConcept ? movedConcept.zIndex : undefined;
+                        
+                        if (movedConcept) {
+                            // Remove z-index from moved tile for intermediate state
+                            delete movedConcept.zIndex;
+                        }
+                        
+                        // Capture the intermediate state (new position, overlapped tile has z-index, moved tile doesn't)
+                        safePushUndoState();
+                        
+                        // Restore the moved tile's z-index
+                        if (movedConcept && originalZIndex !== undefined) {
+                            movedConcept.zIndex = originalZIndex;
+                        }
                     }
+                    
+                    // Apply z-index changes to ALL affected tiles (moved tile + overlapping tiles)
+                    const overlappingIds = window.ZIndexManager.findOverlappingConcepts(
+                        conceptId, concepts, containerWidth, containerHeight
+                    );
+                    
+                    // Update the moved tile
+                    const movedConcept = concepts.find(c => c.id === conceptId);
+                    if (movedConcept) {
+                        const zIndex = window.ZIndexManager.getConceptZIndex(movedConcept);
+                        tile.style.zIndex = zIndex.toString();
+                        StorageManager.saveConcept(movedConcept);
+                    }
+                    
+                    // Update all overlapping tiles that might have gotten new z-indexes
+                    overlappingIds.forEach(overlapId => {
+                        const overlapConcept = concepts.find(c => c.id === overlapId);
+                        const overlapTile = homePoster.querySelector(`[data-id="${overlapId}"]`);
+                        if (overlapConcept && overlapTile) {
+                            const zIndex = window.ZIndexManager.getConceptZIndex(overlapConcept);
+                            overlapTile.style.zIndex = zIndex.toString();
+                            StorageManager.saveConcept(overlapConcept);
+                        }
+                    });
                 }
-            }
-            
-            // Save the concept once with both position and z-index changes
-            const finalIndex = concepts.findIndex(c => c.id === conceptId);
-            if (finalIndex !== -1) {
-                StorageManager.saveConcept(concepts[finalIndex]);
             }
         },
         getTileById: id => concepts.find(c => c.id === id),
@@ -173,16 +253,31 @@ const HomeController = (function() {
             const tileRect = tile.getBoundingClientRect();
             const containerRect = homePoster.getBoundingClientRect();
             
-            const pixelX = tileRect.left - containerRect.left;
-            const pixelY = tileRect.top - containerRect.top;
-            const pixelWidth = tileRect.width;
-            const pixelHeight = tileRect.height;
+            const currentPixelX = tileRect.left - containerRect.left;
+            const currentPixelY = tileRect.top - containerRect.top;
+            const currentPixelWidth = tileRect.width;
+            const currentPixelHeight = tileRect.height;
             
-            // Convert to simple center-based coordinates
+            // Get original pixel position for comparison
+            const originalCoords = ConceptModel.getCoordinates(concept);
             const containerWidth = homePoster.offsetWidth;
             const containerHeight = homePoster.offsetHeight;
+            const originalPixelCoords = window.CoordinateUtils.percentageToPixels(
+                originalCoords.centerX, originalCoords.centerY, originalCoords.width, originalCoords.height,
+                containerWidth, containerHeight
+            );
+            
+            // Check if size/position actually changed at pixel level (with small tolerance for rounding)
+            const sizeOrPositionChanged = (
+                Math.abs(currentPixelX - originalPixelCoords.x) > 1 ||
+                Math.abs(currentPixelY - originalPixelCoords.y) > 1 ||
+                Math.abs(currentPixelWidth - originalPixelCoords.width) > 1 ||
+                Math.abs(currentPixelHeight - originalPixelCoords.height) > 1
+            );
+            
+            // Convert to simple center-based coordinates
             const centerCoords = window.CoordinateUtils.pixelsToPercentage(
-                pixelX, pixelY, pixelWidth, pixelHeight, containerWidth, containerHeight
+                currentPixelX, currentPixelY, currentPixelWidth, currentPixelHeight, containerWidth, containerHeight
             );
             
             // Constrain coordinates to keep tile within bounds
@@ -190,32 +285,97 @@ const HomeController = (function() {
                 centerCoords.centerX, centerCoords.centerY, centerCoords.width, centerCoords.height
             );
             
-            // Update with constrained center coordinates
+            // PHASE 1: Update size/position only and check if z-index changes will be needed
             const updatedConcept = ConceptModel.updateCoordinates(concept, constrainedCoords);
             const index = concepts.findIndex(c => c.id === conceptId);
             if (index !== -1) concepts[index] = updatedConcept;
             
-            // Check for overlaps and bring tile to front if needed (after resize completes)
+            // Check if z-index changes will be needed (before applying them)
+            let willChangeZIndex = false;
+            if (window.ZIndexManager) {
+                // Check for overlaps to determine if z-index changes are needed
+                const overlappingIds = window.ZIndexManager.findOverlappingConcepts(
+                    conceptId, concepts, containerWidth, containerHeight
+                );
+                
+                if (overlappingIds.length > 0) {
+                    // There are overlaps, so z-index will likely change
+                    const currentConcept = concepts.find(c => c.id === conceptId);
+                    const currentZIndex = currentConcept ? currentConcept.zIndex : undefined;
+                    
+                    // Find max z-index among overlapping concepts
+                    let maxZIndex = 0;
+                    overlappingIds.forEach(id => {
+                        const overlapConcept = concepts.find(c => c.id === id);
+                        if (overlapConcept && overlapConcept.zIndex && overlapConcept.zIndex > maxZIndex) {
+                            maxZIndex = overlapConcept.zIndex;
+                        }
+                    });
+                    
+                    const expectedNewZIndex = maxZIndex + 1;
+                    willChangeZIndex = currentZIndex !== expectedNewZIndex;
+                } else if (concepts.find(c => c.id === conceptId)?.zIndex !== undefined) {
+                    // No overlaps but concept has z-index, so it will be removed
+                    willChangeZIndex = true;
+                }
+            }
+            
+            // Save the concept with new size/position but old z-index
+            StorageManager.saveConcept(concepts[index]);
+            
+            // PHASE 2: Now apply z-index changes
             if (window.ZIndexManager) {
                 const wasChanged = window.ZIndexManager.bringConceptToFront(
                     conceptId, concepts, containerWidth, containerHeight
                 );
                 
                 if (wasChanged) {
-                    // Update the concept with new z-index
-                    const conceptIndex = concepts.findIndex(c => c.id === conceptId);
-                    if (conceptIndex !== -1) {
-                        // Apply z-index to the tile immediately
-                        const zIndex = window.ZIndexManager.getConceptZIndex(concepts[conceptIndex]);
-                        tile.style.zIndex = zIndex.toString();
+                    // Push intermediate undo state AFTER z-index changes to concepts but BEFORE DOM/storage updates
+                    // This captures the state with new size/position AND the overlapped tile having proper z-index
+                    // Only create intermediate state if BOTH size/position and z-index changed
+                    if (willChangeZIndex && sizeOrPositionChanged) {
+                        // Temporarily revert the resized tile's z-index for the intermediate state
+                        const resizedConcept = concepts.find(c => c.id === conceptId);
+                        const originalZIndex = resizedConcept ? resizedConcept.zIndex : undefined;
+                        
+                        if (resizedConcept) {
+                            // Remove z-index from resized tile for intermediate state
+                            delete resizedConcept.zIndex;
+                        }
+                        
+                        // Capture the intermediate state (new size/position, overlapped tile has z-index, resized tile doesn't)
+                        safePushUndoState();
+                        
+                        // Restore the resized tile's z-index
+                        if (resizedConcept && originalZIndex !== undefined) {
+                            resizedConcept.zIndex = originalZIndex;
+                        }
                     }
+                    
+                    // Apply z-index changes to ALL affected tiles (resized tile + overlapping tiles)
+                    const overlappingIds = window.ZIndexManager.findOverlappingConcepts(
+                        conceptId, concepts, containerWidth, containerHeight
+                    );
+                    
+                    // Update the resized tile
+                    const resizedConcept = concepts.find(c => c.id === conceptId);
+                    if (resizedConcept) {
+                        const zIndex = window.ZIndexManager.getConceptZIndex(resizedConcept);
+                        tile.style.zIndex = zIndex.toString();
+                        StorageManager.saveConcept(resizedConcept);
+                    }
+                    
+                    // Update all overlapping tiles that might have gotten new z-indexes
+                    overlappingIds.forEach(overlapId => {
+                        const overlapConcept = concepts.find(c => c.id === overlapId);
+                        const overlapTile = homePoster.querySelector(`[data-id="${overlapId}"]`);
+                        if (overlapConcept && overlapTile) {
+                            const zIndex = window.ZIndexManager.getConceptZIndex(overlapConcept);
+                            overlapTile.style.zIndex = zIndex.toString();
+                            StorageManager.saveConcept(overlapConcept);
+                        }
+                    });
                 }
-            }
-            
-            // Save the concept once with both size/position and z-index changes
-            const finalIndex = concepts.findIndex(c => c.id === conceptId);
-            if (finalIndex !== -1) {
-                StorageManager.saveConcept(concepts[finalIndex]);
             }
         },
         getTileById: id => concepts.find(c => c.id === id),
