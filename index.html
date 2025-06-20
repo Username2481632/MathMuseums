@@ -27,7 +27,14 @@
     <link rel="stylesheet" href="static/css/onboarding.css">
     <link rel="stylesheet" href="static/css/sync.css">
     <link rel="stylesheet" href="static/css/display-settings.css">
-    <script src="https://www.desmos.com/api/v1.11/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+    
+    <!-- Config -->
+    <script src="config.js"></script>
+    
+    <!-- Load Desmos API with key from config -->
+    <script>
+        document.write('<script src="https://www.desmos.com/api/v1.11/calculator.js?apiKey=' + window.DESMOS_API_KEY + '"><\/script>');
+    </script>
 </head>
 <body>
     <header>

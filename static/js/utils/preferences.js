@@ -4,17 +4,16 @@
  */
 const PreferencesClient = (function() {
     // Constants
-    const DEFAULT_EXPORT_FILENAME = '{name} - Math Museum.mathmuseums';
     
     // Private variables
     let preferences = {
         onboardingDisabled: false,
-        theme: 'light',
-        aspectRatioWidth: 1, // Default aspect ratio 1:1
-        aspectRatioHeight: 1,
-        screenFit: 'fit', // Default screen fit mode (fit or fill) - stored in localStorage only
-        autosave: false, // New: autosave preference
-        exportFilename: DEFAULT_EXPORT_FILENAME // Default export filename template
+        theme: DEFAULT_THEME,
+        aspectRatioWidth: DEFAULT_ASPECT_RATIO_WIDTH,
+        aspectRatioHeight: DEFAULT_ASPECT_RATIO_HEIGHT,
+        screenFit: DEFAULT_SCREEN_FIT,
+        autosave: false,
+        exportFilename: window.DEFAULT_EXPORT_FILENAME
     };
     let loaded = false;
     let originalContentBounds = null; // Store original content bounds for consistent scaling
@@ -483,7 +482,7 @@ const PreferencesClient = (function() {
                 aspectRatioHeight: parsed.aspectRatioHeight || 1,
                 screenFit: parsed.screenFit || 'fit',
                 autosave: parsed.autosave || false,
-                exportFilename: parsed.exportFilename || DEFAULT_EXPORT_FILENAME
+                exportFilename: parsed.exportFilename || window.DEFAULT_EXPORT_FILENAME
             };
         } catch (error) {
             console.error('Error reading preferences from localStorage:', error);
@@ -494,7 +493,7 @@ const PreferencesClient = (function() {
                 aspectRatioHeight: 1,
                 screenFit: 'fit',
                 autosave: false,
-                exportFilename: DEFAULT_EXPORT_FILENAME
+                exportFilename: window.DEFAULT_EXPORT_FILENAME
             }; // Return defaults on error
         }
     }
@@ -623,7 +622,7 @@ const PreferencesClient = (function() {
      * @returns {string} Export filename with placeholders replaced
      */
     function getExportFilename() {
-        const template = preferences?.exportFilename || DEFAULT_EXPORT_FILENAME;
+        const template = preferences?.exportFilename || window.DEFAULT_EXPORT_FILENAME;
         const userName = document.getElementById('museum-name-text')?.textContent.trim() || 'Anonymous';
         const now = new Date();
         const dateStr = now.toISOString().split('T')[0];
@@ -640,7 +639,7 @@ const PreferencesClient = (function() {
      * @returns {string} Export filename template with placeholders
      */
     function getDefaultExportFilename() {
-        return DEFAULT_EXPORT_FILENAME;
+        return window.DEFAULT_EXPORT_FILENAME;
     }
 
     // Public API

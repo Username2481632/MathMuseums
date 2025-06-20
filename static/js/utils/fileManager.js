@@ -4,9 +4,6 @@
  */
 const FileManager = (function() {
     
-    // File format version for future compatibility
-    const FILE_FORMAT_VERSION = '1.0';
-    
     // Track last saved file handle and filename for autosave
     let lastFileHandle = null;
     let lastFilename = null;
@@ -29,7 +26,7 @@ const FileManager = (function() {
             const userName = window.PreferencesClient ? window.PreferencesClient.getUserName() : 'Anonymous';
             
             const exportData = {
-                version: FILE_FORMAT_VERSION,
+                version: window.FILE_FORMAT_VERSION,
                 exportDate: new Date().toISOString(),
                 userName: userName,
                 concepts: concepts || [], // Each concept includes position, size, z-index if set
@@ -403,7 +400,6 @@ const FileManager = (function() {
         showImportDialog,
         getFileInfo,
         createExportData,
-        FILE_FORMAT_VERSION,
         autosaveUserData,
         canAutosave
     };

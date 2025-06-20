@@ -9,9 +9,6 @@ const DesmosUtils = (function() {
     
     // Thumbnail cache for avoiding redundant generation with sessionStorage persistence
     const thumbnailCache = new Map();
-    const MAX_CACHE_SIZE = 50; // Limit cache size to prevent memory issues
-    const GENERATION_DELAY = 100; // Reduced delay for faster generation
-    const SESSION_CACHE_PREFIX = 'thumb_';
     
     // Queue management for batch processing
     let generationQueue = [];
@@ -52,8 +49,8 @@ const DesmosUtils = (function() {
         try {
             for (let i = 0; i < sessionStorage.length; i++) {
                 const key = sessionStorage.key(i);
-                if (key && key.startsWith(SESSION_CACHE_PREFIX)) {
-                    const hash = key.substring(SESSION_CACHE_PREFIX.length);
+                if (key && key.startsWith(window.THUMBNAIL_CACHE_PREFIX)) {
+                    const hash = key.substring(window.THUMBNAIL_CACHE_PREFIX.length);
                     const dataUrl = sessionStorage.getItem(key);
                     if (dataUrl) {
                         thumbnailCache.set(hash, dataUrl);
@@ -72,7 +69,7 @@ const DesmosUtils = (function() {
      */
     function saveCacheToSession(hash, dataUrl) {
         try {
-            sessionStorage.setItem(SESSION_CACHE_PREFIX + hash, dataUrl);
+            sessionStorage.setItem(window.THUMBNAIL_CACHE_PREFIX + hash, dataUrl);
         } catch (error) {
             // SessionStorage full or unavailable - continue with memory cache only
             console.warn('SessionStorage unavailable, using memory cache only:', error);
@@ -83,9 +80,9 @@ const DesmosUtils = (function() {
      * Clean up old cache entries when cache is full
      */
     function cleanupCache() {
-        if (thumbnailCache.size >= MAX_CACHE_SIZE) {
+        if (thumbnailCache.size >= window.MAX_THUMBNAIL_CACHE_SIZE) {
             // Remove oldest entries (first quarter of cache)
-            const entriesToRemove = Math.floor(MAX_CACHE_SIZE / 4);
+            const entriesToRemove = Math.floor(window.MAX_THUMBNAIL_CACHE_SIZE / 4);
             const keys = Array.from(thumbnailCache.keys());
             for (let i = 0; i < entriesToRemove; i++) {
                 const hash = keys[i];
@@ -93,7 +90,7 @@ const DesmosUtils = (function() {
                 
                 // Also remove from sessionStorage
                 try {
-                    sessionStorage.removeItem(SESSION_CACHE_PREFIX + hash);
+                    sessionStorage.removeItem(window.THUMBNAIL_CACHE_PREFIX + hash);
                 } catch (error) {
                     // Ignore sessionStorage errors
                 }
@@ -193,7 +190,7 @@ const DesmosUtils = (function() {
                 setTimeout(() => {
                     isProcessingQueue = false;
                     processQueue();
-                }, GENERATION_DELAY);
+                }, window.THUMBNAIL_GENERATION_DELAY);
             } else {
                 isProcessingQueue = false;
             }
@@ -318,7 +315,7 @@ const DesmosUtils = (function() {
         
         // Check sessionStorage as fallback
         try {
-            const dataUrl = sessionStorage.getItem(SESSION_CACHE_PREFIX + cacheKey);
+            const dataUrl = sessionStorage.getItem(window.THUMBNAIL_CACHE_PREFIX + cacheKey);
             if (dataUrl) {
                 // Add back to memory cache for faster future access
                 thumbnailCache.set(cacheKey, dataUrl);
@@ -355,7 +352,7 @@ const DesmosUtils = (function() {
         
         // Check sessionStorage as fallback
         try {
-            const dataUrl = sessionStorage.getItem(SESSION_CACHE_PREFIX + cacheKey);
+            const dataUrl = sessionStorage.getItem(window.THUMBNAIL_CACHE_PREFIX + cacheKey);
             if (dataUrl) {
                 // Add back to memory cache for faster future access
                 thumbnailCache.set(cacheKey, dataUrl);
@@ -435,7 +432,7 @@ const DesmosUtils = (function() {
             const keysToRemove = [];
             for (let i = 0; i < sessionStorage.length; i++) {
                 const key = sessionStorage.key(i);
-                if (key && key.startsWith(SESSION_CACHE_PREFIX)) {
+                if (key && key.startsWith(window.THUMBNAIL_CACHE_PREFIX)) {
                     keysToRemove.push(key);
                 }
             }
@@ -452,7 +449,7 @@ const DesmosUtils = (function() {
     function getCacheStats() {
         return {
             size: thumbnailCache.size,
-            maxSize: MAX_CACHE_SIZE,
+            maxSize: window.MAX_THUMBNAIL_CACHE_SIZE,
             queueLength: generationQueue.length,
             pendingGenerations: pendingGenerations.size,
             isProcessing: isProcessingQueue,

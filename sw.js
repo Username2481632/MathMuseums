@@ -1,14 +1,18 @@
 // Service Worker for Math Museums PWA
 // Update version numbers when deploying changes to force cache refresh
-const CACHE_VERSION = '0.1.0';
-const CACHE_NAME = `math-museums-v${CACHE_VERSION}`;
-const STATIC_CACHE_NAME = `math-museums-static-v${CACHE_VERSION}`;
-const DYNAMIC_CACHE_NAME = `math-museums-dynamic-v${CACHE_VERSION}`;
+
+// Import configuration
+importScripts('config.js');
+
+const CACHE_NAME = `math-museums-v${SW_CACHE_VERSION}`;
+const STATIC_CACHE_NAME = `math-museums-static-v${SW_CACHE_VERSION}`;
+const DYNAMIC_CACHE_NAME = `math-museums-dynamic-v${SW_CACHE_VERSION}`;
 
 // Resources to cache immediately
 const STATIC_ASSETS = [
   '/',
   '/index.html',
+  '/config.js',
   '/manifest.json',
   '/static/css/styles.css',
   '/static/css/home.css',
@@ -46,7 +50,7 @@ const STATIC_ASSETS = [
 
 // External resources that should be cached
 const EXTERNAL_ASSETS = [
-  'https://www.desmos.com/api/v1.11/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6'
+  `https://www.desmos.com/api/v1.11/calculator.js?apiKey=${self.DESMOS_API_KEY}`
 ];
 
 // Install event - cache static assets
