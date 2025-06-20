@@ -196,6 +196,20 @@ var App = (function() {
         }
     });
 
+    // Shared save result handler to avoid DRY violations
+    function handleSaveResult(result, operation = 'Save') {
+        if (result) {
+            dirtySinceFileSave = false;
+            setSyncStatus('saved');
+            // File save status no longer tracked in localStorage
+        } else {
+            // User cancelled dialog
+            if (dirtySinceFileSave) {
+                setSyncStatus('unsaved');
+            }
+        }
+    }
+
     async function handleSaveShortcut() {
         if (!window.FileManager) {
             console.error('FileManager not available');
@@ -210,23 +224,11 @@ var App = (function() {
             
             if (autosaveResult) {
                 // Successfully saved to existing file
-                dirtySinceFileSave = false;
-                setSyncStatus('saved');
-                // File save status no longer tracked in localStorage
+                handleSaveResult(true);
             } else {
                 // No previous save location, show Save As dialog
                 const saveAsResult = await window.FileManager.downloadUserData();
-                
-                if (saveAsResult) {
-                    dirtySinceFileSave = false;
-                    setSyncStatus('saved');
-                    // File save status no longer tracked in localStorage
-                } else {
-                    // User cancelled Save As dialog
-                    if (dirtySinceFileSave) {
-                        setSyncStatus('unsaved');
-                    }
-                }
+                handleSaveResult(saveAsResult);
             }
         } catch (error) {
             console.error('Save failed:', error);
@@ -245,17 +247,7 @@ var App = (function() {
             
             // Always show Save As dialog
             const result = await window.FileManager.downloadUserData();
-            
-            if (result) {
-                dirtySinceFileSave = false;
-                setSyncStatus('saved');
-                // File save status no longer tracked in localStorage
-            } else {
-                // User cancelled Save As dialog
-                if (dirtySinceFileSave) {
-                    setSyncStatus('unsaved');
-                }
-            }
+            handleSaveResult(result, 'Save As');
         } catch (error) {
             console.error('Save As failed:', error);
             setSyncStatus('unsaved');
