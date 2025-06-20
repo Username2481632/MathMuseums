@@ -149,10 +149,8 @@ const DesmosUtils = (function() {
                     yAxisLabel: ''           // Remove labels for cleaner thumbnails
                 });
                 
-                // Wait for initialization with shorter timeout
-                setTimeout(() => {
-                    resolve(hiddenCalculator);
-                }, 50); // Reduced from 100ms
+                // Calculator is ready immediately after creation
+                resolve(hiddenCalculator);
             } catch (error) {
                 console.error('Error initializing hidden calculator:', error);
                 reject(error);
@@ -251,49 +249,43 @@ const DesmosUtils = (function() {
                 expressions: { list: [] }
             });
             
-            // Small delay to ensure state is cleared
-            await new Promise(resolve => setTimeout(resolve, 50));
-            
-            // Set the actual calculator state
+            // Set the actual calculator state immediately
             calculator.setState(parsedState);
             
-            // Wait for calculator to process the new state
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            // Final check before screenshot
-            if (isCleaningUp) {
-                throw new Error('DesmosUtils cleanup started before screenshot');
-            }
-            
-            // Capture the screenshot with optimized settings
-            let dataUrl;
-            try {
-                dataUrl = calculator.screenshot({
-                    width: 250,
-                    height: 200,
-                    targetPixelRatio: 1.25,
-                    preserveAxisNumbers: false,
-                    mathBounds: {
-                        left: -10,
-                        right: 10,
-                        bottom: -10,
-                        top: 10
-                    }
-                });
-            } catch (screenshotError) {
-                console.error('Screenshot error:', screenshotError);
-                if (screenshotError.message && screenshotError.message.includes('destroyed')) {
-                    throw new Error('Calculator instance was destroyed during screenshot');
+            // Use proper async screenshot with callback for guaranteed state evaluation
+            // This ensures the graph state is fully evaluated before screenshot
+            // Use higher quality settings for all content - no need for separate configs
+            const screenshotConfig = {
+                width: 250,
+                height: 200,
+                targetPixelRatio: 1.25,
+                preserveAxisNumbers: false,
+                mathBounds: {
+                    left: -10,
+                    right: 10,
+                    bottom: -10,
+                    top: 10
                 }
-                throw screenshotError;
-            }
+            };
             
-            // Validate the returned dataUrl
-            if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
-                throw new Error('Invalid screenshot data returned from Desmos');
-            }
-            
-            return dataUrl;
+            // Use asyncScreenshot instead of screenshot for proper state evaluation
+            return new Promise((resolve, reject) => {
+                calculator.asyncScreenshot(screenshotConfig, (dataUrl) => {
+                    // Final check before returning
+                    if (isCleaningUp) {
+                        reject(new Error('DesmosUtils cleanup started during screenshot'));
+                        return;
+                    }
+                    
+                    // Validate the returned dataUrl
+                    if (!dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) {
+                        reject(new Error('Invalid screenshot data returned from Desmos'));
+                        return;
+                    }
+                    
+                    resolve(dataUrl);
+                });
+            });
         } catch (error) {
             console.error('Thumbnail generation failed:', error);
             throw error;
@@ -345,8 +337,6 @@ const DesmosUtils = (function() {
         // Check cache first
         if (thumbnailCache.has(cacheKey)) {
             performanceStats.cacheHits++;
-            const endTime = performance.now();
-            console.log('🎯 Cache hit for concept:', conceptId, 'in', (endTime - startTime).toFixed(2), 'ms');
             return Promise.resolve(thumbnailCache.get(cacheKey));
         }
         
@@ -357,8 +347,6 @@ const DesmosUtils = (function() {
                 // Add back to memory cache for faster future access
                 thumbnailCache.set(cacheKey, dataUrl);
                 performanceStats.cacheHits++;
-                const endTime = performance.now();
-                console.log('🎯 Session cache hit for concept:', conceptId, 'in', (endTime - startTime).toFixed(2), 'ms');
                 return Promise.resolve(dataUrl);
             }
         } catch (error) {
@@ -423,7 +411,6 @@ const DesmosUtils = (function() {
      * Clear thumbnail cache
      */
     function clearCache() {
-        console.log('🧹 Clearing ALL cache entries');
         // Clear all cache
         thumbnailCache.clear();
         
@@ -537,7 +524,4 @@ const DesmosUtils = (function() {
     };
 })();
 
-window.DesmosUtils = DesmosUtils;    // Add a global debug function for easy console access
-    window.debugThumbnails = function() {
-        return DesmosUtils.getCacheStats();
-    };
+window.DesmosUtils = DesmosUtils;
