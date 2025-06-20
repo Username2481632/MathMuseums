@@ -453,6 +453,7 @@ const DetailController = (function() {
         init,
         render,
         saveCalculatorState,
+        saveDescription,
         refresh: async function() {
             // Refresh current concept data and re-render if we have a current concept
             if (currentConcept) {

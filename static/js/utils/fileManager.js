@@ -14,9 +14,14 @@ const FileManager = (function() {
      */
     async function createExportData() {
         try {
-            // Save current calculator state if in detail view (same as back navigation)
-            if (window.DetailController && typeof window.DetailController.saveCalculatorState === 'function') {
-                window.DetailController.saveCalculatorState();
+            // Save current calculator state and description if in detail view (same as back navigation)
+            if (window.DetailController) {
+                if (typeof window.DetailController.saveCalculatorState === 'function') {
+                    window.DetailController.saveCalculatorState();
+                }
+                if (typeof window.DetailController.saveDescription === 'function') {
+                    window.DetailController.saveDescription();
+                }
             }
             
             // Get current session concept data for export (includes coordinates and z-index)
