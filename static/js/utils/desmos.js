@@ -254,18 +254,13 @@ const DesmosUtils = (function() {
             
             // Use proper async screenshot with callback for guaranteed state evaluation
             // This ensures the graph state is fully evaluated before screenshot
-            // Use higher quality settings for all content - no need for separate configs
+            // Respect the saved viewport/zoom level from the Desmos state
             const screenshotConfig = {
                 width: 250,
                 height: 200,
                 targetPixelRatio: 1.25,
-                preserveAxisNumbers: false,
-                mathBounds: {
-                    left: -10,
-                    right: 10,
-                    bottom: -10,
-                    top: 10
-                }
+                preserveAxisNumbers: false
+                // Note: No mathBounds specified - respects current viewport from state
             };
             
             // Use asyncScreenshot instead of screenshot for proper state evaluation
