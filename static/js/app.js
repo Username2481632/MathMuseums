@@ -175,12 +175,12 @@ var App = (function() {
     // Keyboard shortcuts for save operations
     window.addEventListener('keydown', function(e) {
         // Ctrl+S or Cmd+S - Save to last file or show Save As if no previous file
-        if ((e.ctrlKey || e.metaKey) && e.key === 's' && !e.shiftKey) {
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S') && !e.shiftKey) {
             e.preventDefault();
             handleSaveShortcut();
         }
         // Ctrl+Shift+S or Cmd+Shift+S - Always show Save As dialog
-        else if ((e.ctrlKey || e.metaKey) && e.key === 'S' && e.shiftKey) {
+        else if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S') && e.shiftKey) {
             e.preventDefault();
             handleSaveAsShortcut();
         }
