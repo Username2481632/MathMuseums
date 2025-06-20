@@ -164,6 +164,9 @@ const DetailController = (function() {
             // Get the calculator container
             const container = document.getElementById('calculator-container');
             
+            // Clear any loading messages or previous content
+            container.innerHTML = '';
+            
             // Create the calculator
             calculator = Desmos.GraphingCalculator(container, {
                 expressions: true,
@@ -195,6 +198,9 @@ const DetailController = (function() {
                     }, 3000);
                 }
             }
+            
+            // Mark calculator as ready
+            isCalculatorReady = true;
             
             // Since the calculator is now confirmed to be loaded, 
             // we can start the idle timer for onboarding
