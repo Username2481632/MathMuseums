@@ -33,7 +33,11 @@
     
     <!-- Load Desmos API with key from config -->
     <script>
-        document.write('<script src="https://www.desmos.com/api/v1.11/calculator.js?apiKey=' + window.DESMOS_API_KEY + '"><\/script>');
+        // Load Desmos API using the constant
+        const desmosScript = document.createElement('script');
+        desmosScript.src = `https://www.desmos.com/api/v1.11/calculator.js?apiKey=${window.DESMOS_API_KEY}`;
+        desmosScript.defer = true;
+        document.head.appendChild(desmosScript);
     </script>
 </head>
 <body>
