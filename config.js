@@ -3,16 +3,16 @@
  * Central location for all app constants and settings
  */
 
-// Make constants available in different contexts
+// Make API key available in all contexts
+self.DESMOS_API_KEY = 'd38ef1c6097a41498a850f6324aff83d';
+
+// Service worker specific constants
 if (typeof self !== 'undefined' && self.importScripts) {
-    // Service worker context
-    self.DESMOS_API_KEY = 'd38ef1c6097a41498a850f6324aff83d';
     self.SW_CACHE_VERSION = '0.1.1';
 }
 
+// Main thread specific constants
 if (typeof window !== 'undefined') {
-    // Main thread context - API Keys and External Services
-    window.DESMOS_API_KEY = 'd38ef1c6097a41498a850f6324aff83d';
     
     // Cache Configuration
     window.THUMBNAIL_CACHE_PREFIX = 'thumb_';

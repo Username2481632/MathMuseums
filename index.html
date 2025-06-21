@@ -35,7 +35,7 @@
     <script>
         // Load Desmos API using the constant
         const desmosScript = document.createElement('script');
-        desmosScript.src = `https://www.desmos.com/api/v1.11/calculator.js?apiKey=${window.DESMOS_API_KEY}`;
+        desmosScript.src = `https://www.desmos.com/api/v1.11/calculator.js?apiKey=${self.DESMOS_API_KEY}`;
         desmosScript.defer = true;
         document.head.appendChild(desmosScript);
     </script>
