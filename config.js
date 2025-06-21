@@ -8,7 +8,7 @@ self.DESMOS_API_KEY = 'd38ef1c6097a41498a850f6324aff83d';
 
 // Service worker specific constants
 if (typeof self !== 'undefined' && self.importScripts) {
-    self.SW_CACHE_VERSION = '0.1.1';
+    self.SW_CACHE_VERSION = '0.1.2';
 }
 
 // Main thread specific constants

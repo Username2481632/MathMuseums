@@ -616,6 +616,44 @@ const HomeController = (function() {
     }
     
     /**
+     * Common tile interaction logic for both click and touch
+     * @param {HTMLElement} tile - The tile element
+     * @param {Event} event - The original event
+     */
+    function handleTileInteraction(tile, event) {
+        if (!tile) return;
+
+        // Don't trigger interaction when the resize handle is clicked/touched
+        if (event.target.classList.contains('resize-handle')) {
+            event.stopPropagation();
+            return;
+        }
+        
+        // Check for explicit resizing data attribute
+        if (tile.dataset.resizing === 'true') {
+            event.stopPropagation();
+            event.preventDefault();
+            return;
+        }
+
+        // Check if we're in swap mode first
+        if (isSwapModeActive) {
+            const handled = handleSwapTileClick(tile);
+            if (handled) {
+                event.stopPropagation();
+                event.preventDefault();
+                return;
+            }
+        }
+        
+        // Get the concept ID and navigate to detail view
+        const conceptId = tile.dataset.id;
+        if (conceptId) {
+            Router.navigate('detail', { id: conceptId });
+        }
+    }
+
+    /**
      * Handle tile click
      * @param {MouseEvent} event - Click event
      */
@@ -636,36 +674,9 @@ const HomeController = (function() {
         if (recentlyResized) {
             return;
         }
-        // Don't trigger clicks when the resize handle is clicked
-        if (event.target.classList.contains('resize-handle')) {
-            event.stopPropagation();
-            return;
-        }
-        // Check for explicit resizing data attribute
+
         const tile = event.target.closest('.concept-tile');
-        if (tile && tile.dataset.resizing === 'true') {
-            event.stopPropagation();
-            event.preventDefault();
-            return;
-        }
-        if (!tile) {
-            return;
-        }
-        
-        // Check if we're in swap mode first
-        if (isSwapModeActive) {
-            const handled = handleSwapTileClick(tile);
-            if (handled) {
-                event.stopPropagation();
-                event.preventDefault();
-                return;
-            }
-        }
-        
-        // Get the concept ID
-        const conceptId = tile.dataset.id;
-        // Navigate to the detail view
-        Router.navigate('detail', { id: conceptId });
+        handleTileInteraction(tile, event);
     }
     
     // Private variables for touch debouncing
@@ -691,7 +702,6 @@ const HomeController = (function() {
             return;
         }
         
-        // Check if this is a tile touch
         const tile = event.target.closest('.concept-tile');
         if (!tile) {
             return;
@@ -710,12 +720,11 @@ const HomeController = (function() {
         // Prevent the click event from also firing
         event.preventDefault();
         
-        // Get the concept ID and navigate
-        const conceptId = tile.dataset.id;
-        if (conceptId) {
-            lastTouchNavigationTime = Date.now();
-            Router.navigate('detail', { id: conceptId });
-        }
+        // Update touch navigation time before handling interaction
+        lastTouchNavigationTime = Date.now();
+        
+        // Use shared interaction logic
+        handleTileInteraction(tile, event);
     }
     
     /**
@@ -905,10 +914,8 @@ const HomeController = (function() {
             const destinationConcept = performContentSwap(selectedTileForSwap.concept, concept);
             exitSwapMode();
             
-            // Navigate to the destination concept (where the original content now lives)
-            setTimeout(() => {
-                Router.navigate('detail', { id: destinationConcept.id });
-            }, 1000); // Wait for success message to show
+            // Stay on home view to see the swap result
+            // User can manually navigate to whichever tile they want to view
         }
         
         return true; // Indicate that we handled the click
