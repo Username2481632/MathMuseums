@@ -182,6 +182,9 @@ const PreferencesClient = (function() {
                             handleTouchResizeStart: window.HomeController.getResizeManager ? window.HomeController.getResizeManager().handleTouchResizeStart : null,
                             generateThumbnailWithRetry: window.HomeController.generateThumbnailWithRetry || null
                         });
+                        
+                        // Dispatch ready event AFTER tiles are actually rendered
+                        document.dispatchEvent(new CustomEvent('homeControllerReady'));
                     }
                 }
             }

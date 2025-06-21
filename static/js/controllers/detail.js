@@ -267,15 +267,25 @@ const DetailController = (function() {
     function handleSwapButtonClick() {
         if (!currentConcept) return;
         
+        // Capture the concept ID before navigation to avoid null reference
+        const conceptId = currentConcept.id;
+        
         // Save current state before navigating
         saveCalculatorState();
         saveDescription();
         
-        // Navigate to home view in swap mode with this concept pre-selected
-        Router.navigate('home', { 
-            swapMode: true, 
-            conceptId: currentConcept.id 
-        });
+        // Set up event listener for when home controller is ready
+        function onHomeControllerReady() {
+            document.removeEventListener('homeControllerReady', onHomeControllerReady);
+            if (window.HomeController && window.HomeController.startSwapMode) {
+                window.HomeController.startSwapMode(conceptId);
+            }
+        }
+        
+        document.addEventListener('homeControllerReady', onHomeControllerReady);
+        
+        // Navigate to home view and start swap mode directly
+        Router.navigate('home');
     }
 
     /**

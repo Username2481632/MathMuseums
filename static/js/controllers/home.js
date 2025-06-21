@@ -507,9 +507,8 @@ const HomeController = (function() {
     
     /**
      * Initialize the home controller
-     * @param {Object} params - URL parameters, may include swap mode
      */
-    async function init(params = {}) {
+    async function init() {
         // Force cleanup of any corrupted data first
         await forceCleanupCorruptedData();
         
@@ -530,12 +529,6 @@ const HomeController = (function() {
         // Initialize FontSizer for real-time font resizing
         if (window.FontSizer) {
             window.FontSizer.init();
-        }
-        
-        // Check if we should start in swap mode
-        if (params.swapMode && params.conceptId) {
-            // Start swap mode with the specified concept pre-selected
-            startSwapModeWithConcept(params.conceptId);
         }
     }
     
@@ -574,17 +567,8 @@ const HomeController = (function() {
         appContainer.appendChild(homeView);
         homePoster = setupHomePoster();
 
-        // Apply display settings and render tiles synchronously
-        if (window.PreferencesClient && window.PreferencesClient.applyDisplaySettings) {
-            window.PreferencesClient.applyDisplaySettings();
-        } else {
-            // Fallback: render tiles directly if preferences not available
-            renderTilesOnPoster(homePoster, concepts, {
-                handleResizeStart: resizeManager.handleResizeStart,
-                handleTouchResizeStart: resizeManager.handleTouchResizeStart,
-                generateThumbnailWithRetry: generateThumbnailWithRetry
-            });
-        }
+        // Apply display settings and render tiles
+        window.PreferencesClient.applyDisplaySettings();
     }
     
     /**
@@ -1155,6 +1139,19 @@ const HomeController = (function() {
                     immediateRenderTiles();
                 }, 50);
             }
+        },
+        startSwapMode: function(conceptId) {
+            // Simple swap mode entry without URL manipulation
+            if (conceptId) {
+                startSwapModeWithConcept(conceptId);
+            } else {
+                // Start swap mode without pre-selecting a concept
+                isSwapModeActive = true;
+                showSwapInstruction('Click on the first tile to start swapping');
+            }
+        },
+        exitSwapMode: function() {
+            exitSwapMode();
         },
         getConcepts: function() {
             return concepts;

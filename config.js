@@ -7,7 +7,7 @@
 if (typeof self !== 'undefined' && self.importScripts) {
     // Service worker context
     self.DESMOS_API_KEY = 'd38ef1c6097a41498a850f6324aff83d';
-    self.SW_CACHE_VERSION = '0.1.0';
+    self.SW_CACHE_VERSION = '0.1.1';
 }
 
 if (typeof window !== 'undefined') {
