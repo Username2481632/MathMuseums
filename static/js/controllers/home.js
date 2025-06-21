@@ -574,32 +574,17 @@ const HomeController = (function() {
         appContainer.appendChild(homeView);
         homePoster = setupHomePoster();
 
-        // Apply display settings now that the DOM elements exist, then render tiles
-        requestAnimationFrame(() => {
-            if (window.PreferencesClient && window.PreferencesClient.applyDisplaySettings) {
-                window.PreferencesClient.applyDisplaySettings();
-            }
-            // Wait for CSS layout to complete after applyDisplaySettings
-            function renderWhenReady() {
-                const containerWidth = homePoster.offsetWidth;
-                const containerHeight = homePoster.offsetHeight;
-                if (containerWidth > 0 && containerHeight > 0) {
-                    renderTilesOnPoster(homePoster, concepts, {
-                        handleResizeStart: resizeManager.handleResizeStart,
-                        handleTouchResizeStart: resizeManager.handleTouchResizeStart,
-                        generateThumbnailWithRetry: generateThumbnailWithRetry
-                    });
-                    if (window.FontSizer) {
-                        setTimeout(() => {
-                            window.FontSizer.forceAdjustment();
-                        }, 250);
-                    }
-                } else {
-                    requestAnimationFrame(renderWhenReady);
-                }
-            }
-            renderWhenReady();
-        });
+        // Apply display settings and render tiles synchronously
+        if (window.PreferencesClient && window.PreferencesClient.applyDisplaySettings) {
+            window.PreferencesClient.applyDisplaySettings();
+        } else {
+            // Fallback: render tiles directly if preferences not available
+            renderTilesOnPoster(homePoster, concepts, {
+                handleResizeStart: resizeManager.handleResizeStart,
+                handleTouchResizeStart: resizeManager.handleTouchResizeStart,
+                generateThumbnailWithRetry: generateThumbnailWithRetry
+            });
+        }
     }
     
     /**
@@ -1069,8 +1054,19 @@ const HomeController = (function() {
     // --- Listen for containerSized event from preferences.js ---
     document.addEventListener('containerSized', function() {
         if (homePoster && concepts.length > 0) {
-            // Use immediate rendering for container size changes to enable real-time font resizing
-            immediateRenderTiles();
+            // Wait for container to have proper dimensions before re-rendering
+            function waitForContainerResize() {
+                const containerWidth = homePoster.offsetWidth;
+                const containerHeight = homePoster.offsetHeight;
+                if (containerWidth > 0 && containerHeight > 0) {
+                    // Use immediate rendering for container size changes to enable real-time font resizing
+                    immediateRenderTiles();
+                } else {
+                    // Container not ready yet, try again
+                    requestAnimationFrame(waitForContainerResize);
+                }
+            }
+            waitForContainerResize();
         }
     });
     
@@ -1088,6 +1084,25 @@ const HomeController = (function() {
         }
     });
 
+    // --- Listen for screen fit mode changes specifically ---
+    function handleScreenFitModeChange() {
+        if (homePoster && concepts.length > 0) {
+            // Force re-application of display settings and re-render tiles
+            setTimeout(() => {
+                if (window.PreferencesClient && window.PreferencesClient.applyDisplaySettings) {
+                    window.PreferencesClient.applyDisplaySettings();
+                }
+                // Wait for DOM to update, then re-render
+                requestAnimationFrame(() => {
+                    immediateRenderTiles();
+                });
+            }, 100);
+        }
+    }
+    
+    // Listen for preference changes
+    document.addEventListener('preferencesChanged', handleScreenFitModeChange);
+    
     /**
      * Force cleanup of all corrupted data from storage
      */
@@ -1128,6 +1143,26 @@ const HomeController = (function() {
             // Use immediate render for refresh to avoid timing issues after import
             immediateRenderTiles();
         },
+        forceReRender: function() {
+            // Force immediate re-rendering of tiles with proper container dimensions
+            if (homePoster && concepts.length > 0) {
+                // Apply display settings first to ensure container is properly sized
+                if (window.PreferencesClient && window.PreferencesClient.applyDisplaySettings) {
+                    window.PreferencesClient.applyDisplaySettings();
+                }
+                // Then re-render tiles after a brief delay to allow container sizing
+                setTimeout(() => {
+                    immediateRenderTiles();
+                }, 50);
+            }
+        },
+        getConcepts: function() {
+            return concepts;
+        },
+        getResizeManager: function() {
+            return resizeManager;
+        },
+        generateThumbnailWithRetry: generateThumbnailWithRetry,
         clearThumbnailQueue: function() {
             thumbnailQueue.clear();
         },

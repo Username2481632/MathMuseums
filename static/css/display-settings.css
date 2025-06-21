@@ -121,80 +121,24 @@ input:checked + .slider:before {
     border-right: 1px solid var(--primary-color);
 }
 
-/* Aspect Ratio Container Styles */
-.aspect-ratio-container {
-    width: 100%;
-    height: 100%;
-    margin: 0 auto;
-    transition: width 0.3s ease, height 0.3s ease; /* Smooth transitions for dynamic resizing */
-    /* Don't use position:relative here as it creates a stacking context that conflicts with absolute positioned tiles */
-}
-
-/* Specific Aspect Ratios */
-.aspect-ratio-16-9 {
-    position: relative;
-    width: 100%;
-    height: 0;
-    padding-top: 56.25%; /* 9/16 = 0.5625 */
-}
-
-.aspect-ratio-4-3 {
-    position: relative;
-    width: 100%;
-    height: 0;
-    padding-top: 75%; /* 3/4 = 0.75 */
-}
-
-.aspect-ratio-1-1 {
-    position: relative;
-    width: 100%;
-    height: 0;
-    padding-top: 100%; /* 1/1 = 1.0 */
-}
-
-/* Override aspect ratio behavior in fit mode */
-#home-view.screen-fit-mode .aspect-ratio-16-9,
-#home-view.screen-fit-mode .aspect-ratio-4-3,
-#home-view.screen-fit-mode .aspect-ratio-1-1 {
-    padding-top: 0;
-    height: 100%;
-}
-
-/* Content inside aspect ratio container */
-.aspect-ratio-content {
-    /* Remove position: absolute; top: 0; left: 0; */
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    /* Don't center content - let tiles position themselves */
-    align-items: stretch;
-    justify-content: flex-start;
-}
+/* Simplified display settings - direct tiles container management */
 
 /* Fit Mode (scale down to fit viewport with no scrolling) */
 #home-view.screen-fit-mode {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--letterbox-color); /* DRY: Use consistent letterbox color */
+    background-color: var(--letterbox-color);
     height: calc(var(--actual-vh, 100vh) - var(--header-height, 70px));
     width: 100vw;
     position: fixed;
-    top: var(--header-height, 70px); /* Start below the header */
+    top: var(--header-height, 70px);
     left: 0;
-    z-index: 999; /* Below header but above everything else */
+    z-index: 999;
     padding: 0;
     margin: 0;
-    overflow: hidden; /* Prevent any scrolling */
+    overflow: hidden;
     box-sizing: border-box;
-}
-
-#home-view.screen-fit-mode .aspect-ratio-container {
-    /* Dimensions will be set by JavaScript */
-    transform-origin: center center;
-    position: relative;
-    /* Remove any default constraints */
 }
 
 /* Fill Mode (with scrolling) */
@@ -202,23 +146,20 @@ input:checked + .slider:before {
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
-    background-color: var(--letterbox-color); /* DRY: Use consistent letterbox color */
+    background-color: var(--letterbox-color);
     height: calc(var(--actual-vh, 100vh) - var(--header-height, 70px));
     width: 100vw;
     position: fixed;
-    top: var(--header-height, 70px); /* Start below the header */
+    top: var(--header-height, 70px);
     left: 0;
-    z-index: 999; /* Below header but above everything else */
+    z-index: 999;
     padding: 0;
     margin: 0;
-    overflow: auto; /* Enable scrolling when content exceeds viewport */
+    overflow: auto;
     box-sizing: border-box;
 }
 
-#home-view.screen-fill-mode .aspect-ratio-container {
-    /* Dimensions will be set by JavaScript */
-    transform-origin: center center;
-    position: relative;
+#home-view.screen-fill-mode .tiles-container {
     flex-shrink: 0; /* Prevent shrinking when content overflows */
 }
 

@@ -99,10 +99,10 @@ const PreferencesClient = (function() {
         }
         
         // If no previous aspect ratio, try to determine from current container size
-        const aspectRatioContainer = document.querySelector('#home-view .aspect-ratio-container');
-        if (aspectRatioContainer && aspectRatioContainer.style.width && aspectRatioContainer.style.height) {
-            const currentWidth = parseInt(aspectRatioContainer.style.width, 10);
-            const currentHeight = parseInt(aspectRatioContainer.style.height, 10);
+        const tilesContainer = document.querySelector('#home-view .tiles-container');
+        if (tilesContainer && tilesContainer.style.width && tilesContainer.style.height) {
+            const currentWidth = parseInt(tilesContainer.style.width, 10);
+            const currentHeight = parseInt(tilesContainer.style.height, 10);
             const currentAspect = currentWidth / currentHeight;
             
             // Convert back to whole number ratio
@@ -125,42 +125,24 @@ const PreferencesClient = (function() {
 
     function applyDisplaySettings() {
         const homeView = document.getElementById('home-view');
-        const aspectRatioContainer = document.querySelector('#home-view .aspect-ratio-container');
-        if (!homeView) return;
+        const tilesContainer = document.querySelector('#home-view .tiles-container');
+        if (!homeView || !tilesContainer) return;
 
         // Clean existing classes from home view
         homeView.classList.remove('screen-fit-mode', 'screen-fill-mode');
 
-        // Clean up aspect ratio container
-        if (aspectRatioContainer) {
-            aspectRatioContainer.classList.remove('aspect-ratio-16-9', 'aspect-ratio-4-3', 'aspect-ratio-1-1');
-            aspectRatioContainer.style.transform = '';
-            aspectRatioContainer.style.width = '';
-            aspectRatioContainer.style.height = '';
-            aspectRatioContainer.style.maxWidth = '';
-            aspectRatioContainer.style.maxHeight = '';
-        }
-
-        // Always set up the container with the correct aspect ratio
-        if (aspectRatioContainer) {
-            // Calculate container dimensions using actual measurements
-            const header = document.querySelector('header');
-            const actualHeaderHeight = header ? header.offsetHeight : 70;
-            const availableWidth = window.innerWidth;
-            const availableHeight = window.innerHeight - actualHeaderHeight;
-            const targetAspect = preferences.aspectRatioWidth / preferences.aspectRatioHeight;
-            
-            let containerWidth = availableWidth;
-            let containerHeight = containerWidth / targetAspect;
-            if (containerHeight > availableHeight) {
-                containerHeight = availableHeight;
-                containerWidth = containerHeight * targetAspect;
-            }
-            
-            aspectRatioContainer.style.width = `${containerWidth}px`;
-            aspectRatioContainer.style.height = `${containerHeight}px`;
-            aspectRatioContainer.style.maxWidth = 'none';
-            aspectRatioContainer.style.maxHeight = 'none';
+        // Calculate container dimensions using actual measurements
+        const header = document.querySelector('header');
+        const actualHeaderHeight = header ? header.offsetHeight : 70;
+        const availableWidth = window.innerWidth;
+        const availableHeight = window.innerHeight - actualHeaderHeight;
+        const targetAspect = preferences.aspectRatioWidth / preferences.aspectRatioHeight;
+        
+        let containerWidth = availableWidth;
+        let containerHeight = containerWidth / targetAspect;
+        if (containerHeight > availableHeight) {
+            containerHeight = availableHeight;
+            containerWidth = containerHeight * targetAspect;
         }
 
         // Detect aspect ratio change
@@ -168,101 +150,118 @@ const PreferencesClient = (function() {
         const aspectRatioChanged = lastAspectRatio !== null && lastAspectRatio !== currentAspectRatio;
         
         // Only scale tiles if aspect ratio changed (not on initial load)
-        if (aspectRatioChanged && aspectRatioContainer) {
+        if (aspectRatioChanged && tilesContainer) {
             // Run async scaling in background
-            scaleTilesForAspectRatioChange(aspectRatioContainer, preferences.aspectRatioWidth, preferences.aspectRatioHeight)
+            scaleTilesForAspectRatioChange(tilesContainer, preferences.aspectRatioWidth, preferences.aspectRatioHeight)
                 .catch(error => console.error('Error scaling tiles:', error));
         }
         
         // Update last aspect ratio after processing
         lastAspectRatio = currentAspectRatio;
 
-        // Apply screen fit/fill mode for display scaling only
+        // Apply screen fit/fill mode for display scaling and get final dimensions
+        let finalDimensions = { width: containerWidth, height: containerHeight };
+        
         if (preferences.screenFit === 'fit') {
             homeView.classList.add('screen-fit-mode');
-            applyFitModeDisplayScaling();
+            finalDimensions = applyFitModeDisplayScaling(containerWidth, containerHeight) || finalDimensions;
         } else if (preferences.screenFit === 'fill') {
             homeView.classList.add('screen-fill-mode');
-            applyFillModeDisplayScaling();
+            finalDimensions = applyFillModeDisplayScaling(containerWidth, containerHeight) || finalDimensions;
+        }
+
+        // Wait for CSS transition to complete before rendering tiles
+        function renderTilesAfterTransition() {
+            if (window.renderTilesOnPoster && tilesContainer.offsetWidth > 0 && tilesContainer.offsetHeight > 0) {
+                // Get the concepts from the home controller if available
+                if (window.HomeController && typeof window.HomeController.getConcepts === 'function') {
+                    const concepts = window.HomeController.getConcepts();
+                    if (concepts && concepts.length > 0) {
+                        window.renderTilesOnPoster(tilesContainer, concepts, {
+                            handleResizeStart: window.HomeController.getResizeManager ? window.HomeController.getResizeManager().handleResizeStart : null,
+                            handleTouchResizeStart: window.HomeController.getResizeManager ? window.HomeController.getResizeManager().handleTouchResizeStart : null,
+                            generateThumbnailWithRetry: window.HomeController.generateThumbnailWithRetry || null
+                        });
+                    }
+                }
+            }
+        }
+
+        // Listen for transition end to render tiles
+        let transitionHandled = false;
+        
+        function handleTransitionEnd(event) {
+            // Only respond to width/height transitions on the tiles container
+            if (event.target === tilesContainer && (event.propertyName === 'width' || event.propertyName === 'height')) {
+                transitionHandled = true;
+                tilesContainer.removeEventListener('transitionend', handleTransitionEnd);
+                renderTilesAfterTransition();
+            }
+        }
+
+        // Check if transition is enabled
+        const computedStyle = window.getComputedStyle(tilesContainer);
+        const transitionDuration = computedStyle.transitionDuration;
+        
+        if (transitionDuration && transitionDuration !== '0s') {
+            // Wait for transition to complete
+            tilesContainer.addEventListener('transitionend', handleTransitionEnd);
+            // Fallback timeout in case transition event doesn't fire
+            setTimeout(() => {
+                if (!transitionHandled) {
+                    tilesContainer.removeEventListener('transitionend', handleTransitionEnd);
+                    renderTilesAfterTransition();
+                }
+            }, 350); // Slightly longer than the 0.3s transition
+        } else {
+            // No transition, render immediately
+            renderTilesAfterTransition();
         }
     }
     
     /**
      * Apply scaling to fit the content within the viewport for fit mode
      */
-    // Only handles display scaling/letterboxing for fit mode
-    function applyFitModeDisplayScaling() {
+    function applyFitModeDisplayScaling(containerWidth, containerHeight) {
         const homeView = document.getElementById('home-view');
-        const aspectRatioContainer = document.querySelector('#home-view .aspect-ratio-container');
-        if (!homeView || !aspectRatioContainer || !homeView.classList.contains('screen-fit-mode')) return;
+        const tilesContainer = document.querySelector('#home-view .tiles-container');
+        if (!homeView || !tilesContainer || !homeView.classList.contains('screen-fit-mode')) return;
 
-        // Calculate available viewport dimensions using actual measurements
-        const header = document.querySelector('header');
-        const actualHeaderHeight = header ? header.offsetHeight : 70;
-        const availableWidth = window.innerWidth;
-        const availableHeight = window.innerHeight - actualHeaderHeight;
-        const targetAspectRatio = preferences.aspectRatioWidth / preferences.aspectRatioHeight;
-
-        // Compute the largest size for the aspect ratio container that fits in the viewport
-        let containerWidth = availableWidth;
-        let containerHeight = containerWidth / targetAspectRatio;
-        if (containerHeight > availableHeight) {
-            containerHeight = availableHeight;
-            containerWidth = containerHeight * targetAspectRatio;
-        }
-
-        // Set the container size (this creates black bars if needed)
-        aspectRatioContainer.style.setProperty('width', `${containerWidth}px`, 'important');
-        aspectRatioContainer.style.setProperty('height', `${containerHeight}px`, 'important');
-        aspectRatioContainer.style.setProperty('max-width', 'none', 'important');
-        aspectRatioContainer.style.setProperty('max-height', 'none', 'important');
-        aspectRatioContainer.style.setProperty('min-width', `${containerWidth}px`, 'important');
-        aspectRatioContainer.style.setProperty('min-height', `${containerHeight}px`, 'important');
-        aspectRatioContainer.style.transform = 'none';
-        aspectRatioContainer.style.overflow = 'hidden';
-        aspectRatioContainer.style.position = 'relative';
-
-        // Also ensure child containers respect the parent dimensions
-        const aspectRatioContent = aspectRatioContainer.querySelector('.aspect-ratio-content');
-        const tilesContainer = aspectRatioContainer.querySelector('.tiles-container');
-        
-        if (aspectRatioContent) {
-            aspectRatioContent.style.setProperty('width', '100%', 'important');
-            aspectRatioContent.style.setProperty('height', '100%', 'important');
-            aspectRatioContent.style.setProperty('max-width', `${containerWidth}px`, 'important');
-            aspectRatioContent.style.setProperty('max-height', `${containerHeight}px`, 'important');
-        }
-        
-        if (tilesContainer) {
-            tilesContainer.style.setProperty('width', '100%', 'important');
-            tilesContainer.style.setProperty('height', '100%', 'important');
-            tilesContainer.style.setProperty('max-width', `${containerWidth}px`, 'important');
-            tilesContainer.style.setProperty('max-height', `${containerHeight}px`, 'important');
-        }
-
-        // Force a layout recalculation to ensure the styles take effect
-        aspectRatioContainer.offsetWidth; // Force reflow
+        // Set the tiles container size directly
+        tilesContainer.style.width = `${containerWidth}px`;
+        tilesContainer.style.height = `${containerHeight}px`;
+        tilesContainer.style.maxWidth = 'none';
+        tilesContainer.style.maxHeight = 'none';
+        tilesContainer.style.minWidth = `${containerWidth}px`;
+        tilesContainer.style.minHeight = `${containerHeight}px`;
+        tilesContainer.style.transform = 'none';
+        tilesContainer.style.overflow = 'hidden';
+        tilesContainer.style.position = 'relative';
 
         // Center the container
         homeView.style.alignItems = 'center';
         homeView.style.justifyContent = 'center';
+
+        // Force immediate layout recalculation - synchronous
+        tilesContainer.offsetWidth; // Force reflow
+        tilesContainer.offsetHeight; // Force reflow
         
-        // Re-render tiles now that container has proper dimensions
-        if (window.renderTilesOnPoster) {
-            document.dispatchEvent(new CustomEvent('containerSized'));
-        }
+        // Return the final dimensions for immediate use
+        return {
+            width: containerWidth,
+            height: containerHeight
+        };
     }
     
     /**
      * Apply proportional scaling for fill mode
      */
-    // Only handles display scaling for fill mode (fills viewport in one dimension, allows scrolling in the other)
-    function applyFillModeDisplayScaling() {
+    function applyFillModeDisplayScaling(containerWidth, containerHeight) {
         const homeView = document.getElementById('home-view');
-        const aspectRatioContainer = document.querySelector('#home-view .aspect-ratio-container');
-        if (!homeView || !aspectRatioContainer || !homeView.classList.contains('screen-fill-mode')) return;
+        const tilesContainer = document.querySelector('#home-view .tiles-container');
+        if (!homeView || !tilesContainer || !homeView.classList.contains('screen-fill-mode')) return;
 
-        // Calculate available viewport dimensions using actual measurements
+        // Calculate available viewport dimensions
         const header = document.querySelector('header');
         const actualHeaderHeight = header ? header.offsetHeight : 70;
         const availableWidth = window.innerWidth;
@@ -270,35 +269,26 @@ const PreferencesClient = (function() {
         const targetAspectRatio = preferences.aspectRatioWidth / preferences.aspectRatioHeight;
 
         // Calculate dimensions for both scenarios:
-        // 1. Fill width (height might exceed viewport)
         const fillWidthHeight = availableWidth / targetAspectRatio;
-        
-        // 2. Fill height (width might exceed viewport)
         const fillHeightWidth = availableHeight * targetAspectRatio;
 
-        let containerWidth, containerHeight;
-        
         // Choose the option that makes the container larger (maximizes content area)
-        // This ensures fill mode actually "fills" the viewport, allowing scrolling for overflow
         if (fillWidthHeight >= fillHeightWidth) {
-            // Fill width, allow vertical scrolling if needed
             containerWidth = availableWidth;
             containerHeight = fillWidthHeight;
         } else {
-            // Fill height, allow horizontal scrolling if needed
             containerWidth = fillHeightWidth;
             containerHeight = availableHeight;
         }
 
-        // Set the container size
-        aspectRatioContainer.style.width = `${containerWidth}px`;
-        aspectRatioContainer.style.height = `${containerHeight}px`;
-        aspectRatioContainer.style.maxWidth = 'none';
-        aspectRatioContainer.style.maxHeight = 'none';
-        aspectRatioContainer.style.transform = 'none';
+        // Set the tiles container size directly
+        tilesContainer.style.width = `${containerWidth}px`;
+        tilesContainer.style.height = `${containerHeight}px`;
+        tilesContainer.style.maxWidth = 'none';
+        tilesContainer.style.maxHeight = 'none';
+        tilesContainer.style.transform = 'none';
 
         // Configure scrolling for home view
-        // If container is larger than viewport, enable scrolling
         if (containerWidth > availableWidth || containerHeight > availableHeight) {
             homeView.style.overflow = 'auto';
         } else {
@@ -309,21 +299,26 @@ const PreferencesClient = (function() {
         homeView.style.alignItems = containerHeight <= availableHeight ? 'center' : 'flex-start';
         homeView.style.justifyContent = containerWidth <= availableWidth ? 'center' : 'flex-start';
         
-        // Re-render tiles now that container has proper dimensions
-        if (window.renderTilesOnPoster) {
-            document.dispatchEvent(new CustomEvent('containerSized'));
-        }
+        // Force immediate layout recalculation - synchronous
+        tilesContainer.offsetWidth; // Force reflow
+        tilesContainer.offsetHeight; // Force reflow
+        
+        // Return the final dimensions for immediate use
+        return {
+            width: containerWidth,
+            height: containerHeight
+        };
     }
 
     // Scale tiles for aspect ratio change using center-based proportional scaling
-    async function scaleTilesForAspectRatioChange(aspectRatioContainer, aspectRatioWidth, aspectRatioHeight) {
-        const tiles = aspectRatioContainer.querySelectorAll('.concept-tile');
+    async function scaleTilesForAspectRatioChange(tilesContainer, aspectRatioWidth, aspectRatioHeight) {
+        const tiles = tilesContainer.querySelectorAll('.concept-tile');
         if (!tiles || tiles.length === 0) return;
         
         // Get old aspect ratio
         const oldAspectRatio = getLastAspectRatio();
         if (!oldAspectRatio) {
-            return simpleReRenderTiles(aspectRatioContainer, aspectRatioWidth, aspectRatioHeight);
+            return simpleReRenderTiles(tilesContainer, aspectRatioWidth, aspectRatioHeight);
         }
         
         const oldRatio = oldAspectRatio.width / oldAspectRatio.height;
@@ -367,8 +362,8 @@ const PreferencesClient = (function() {
                         await window.StorageManager.saveConcept(updatedConcept);
                         
                         // Convert to pixels and apply to tile
-                        const containerWidth = aspectRatioContainer.offsetWidth;
-                        const containerHeight = aspectRatioContainer.offsetHeight;
+                        const containerWidth = tilesContainer.offsetWidth;
+                        const containerHeight = tilesContainer.offsetHeight;
                         const pixelCoords = window.CoordinateUtils.percentageToPixels(
                             scaledCoords.centerX, scaledCoords.centerY, 
                             scaledCoords.width, scaledCoords.height,
@@ -388,13 +383,13 @@ const PreferencesClient = (function() {
     }
 
     // Simple re-render fallback for when no previous aspect ratio is available
-    async function simpleReRenderTiles(aspectRatioContainer, aspectRatioWidth, aspectRatioHeight) {
-        const tiles = aspectRatioContainer.querySelectorAll('.concept-tile');
+    async function simpleReRenderTiles(tilesContainer, aspectRatioWidth, aspectRatioHeight) {
+        const tiles = tilesContainer.querySelectorAll('.concept-tile');
         if (!tiles || tiles.length === 0) return;
         
         // Get new container dimensions using consistent offsetWidth/offsetHeight
-        const containerWidth = aspectRatioContainer.offsetWidth;
-        const containerHeight = aspectRatioContainer.offsetHeight;
+        const containerWidth = tilesContainer.offsetWidth;
+        const containerHeight = tilesContainer.offsetHeight;
         
         // Simply re-render all tiles using their existing percentage coordinates
         for (const tile of tiles) {
@@ -529,14 +524,6 @@ const PreferencesClient = (function() {
         loadPreferences();
         
         // Add window resize listener for scaling
-        window.addEventListener('resize', () => {
-            if (preferences.screenFit === 'fit') {
-                applyFitModeDisplayScaling();
-            } else if (preferences.screenFit === 'fill') {
-                applyFillModeDisplayScaling();
-            }
-        });
-        
         // Ensure display settings are reapplied on window resize for responsive tiles
         window.addEventListener('resize', () => {
             applyDisplaySettings();
